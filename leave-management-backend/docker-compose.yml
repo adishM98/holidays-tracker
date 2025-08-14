@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14
+    container_name: leave_management_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: leave_management
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - leave_management_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: leave_management_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - leave_management_network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: leave_management_api
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=postgres
+      - DATABASE_PASSWORD=postgres
+      - DATABASE_NAME=leave_management
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./src:/app/src
+      - ./uploads:/app/uploads
+    networks:
+      - leave_management_network
+
+volumes:
+  postgres_data:
+
+networks:
+  leave_management_network:
+    driver: bridge

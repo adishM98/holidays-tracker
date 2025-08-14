@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Calendar, FileText, Home, Users, LogOut, Clock, Menu, X } from 'lucide-react';
+import { Calendar, FileText, Home, Users, LogOut, Clock, Menu, X, Settings, Upload } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -25,7 +25,43 @@ const Sidebar: React.FC = () => {
     { path: '/leave-history', icon: FileText, label: 'Leave History' }
   ];
 
-  const navItems = user?.role === 'manager' ? managerNavItems : employeeNavItems;
+  const adminNavItems = [
+    { path: '/dashboard', icon: Home, label: 'Dashboard' },
+    { path: '/admin/employees', icon: Users, label: 'Employees' },
+    { path: '/admin/reports', icon: FileText, label: 'Reports' }
+  ];
+
+  const getNavItems = () => {
+    switch (user?.role) {
+      case 'admin':
+        return adminNavItems;
+      case 'manager':
+        return managerNavItems;
+      default:
+        return employeeNavItems;
+    }
+  };
+
+  const navItems = getNavItems();
+  
+  const getUserDisplayName = () => {
+    if (user?.employee?.fullName) {
+      return user.employee.fullName;
+    }
+    if (user?.employee?.firstName && user?.employee?.lastName) {
+      return `${user.employee.firstName} ${user.employee.lastName}`;
+    }
+    return user?.email?.split('@')[0] || 'User';
+  };
+
+  const getUserInitials = () => {
+    const displayName = getUserDisplayName();
+    return displayName.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+
+  const getUserDepartment = () => {
+    return user?.employee?.department?.name || 'Admin';
+  };
 
   if (isMobile) {
     return (
@@ -52,18 +88,28 @@ const Sidebar: React.FC = () => {
           isOpen ? 'translate-x-0' : '-translate-x-full'
         } shadow-professional-lg flex flex-col`}>
           <div className="p-6 border-b border-border mt-16">
-            <h1 className="text-xl font-bold text-primary">LeaveManager</h1>
-            <p className="text-sm text-muted-foreground mt-1">Professional Leave Management</p>
+            <div className="flex items-center justify-center">
+              <img 
+                src="/light/tooljet-light.svg" 
+                alt="ToolJet Logo" 
+                className="h-8 w-auto"
+                onError={(e) => {
+                  // Fallback to PNG if SVG fails to load
+                  e.currentTarget.src = "/light/light.png";
+                }}
+              />
+            </div>
+            <p className="text-sm font-bold text-muted-foreground text-center mt-2">Leave management</p>
           </div>
 
           <div className="p-4 border-b border-border">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center text-white font-semibold">
-                {user?.name.split(' ').map(n => n[0]).join('')}
+                {getUserInitials()}
               </div>
               <div>
-                <p className="font-medium text-foreground">{user?.name}</p>
-                <p className="text-sm text-muted-foreground capitalize">{user?.role} • {user?.department}</p>
+                <p className="font-medium text-foreground">{getUserDisplayName()}</p>
+                <p className="text-sm text-muted-foreground capitalize">{user?.role} • {getUserDepartment()}</p>
               </div>
             </div>
           </div>
@@ -112,18 +158,28 @@ const Sidebar: React.FC = () => {
   return (
     <div className="h-screen w-64 bg-card border-r border-border flex flex-col shadow-professional-sm">
       <div className="p-6 border-b border-border">
-        <h1 className="text-xl font-bold text-primary">LeaveManager</h1>
-        <p className="text-sm text-muted-foreground mt-1">Professional Leave Management</p>
+        <div className="flex items-center justify-center">
+          <img 
+            src="/light/tooljet-light.svg" 
+            alt="ToolJet Logo" 
+            className="h-8 w-auto"
+            onError={(e) => {
+              // Fallback to PNG if SVG fails to load
+              e.currentTarget.src = "/light/light.png";
+            }}
+          />
+        </div>
+        <p className="text-sm font-bold text-muted-foreground text-center mt-2">Leave management</p>
       </div>
 
       <div className="p-4 border-b border-border">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center text-white font-semibold">
-            {user?.name.split(' ').map(n => n[0]).join('')}
+            {getUserInitials()}
           </div>
           <div>
-            <p className="font-medium text-foreground">{user?.name}</p>
-            <p className="text-sm text-muted-foreground capitalize">{user?.role} • {user?.department}</p>
+            <p className="font-medium text-foreground">{getUserDisplayName()}</p>
+            <p className="text-sm text-muted-foreground capitalize">{user?.role} • {getUserDepartment()}</p>
           </div>
         </div>
       </div>

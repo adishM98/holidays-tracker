@@ -11,6 +11,7 @@ import Dashboard from "@/pages/Dashboard";
 import ApplyLeave from "@/pages/ApplyLeave";
 import LeaveHistory from "@/pages/LeaveHistory";
 import PendingApprovals from "@/pages/PendingApprovals";
+import EmployeesDebug from "@/pages/admin/EmployeesDebug";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -63,6 +64,13 @@ const App = () => (
               <ProtectedRoute>
                 <Layout>
                   <LeaveHistory />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/employees" element={
+              <ProtectedRoute>
+                <Layout>
+                  <EmployeesDebug />
                 </Layout>
               </ProtectedRoute>
             } />

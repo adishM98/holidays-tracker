@@ -1,40 +1,95 @@
-export type UserRole = 'employee' | 'manager';
+export type UserRole = 'employee' | 'manager' | 'admin';
 
-export type LeaveType = 'paid' | 'sick' | 'casual' | 'maternity' | 'emergency';
+export type LeaveType = 'annual' | 'sick' | 'casual' | 'maternity' | 'paternity' | 'unpaid';
 
-export type LeaveStatus = 'pending' | 'approved' | 'rejected';
+export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
 export interface User {
   id: string;
-  username: string;
-  name: string;
+  email: string;
   role: UserRole;
-  department: string;
-  leaveBalance: {
-    paid: number;
-    sick: number;
-    casual: number;
+  employee?: {
+    id: string;
+    employeeId: string;
+    firstName: string;
+    lastName: string;
+    fullName: string;
+    position?: string;
+    department?: {
+      id: string;
+      name: string;
+    };
+    joiningDate: string;
+    manager?: {
+      id: string;
+      fullName: string;
+    };
   };
+}
+
+export interface LeaveBalance {
+  id: string;
+  year: number;
+  leaveType: LeaveType;
+  totalAllocated: number;
+  usedDays: number;
+  availableDays: number;
+  carryForward: number;
 }
 
 export interface LeaveRequest {
   id: string;
   employeeId: string;
-  employeeName: string;
   leaveType: LeaveType;
   startDate: string;
   endDate: string;
-  days: number;
-  reason: string;
+  daysCount: number;
+  reason?: string;
   status: LeaveStatus;
   appliedAt: string;
-  reviewedBy?: string;
-  reviewedAt?: string;
-  comments?: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  rejectionReason?: string;
+  employee: {
+    id: string;
+    employeeId: string;
+    fullName: string;
+    department?: {
+      name: string;
+    };
+  };
+  approver?: {
+    id: string;
+    fullName: string;
+  };
+}
+
+export interface DashboardData {
+  employee: {
+    id: string;
+    employeeId: string;
+    fullName: string;
+    position?: string;
+    department?: string;
+    joiningDate: string;
+    manager?: {
+      id: string;
+      name: string;
+    };
+  };
+  leaveBalances: LeaveBalance[];
+  stats: {
+    pendingRequests: number;
+    totalRequests: number;
+    approvedThisYear: number;
+  };
+  recentRequests: LeaveRequest[];
 }
 
 export interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string, role: UserRole) => Promise<boolean>;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }

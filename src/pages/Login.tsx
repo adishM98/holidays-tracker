@@ -5,15 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { UserRole } from '@/types';
-import { Calendar, Shield } from 'lucide-react';
+import { Calendar, Mail, Lock } from 'lucide-react';
 
 const Login: React.FC = () => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('employee');
   const [isLoading, setIsLoading] = useState(false);
   
   const { login } = useAuth();
@@ -25,7 +22,7 @@ const Login: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const success = await login(username, password, role);
+      const success = await login(email, password);
       
       if (success) {
         toast({
@@ -36,7 +33,7 @@ const Login: React.FC = () => {
       } else {
         toast({
           title: "Login failed",
-          description: "Invalid credentials. Please check your username and password.",
+          description: "Invalid credentials. Please check your email and password.",
           variant: "destructive",
         });
       }
@@ -74,20 +71,26 @@ const Login: React.FC = () => {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="email" className="flex items-center space-x-2">
+                  <Mail size={16} />
+                  <span>Email</span>
+                </Label>
                 <Input
-                  id="username"
-                  type="text"
-                  placeholder="Enter your username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                   className="bg-background/50"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="flex items-center space-x-2">
+                  <Lock size={16} />
+                  <span>Password</span>
+                </Label>
                 <Input
                   id="password"
                   type="password"
@@ -97,30 +100,6 @@ const Login: React.FC = () => {
                   required
                   className="bg-background/50"
                 />
-              </div>
-
-              <div className="space-y-3">
-                <Label>Login as</Label>
-                <RadioGroup
-                  value={role}
-                  onValueChange={(value) => setRole(value as UserRole)}
-                  className="flex space-x-6"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="employee" id="employee" />
-                    <Label htmlFor="employee" className="flex items-center space-x-2 cursor-pointer">
-                      <Calendar size={16} />
-                      <span>Employee</span>
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="manager" id="manager" />
-                    <Label htmlFor="manager" className="flex items-center space-x-2 cursor-pointer">
-                      <Shield size={16} />
-                      <span>Manager</span>
-                    </Label>
-                  </div>
-                </RadioGroup>
               </div>
 
               <Button 
@@ -133,11 +112,14 @@ const Login: React.FC = () => {
             </form>
 
             <div className="mt-6 p-4 bg-secondary/50 rounded-lg">
-              <p className="text-sm text-muted-foreground mb-2">Demo Credentials:</p>
+              <p className="text-sm text-muted-foreground mb-2">Default Admin Credentials:</p>
               <div className="text-sm space-y-1">
-                <p><strong>Employee:</strong> john.doe / password</p>
-                <p><strong>Manager:</strong> sarah.manager / password</p>
+                <p><strong>Email:</strong> admin@company.com</p>
+                <p><strong>Password:</strong> Admin@123</p>
               </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Additional employees can be created via admin panel or bulk import
+              </p>
             </div>
           </CardContent>
         </Card>

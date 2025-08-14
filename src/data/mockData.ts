@@ -56,11 +56,12 @@ export const mockLeaveRequests: LeaveRequest[] = [
 ];
 
 export const leaveTypeLabels = {
-  paid: 'Paid Leave',
+  annual: 'Annual Leave',
   sick: 'Sick Leave',
   casual: 'Casual Leave',
   maternity: 'Maternity Leave',
-  emergency: 'Emergency Leave'
+  paternity: 'Paternity Leave',
+  unpaid: 'Unpaid Leave'
 };
 
 export const statusConfig = {
@@ -75,5 +76,9 @@ export const statusConfig = {
   rejected: {
     label: 'Rejected',
     className: 'bg-destructive-light text-destructive border-destructive/20'
+  },
+  cancelled: {
+    label: 'Cancelled',
+    className: 'bg-muted text-muted-foreground border-muted/20'
   }
 };
