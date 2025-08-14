@@ -1,68 +1,179 @@
-# Welcome to your Lovable project
+# Leave Management System
 
-## Project info
+A comprehensive leave management application with role-based access control, featuring a modern React frontend and a robust NestJS backend API.
 
-## How can I edit this code?
+## 🌟 Features
 
-There are several ways of editing your application.
+### For Employees
+- **Self-Service Portal**: Apply for leaves, view balance, and track request status
+- **Leave Calendar**: Visual representation of approved leaves
+- **Dashboard**: Overview of leave balances and recent activities
 
+### For Managers
+- **Team Management**: Approve/reject team member leave requests
+- **Team Calendar**: View team's leave schedule
+- **Reporting**: Access to team leave statistics
 
-Changes made via Lovable will be committed automatically to this repo.
+### For Administrators
+- **Employee Management**: Full CRUD operations for employees
+- **Bulk Import**: CSV-based employee data import
+- **System Analytics**: Comprehensive dashboard with system statistics
+- **Department Management**: Organize employees by departments
 
-**Use your preferred IDE**
+## 🛠️ Technology Stack
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Frontend
+- **React 18** with TypeScript
+- **Vite** for fast development and building
+- **shadcn/ui** components with Radix UI primitives
+- **Tailwind CSS** for styling
+- **React Router** for navigation
+- **TanStack Query** for data fetching
+- **React Hook Form** with Zod validation
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Backend
+- **NestJS 10** with TypeScript
+- **PostgreSQL** database with TypeORM
+- **JWT Authentication** with role-based access control
+- **Swagger/OpenAPI** documentation
+- **Email notifications** with Nodemailer
+- **Docker** support for easy deployment
 
-Follow these steps:
+## 🚀 Quick Start
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Prerequisites
+- Node.js 18+ and npm
+- PostgreSQL 14+
+- Docker & Docker Compose (optional)
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### Installation & Setup
 
-# Step 3: Install the necessary dependencies.
-npm i
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd holidays-tracker
+   ```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+2. **Start the backend services**
+   ```bash
+   # Start all services (backend + database)
+   ./start-all.sh
+   ```
+
+3. **Install frontend dependencies and start development server**
+   ```bash
+   npm install
+   npm run dev
+   ```
+
+4. **Access the applications**
+   - Frontend: http://localhost:5173
+   - Backend API: http://localhost:3000/api
+   - API Documentation: http://localhost:3000/api/docs
+
+### Default Admin Credentials
+- **Email**: admin@company.com
+- **Password**: Admin@123
+
+## 📁 Project Structure
+
+```
+holidays-tracker/
+├── src/                          # React frontend application
+│   ├── components/              # Reusable UI components
+│   ├── pages/                   # Application pages/routes
+│   ├── contexts/                # React contexts (Auth, etc.)
+│   ├── services/                # API service layer
+│   └── types/                   # TypeScript type definitions
+├── leave-management-backend/     # NestJS backend API
+│   ├── src/                     # Backend source code
+│   │   ├── auth/               # Authentication module
+│   │   ├── employees/          # Employee management
+│   │   ├── leaves/             # Leave management
+│   │   ├── departments/        # Department management
+│   │   └── users/              # User management
+│   ├── docker-compose.yml      # Database setup
+│   └── README.md               # Backend-specific documentation
+└── start-all.sh                # Startup script
 ```
 
-**Edit a file directly in GitHub**
+## 🔧 Development
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Frontend Development
+```bash
+# Install dependencies
+npm install
 
-**Use GitHub Codespaces**
+# Start development server
+npm run dev
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+# Build for production
+npm run build
 
-## What technologies are used for this project?
+# Lint code
+npm run lint
+```
 
-This project is built with:
+### Backend Development
+```bash
+cd leave-management-backend
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+# Install dependencies
+npm install
 
-## How can I deploy this project?
+# Start in development mode
+npm run start:dev
 
-Simply open [Lovable](https://lovable.dev/projects/bfca3c33-1ff3-4993-a074-41d6b6270f4a) and click on Share -> Publish.
+# Build for production
+npm run build
 
-## Can I connect a custom domain to my Lovable project?
+# Run tests
+npm run test
+```
 
-Yes, you can!
+## 🐳 Docker Deployment
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+The project includes Docker support for easy deployment:
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+```bash
+# Start all services with Docker
+cd leave-management-backend
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
+
+## 📖 API Documentation
+
+When the backend is running, visit:
+- **Swagger UI**: http://localhost:3000/api/docs
+- **API Base URL**: http://localhost:3000/api
+
+## 🔐 Authentication & Security
+
+- JWT-based authentication with refresh tokens
+- Role-based access control (Admin, Manager, Employee)
+- Secure password policies and reset functionality
+- Input validation and sanitization
+- Rate limiting to prevent abuse
+
+## 📧 Email Notifications
+
+The system sends automated emails for:
+- Welcome messages for new employees
+- Leave request notifications to managers
+- Status updates when requests are approved/rejected
+- Password reset tokens
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
