@@ -67,7 +67,7 @@ A comprehensive leave management application with role-based access control, fea
    ```
 
 4. **Access the applications**
-   - Frontend: http://localhost:5173
+   - Frontend: http://localhost:8081
    - Backend API: http://localhost:3000/api
    - API Documentation: http://localhost:3000/api/docs
 
