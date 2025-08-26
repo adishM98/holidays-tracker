@@ -32,15 +32,53 @@ export class LeaveBalance {
   })
   leaveType: LeaveType;
 
-  @Column({ name: 'total_allocated', type: 'decimal', precision: 5, scale: 2 })
+  @Column({ 
+    name: 'total_allocated', 
+    type: 'decimal', 
+    precision: 5, 
+    scale: 2,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => parseFloat(value)
+    }
+  })
   totalAllocated: number;
 
-  @Column({ name: 'used_days', type: 'decimal', precision: 5, scale: 2, default: 0 })
+  @Column({ 
+    name: 'used_days', 
+    type: 'decimal', 
+    precision: 5, 
+    scale: 2, 
+    default: 0,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => parseFloat(value)
+    }
+  })
   usedDays: number;
 
-  @Column({ name: 'available_days', type: 'decimal', precision: 5, scale: 2 })
+  @Column({ 
+    name: 'available_days', 
+    type: 'decimal', 
+    precision: 5, 
+    scale: 2,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => parseFloat(value)
+    }
+  })
   availableDays: number;
 
-  @Column({ name: 'carry_forward', type: 'decimal', precision: 5, scale: 2, default: 0 })
+  @Column({ 
+    name: 'carry_forward', 
+    type: 'decimal', 
+    precision: 5, 
+    scale: 2, 
+    default: 0,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => parseFloat(value)
+    }
+  })
   carryForward: number;
 }

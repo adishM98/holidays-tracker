@@ -416,7 +416,6 @@ const EmployeesSimple: React.FC = () => {
                           {employee.firstName} {employee.lastName}
                         </div>
                       </TableCell>
-                      <TableCell>{employee.employeeId}</TableCell>
                       <TableCell>{employee.user?.email || employee.email}</TableCell>
                       <TableCell>{employee.department?.name || 'No Department'}</TableCell>
                       <TableCell>{employee.position}</TableCell>

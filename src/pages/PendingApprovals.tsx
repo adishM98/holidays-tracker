@@ -1,21 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Clock, Check, X, Calendar, User, MessageSquare } from 'lucide-react';
-import { mockLeaveRequests, leaveTypeLabels } from '@/data/mockData';
-import { LeaveRequest } from '@/types';
+import { Clock, Check, X, Calendar, User, MessageSquare, Loader2 } from 'lucide-react';
+import { leaveTypeLabels } from '@/data/mockData';
+import { managerAPI } from '@/services/api';
 
 const PendingApprovals: React.FC = () => {
-  const [requests, setRequests] = useState(mockLeaveRequests);
-  const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
+  const [requests, setRequests] = useState<any[]>([]);
+  const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
   const [comments, setComments] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [loading, setLoading] = useState(true);
   
   const { toast } = useToast();
+
+  useEffect(() => {
+    fetchPendingRequests();
+  }, []);
+
+  const fetchPendingRequests = async () => {
+    try {
+      setLoading(true);
+      const data = await managerAPI.getTeamRequests(1, 50, 'pending');
+      setRequests(data?.requests || []);
+    } catch (error) {
+      console.error('Failed to fetch pending requests:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch pending requests",
+        variant: "destructive",
+      });
+      setRequests([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const pendingRequests = requests.filter(req => req.status === 'pending');
 
@@ -23,31 +46,25 @@ const PendingApprovals: React.FC = () => {
     setIsProcessing(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setRequests(prev => prev.map(req => 
-        req.id === requestId 
-          ? { 
-              ...req, 
-              status: action,
-              reviewedBy: 'Sarah Johnson',
-              reviewedAt: new Date().toISOString(),
-              comments: comments || undefined
-            }
-          : req
-      ));
+      if (action === 'approved') {
+        await managerAPI.approveLeaveRequest(requestId, comments);
+      } else {
+        await managerAPI.rejectLeaveRequest(requestId, comments || 'No reason provided');
+      }
 
       const request = requests.find(req => req.id === requestId);
       
       toast({
         title: `Request ${action}`,
-        description: `${request?.employeeName}'s leave request has been ${action}.`,
+        description: `${request?.employee?.firstName} ${request?.employee?.lastName}'s leave request has been ${action}.`,
       });
 
       setSelectedRequest(null);
       setComments('');
-    } catch (error) {
+      
+      // Refresh the list
+      fetchPendingRequests();
+    } catch (error: any) {
       toast({
         title: "Error",
         description: "Failed to process the request. Please try again.",
@@ -85,21 +102,28 @@ const PendingApprovals: React.FC = () => {
         </p>
       </div>
 
-      {pendingRequests.length > 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin mr-2" />
+          <span>Loading pending requests...</span>
+        </div>
+      ) : pendingRequests.length > 0 ? (
         <div className="grid gap-6">
-          {pendingRequests.map((request: LeaveRequest) => (
+          {pendingRequests.map((request) => (
             <Card key={request.id} className="shadow-professional-md border-0 bg-gradient-card hover:shadow-professional-lg transition-smooth">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-3">
                       <div className="w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                        {request.employeeName.split(' ').map(n => n[0]).join('')}
+                        {request.employee ? `${request.employee.firstName[0]}${request.employee.lastName[0]}` : 'U'}
                       </div>
                       <div>
-                        <p className="font-semibold text-foreground">{request.employeeName}</p>
+                        <p className="font-semibold text-foreground">
+                          {request.employee ? `${request.employee.firstName} ${request.employee.lastName}` : 'Unknown Employee'}
+                        </p>
                         <p className="text-sm text-muted-foreground">
-                          Applied {formatDateTime(request.appliedAt)}
+                          Applied {formatDateTime(request.createdAt)}
                         </p>
                       </div>
                       <Badge className="bg-warning-light text-warning border-warning/20">
@@ -115,7 +139,7 @@ const PendingApprovals: React.FC = () => {
                         <Calendar className="h-4 w-4 text-primary" />
                         <div>
                           <p className="text-sm text-muted-foreground">Leave Type</p>
-                          <p className="font-medium">{leaveTypeLabels[request.leaveType]}</p>
+                          <p className="font-medium">{leaveTypeLabels[request.leaveType] || request.leaveType}</p>
                         </div>
                       </div>
                       
@@ -124,12 +148,12 @@ const PendingApprovals: React.FC = () => {
                         <p className="font-medium">
                           {formatDate(request.startDate)} - {formatDate(request.endDate)}
                         </p>
-                        <p className="text-sm text-muted-foreground">{request.days} days</p>
+                        <p className="text-sm text-muted-foreground">{request.daysCount || request.days || 0} days</p>
                       </div>
                       
                       <div>
                         <p className="text-sm text-muted-foreground">Reason</p>
-                        <p className="font-medium line-clamp-2">{request.reason}</p>
+                        <p className="font-medium line-clamp-2">{request.reason || 'No reason provided'}</p>
                       </div>
                     </div>
                   </div>
@@ -152,16 +176,16 @@ const PendingApprovals: React.FC = () => {
                       <DialogHeader>
                         <DialogTitle>Review Leave Request</DialogTitle>
                         <DialogDescription>
-                          Review and approve or reject {request.employeeName}'s leave request
+                          Review and approve or reject {request.employee ? `${request.employee.firstName} ${request.employee.lastName}` : 'Unknown Employee'}'s leave request
                         </DialogDescription>
                       </DialogHeader>
                       
                       <div className="space-y-4">
                         <div className="p-4 bg-secondary/50 rounded-lg space-y-2">
-                          <p><span className="font-medium">Employee:</span> {request.employeeName}</p>
-                          <p><span className="font-medium">Leave Type:</span> {leaveTypeLabels[request.leaveType]}</p>
-                          <p><span className="font-medium">Duration:</span> {formatDate(request.startDate)} - {formatDate(request.endDate)} ({request.days} days)</p>
-                          <p><span className="font-medium">Reason:</span> {request.reason}</p>
+                          <p><span className="font-medium">Employee:</span> {request.employee ? `${request.employee.firstName} ${request.employee.lastName}` : 'Unknown Employee'}</p>
+                          <p><span className="font-medium">Leave Type:</span> {leaveTypeLabels[request.leaveType] || request.leaveType}</p>
+                          <p><span className="font-medium">Duration:</span> {formatDate(request.startDate)} - {formatDate(request.endDate)} ({request.daysCount || request.days || 0} days)</p>
+                          <p><span className="font-medium">Reason:</span> {request.reason || 'No reason provided'}</p>
                         </div>
                         
                         <div>

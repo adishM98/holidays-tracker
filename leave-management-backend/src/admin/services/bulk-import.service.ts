@@ -135,6 +135,7 @@ export class BulkImportService {
     const employee = await this.employeesService.create({
       userId: user.id,
       employeeId: row.employee_id,
+      email: row.email,
       firstName: row.first_name,
       lastName: row.last_name,
       phone: row.phone,

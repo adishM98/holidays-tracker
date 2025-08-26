@@ -71,6 +71,7 @@ const Employees: React.FC = () => {
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
+    employeeId: '',
     firstName: '',
     lastName: '',
     email: '',
@@ -87,6 +88,10 @@ const Employees: React.FC = () => {
     loadData();
   }, []);
 
+  useEffect(() => {
+    console.log('formData changed:', formData);
+  }, [formData]);
+
   const loadData = async () => {
     try {
       setIsLoading(true);
@@ -94,6 +99,9 @@ const Employees: React.FC = () => {
         adminAPI.getEmployees(1, 100),
         adminAPI.getDepartments(),
       ]);
+      
+      console.log('API Response:', employeesResponse);
+      console.log('First employee:', employeesResponse.employees?.[0] || employeesResponse.data?.[0]);
       
       setEmployees(employeesResponse.employees || employeesResponse.data || []);
       setDepartments(departmentsResponse);
@@ -190,6 +198,7 @@ const Employees: React.FC = () => {
 
   const resetForm = () => {
     setFormData({
+      employeeId: '',
       firstName: '',
       lastName: '',
       email: '',
@@ -239,8 +248,10 @@ const Employees: React.FC = () => {
   };
 
   const openEditDialog = (employee: Employee) => {
+    console.log('Opening edit dialog for employee:', employee);
     setSelectedEmployee(employee);
     setFormData({
+      employeeId: employee.employeeId || '',
       firstName: employee.firstName,
       lastName: employee.lastName,
       email: employee.email,
@@ -252,6 +263,15 @@ const Employees: React.FC = () => {
       sickLeaveDays: 12,
       casualLeaveDays: 8,
     });
+    console.log('Form data set to:', {
+      firstName: employee.firstName,
+      lastName: employee.lastName,
+      email: employee.email,
+      departmentId: employee.department.id,
+      position: employee.position,
+      managerId: employee.manager?.id || '',
+      joiningDate: employee.joiningDate.split('T')[0],
+    });
     setIsEditDialogOpen(true);
   };
 
@@ -260,7 +280,7 @@ const Employees: React.FC = () => {
       employee.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.employeeId.toLowerCase().includes(searchTerm.toLowerCase());
+      `${employee.firstName} ${employee.lastName}`.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesDepartment = selectedDepartment === '' || 
       employee.department.id === selectedDepartment;
@@ -292,6 +312,17 @@ const Employees: React.FC = () => {
           />
         </div>
       </div>
+
+      <div>
+        <Label htmlFor="employeeId">Employee ID *</Label>
+        <Input
+          id="employeeId"
+          value={formData.employeeId}
+          onChange={(e) => setFormData({...formData, employeeId: e.target.value})}
+          placeholder="Enter employee ID"
+          required
+        />
+      </div>
       
       <div>
         <Label htmlFor="email">Email *</Label>
@@ -299,10 +330,16 @@ const Employees: React.FC = () => {
           id="email"
           type="email"
           value={formData.email}
-          onChange={(e) => setFormData({...formData, email: e.target.value})}
+          onChange={(e) => {
+            console.log('Email input changed:', e.target.value);
+            setFormData({...formData, email: e.target.value});
+          }}
           placeholder="Enter email address"
           required
         />
+        <div className="text-xs text-muted-foreground mt-1">
+          Current value: "{formData.email}"
+        </div>
       </div>
       
       <div className="grid grid-cols-2 gap-4">
@@ -489,31 +526,30 @@ const Employees: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Employee ID</TableHead>
-                    <TableHead>Name</TableHead>
+                    <TableHead>Serial No.</TableHead>
+                    <TableHead>Employee Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Department</TableHead>
                     <TableHead>Position</TableHead>
                     <TableHead>Manager</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="w-24">Actions</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredEmployees.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                         No employees found
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredEmployees.map((employee) => (
                       <TableRow key={employee.id}>
-                        <TableCell className="font-medium">{employee.employeeId}</TableCell>
                         <TableCell>
-                          <div>
-                            <div className="font-medium">{employee.firstName} {employee.lastName}</div>
-                          </div>
+                          <div className="font-medium">{employee.employeeId || 'N/A'}</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium">{employee.firstName} {employee.lastName}</div>
                         </TableCell>
                         <TableCell>{employee.email}</TableCell>
                         <TableCell>{employee.department.name}</TableCell>
@@ -523,11 +559,6 @@ const Employees: React.FC = () => {
                             ? `${employee.manager.firstName} ${employee.manager.lastName}`
                             : '-'
                           }
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={employee.isActive ? "default" : "secondary"}>
-                            {employee.isActive ? "Active" : "Inactive"}
-                          </Badge>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center space-x-2">

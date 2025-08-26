@@ -4,10 +4,13 @@ import { Calendar, FileText, Home, Users, LogOut, Clock, Menu, X, Settings, Uplo
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { actualTheme } = useTheme();
   const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -27,8 +30,10 @@ const Sidebar: React.FC = () => {
 
   const adminNavItems = [
     { path: '/dashboard', icon: Home, label: 'Dashboard' },
-    { path: '/admin/employees', icon: Users, label: 'Employees' },
-    { path: '/admin/reports', icon: FileText, label: 'Reports' }
+    { path: '/admin/employees', icon: Users, label: 'People' },
+    { path: '/admin/calendar', icon: Calendar, label: 'Mark Leave/Attendance' },
+    { path: '/admin/reports', icon: FileText, label: 'Reports' },
+    { path: '/admin/settings', icon: Settings, label: 'Settings' }
   ];
 
   const getNavItems = () => {
@@ -90,9 +95,9 @@ const Sidebar: React.FC = () => {
           <div className="p-6 border-b border-border mt-16">
             <div className="flex items-center justify-center">
               <img 
-                src="/light/tooljet-light.svg" 
+                src={actualTheme === 'dark' ? "/light/light.png" : "/light/tooljet-light.svg"}
                 alt="ToolJet Logo" 
-                className="h-8 w-auto"
+                className={`h-8 w-auto ${actualTheme === 'dark' ? 'brightness-0 invert' : ''}`}
                 onError={(e) => {
                   // Fallback to PNG if SVG fails to load
                   e.currentTarget.src = "/light/light.png";
@@ -103,14 +108,17 @@ const Sidebar: React.FC = () => {
           </div>
 
           <div className="p-4 border-b border-border">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center text-white font-semibold">
-                {getUserInitials()}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center text-white font-semibold">
+                  {getUserInitials()}
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">{getUserDisplayName()}</p>
+                  <p className="text-sm text-muted-foreground capitalize">{user?.role} • {getUserDepartment()}</p>
+                </div>
               </div>
-              <div>
-                <p className="font-medium text-foreground">{getUserDisplayName()}</p>
-                <p className="text-sm text-muted-foreground capitalize">{user?.role} • {getUserDepartment()}</p>
-              </div>
+              <ThemeToggle />
             </div>
           </div>
 
@@ -160,9 +168,9 @@ const Sidebar: React.FC = () => {
       <div className="p-6 border-b border-border">
         <div className="flex items-center justify-center">
           <img 
-            src="/light/tooljet-light.svg" 
+            src={actualTheme === 'dark' ? "/light/light.png" : "/light/tooljet-light.svg"}
             alt="ToolJet Logo" 
-            className="h-8 w-auto"
+            className={`h-8 w-auto ${actualTheme === 'dark' ? 'brightness-0 invert' : ''}`}
             onError={(e) => {
               // Fallback to PNG if SVG fails to load
               e.currentTarget.src = "/light/light.png";
@@ -173,14 +181,17 @@ const Sidebar: React.FC = () => {
       </div>
 
       <div className="p-4 border-b border-border">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center text-white font-semibold">
-            {getUserInitials()}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center text-white font-semibold">
+              {getUserInitials()}
+            </div>
+            <div>
+              <p className="font-medium text-foreground">{getUserDisplayName()}</p>
+              <p className="text-sm text-muted-foreground capitalize">{user?.role} • {getUserDepartment()}</p>
+            </div>
           </div>
-          <div>
-            <p className="font-medium text-foreground">{getUserDisplayName()}</p>
-            <p className="text-sm text-muted-foreground capitalize">{user?.role} • {getUserDepartment()}</p>
-          </div>
+          <ThemeToggle />
         </div>
       </div>
 

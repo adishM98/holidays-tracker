@@ -316,6 +316,156 @@ export const adminAPI = {
       body: JSON.stringify(data),
     });
   },
+
+  getLeaveCalendar: async (month?: number, year?: number) => {
+    const params = new URLSearchParams();
+    if (month) params.append('month', month.toString());
+    if (year) params.append('year', year.toString());
+    
+    const queryString = params.toString() ? `?${params}` : '';
+    return apiRequest(`/admin/leave-calendar${queryString}`);
+  },
+
+  getAllLeaveRequests: async (status?: string, month?: number, year?: number) => {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (month) params.append('month', month.toString());
+    if (year) params.append('year', year.toString());
+    
+    const queryString = params.toString() ? `?${params}` : '';
+    return apiRequest(`/admin/leave-requests${queryString}`);
+  },
+
+  createLeaveForEmployee: async (data: {
+    employeeId: string;
+    leaveType: 'annual' | 'sick' | 'casual';
+    startDate: string;
+    endDate: string;
+    reason: string;
+    status?: 'approved' | 'pending';
+  }) => {
+    return apiRequest('/admin/leave-requests', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateLeaveRequest: async (id: string, data: {
+    leaveType?: 'annual' | 'sick' | 'casual';
+    startDate?: string;
+    endDate?: string;
+    reason?: string;
+  }) => {
+    return apiRequest(`/admin/leave-requests/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteLeaveRequest: async (id: string) => {
+    return apiRequest(`/admin/leave-requests/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  approveLeaveRequest: async (requestId: string, comments?: string) => {
+    return apiRequest(`/admin/leave-requests/${requestId}/approve`, {
+      method: 'PUT',
+      body: JSON.stringify({ comments }),
+    });
+  },
+
+  rejectLeaveRequest: async (requestId: string, rejectionReason: string) => {
+    return apiRequest(`/admin/leave-requests/${requestId}/reject`, {
+      method: 'PUT',
+      body: JSON.stringify({ rejectionReason }),
+    });
+  },
+
+  // Reports API
+  getEmployeeLeaveReport: async (employeeId?: string, year?: number) => {
+    const params = new URLSearchParams();
+    if (employeeId) params.append('employeeId', employeeId);
+    if (year) params.append('year', year.toString());
+    
+    const queryString = params.toString() ? `?${params}` : '';
+    return apiRequest(`/admin/reports/employee-leave${queryString}`);
+  },
+
+  getApprovalBottlenecks: async (days?: number) => {
+    const params = new URLSearchParams();
+    if (days) params.append('days', days.toString());
+    
+    const queryString = params.toString() ? `?${params}` : '';
+    return apiRequest(`/admin/reports/approval-bottlenecks${queryString}`);
+  },
+
+  getLowUtilizationReport: async (year?: number, threshold?: number) => {
+    const params = new URLSearchParams();
+    if (year) params.append('year', year.toString());
+    if (threshold) params.append('threshold', threshold.toString());
+    
+    const queryString = params.toString() ? `?${params}` : '';
+    return apiRequest(`/admin/reports/low-utilization${queryString}`);
+  },
+
+  getDepartmentComparison: async (year?: number) => {
+    const params = new URLSearchParams();
+    if (year) params.append('year', year.toString());
+    
+    const queryString = params.toString() ? `?${params}` : '';
+    return apiRequest(`/admin/reports/department-comparison${queryString}`);
+  },
+
+  // Holiday Management
+  getHolidays: async (year?: number, isActive?: boolean) => {
+    const params = new URLSearchParams();
+    if (year) params.append('year', year.toString());
+    if (isActive !== undefined) params.append('isActive', isActive.toString());
+    
+    const queryString = params.toString() ? `?${params}` : '';
+    return apiRequest(`/admin/holidays${queryString}`);
+  },
+
+  getHoliday: async (id: string) => {
+    return apiRequest(`/admin/holidays/${id}`);
+  },
+
+  createHoliday: async (data: {
+    name: string;
+    date: string;
+    description?: string;
+    isRecurring?: boolean;
+    isActive?: boolean;
+  }) => {
+    return apiRequest('/admin/holidays', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateHoliday: async (id: string, data: {
+    name?: string;
+    date?: string;
+    description?: string;
+    isRecurring?: boolean;
+    isActive?: boolean;
+  }) => {
+    return apiRequest(`/admin/holidays/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteHoliday: async (id: string) => {
+    return apiRequest(`/admin/holidays/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  getUpcomingHolidays: async (days: number = 30) => {
+    return apiRequest(`/admin/holidays/upcoming/${days}`);
+  },
 };
 
 export { getAuthToken, setAuthToken, removeAuthToken };

@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Layout from "@/components/Layout/Layout";
 import Login from "@/pages/Login";
@@ -12,14 +13,18 @@ import ApplyLeave from "@/pages/ApplyLeave";
 import LeaveHistory from "@/pages/LeaveHistory";
 import PendingApprovals from "@/pages/PendingApprovals";
 import EmployeesDebug from "@/pages/admin/EmployeesDebug";
+import LeaveCalendar from "@/pages/admin/LeaveCalendar";
+import Reports from "@/pages/admin/Reports";
+import Settings from "@/pages/admin/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
+    <ThemeProvider>
+      <TooltipProvider>
+        <AuthProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
@@ -74,12 +79,34 @@ const App = () => (
                 </Layout>
               </ProtectedRoute>
             } />
+            <Route path="/admin/calendar" element={
+              <ProtectedRoute>
+                <Layout>
+                  <LeaveCalendar />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/reports" element={
+              <ProtectedRoute>
+                <Layout>
+                  <Reports />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/settings" element={
+              <ProtectedRoute>
+                <Layout>
+                  <Settings />
+                </Layout>
+              </ProtectedRoute>
+            } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
-      </AuthProvider>
-    </TooltipProvider>
+        </AuthProvider>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

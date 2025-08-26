@@ -3,7 +3,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { LeaveType } from '../../common/enums/leave-type.enum';
 
 export class CreateLeaveRequestDto {
-  @ApiProperty({ enum: LeaveType, example: LeaveType.ANNUAL })
+  @ApiProperty({ enum: LeaveType, example: LeaveType.SICK })
   @IsEnum(LeaveType)
   leaveType: LeaveType;
 

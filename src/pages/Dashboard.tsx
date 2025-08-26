@@ -3,9 +3,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, CheckCircle, XCircle, Plus, Users, Loader2 } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, XCircle, Plus, Users, Loader2, Check, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { employeeAPI, managerAPI } from '@/services/api';
+import { employeeAPI, managerAPI, adminAPI } from '@/services/api';
 import { DashboardData, LeaveRequest, LeaveBalance } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -13,7 +13,10 @@ const Dashboard: React.FC = () => {
   const { user, isLoading: authLoading } = useAuth();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [managerData, setManagerData] = useState<any>(null);
+  const [upcomingHolidays, setUpcomingHolidays] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [adminRequests, setAdminRequests] = useState<any>(null);
+  const [isProcessingApproval, setIsProcessingApproval] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -35,6 +38,23 @@ const Dashboard: React.FC = () => {
         const managerStats = await managerAPI.getDashboardStats();
         const teamRequests = await managerAPI.getTeamRequests(1, 5, 'pending');
         setManagerData({ stats: managerStats, teamRequests });
+      }
+      
+      if (user?.role === 'admin') {
+        // Get all recent requests, not just pending ones for the Recent Requests section
+        const adminLeaveRequests = await adminAPI.getAllLeaveRequests();
+        console.log('Admin leave requests:', adminLeaveRequests);
+        setAdminRequests(adminLeaveRequests);
+      }
+
+      // Load upcoming holidays for all users
+      try {
+        const holidays = await adminAPI.getUpcomingHolidays(30);
+        setUpcomingHolidays(holidays || []);
+      } catch (error) {
+        // Holidays are optional, don't fail the dashboard if they can't be loaded
+        console.warn('Failed to load upcoming holidays:', error);
+        setUpcomingHolidays([]);
       }
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
@@ -99,6 +119,34 @@ const Dashboard: React.FC = () => {
       }
     };
     return configs[status] || configs.pending;
+  };
+
+  const handleAdminApproval = async (requestId: string, action: 'approved' | 'rejected') => {
+    setIsProcessingApproval(requestId);
+    
+    try {
+      if (action === 'approved') {
+        await adminAPI.approveLeaveRequest(requestId, 'Approved by admin');
+      } else {
+        await adminAPI.rejectLeaveRequest(requestId, 'Rejected by admin');
+      }
+
+      toast({
+        title: `Request ${action}`,
+        description: `Leave request has been ${action} successfully.`,
+      });
+
+      // Refresh the dashboard data
+      loadDashboardData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to process the request. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingApproval(null);
+    }
   };
 
   if (authLoading || isLoading) {
@@ -183,67 +231,61 @@ const Dashboard: React.FC = () => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Recent Leave Requests */}
+        {/* Open Requests - Left Side */}
         <Card className="shadow-professional-md border-0 bg-gradient-card">
           <CardHeader>
             <CardTitle className="flex items-center">
               <Clock className="h-5 w-5 mr-2 text-primary" />
-              Recent Requests
+              Open Requests
+              {(() => {
+                const pendingCount = user?.role === 'admin' 
+                  ? adminRequests?.requests?.filter(req => req.status === 'pending').length || 0
+                  : dashboardData?.recentRequests?.filter(req => req.status === 'pending').length || 0;
+                
+                return pendingCount > 0 && (
+                  <Badge className="ml-2 bg-warning text-warning-foreground">
+                    {pendingCount}
+                  </Badge>
+                );
+              })()}
             </CardTitle>
             <CardDescription>
-              {user?.role === 'admin' ? 'Latest leave applications from all employees' : 'Your latest leave applications'}
+              {user?.role === 'admin' ? 'Pending leave applications from all employees' : 'Your pending leave applications'}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {dashboardData?.recentRequests && dashboardData.recentRequests.length > 0 ? (
-              <div className="space-y-4">
-                {dashboardData.recentRequests.map((request: LeaveRequest) => {
-                  const statusConfig = getStatusConfig(request.status);
-                  return (
-                    <div key={request.id} className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <p className="font-medium text-foreground">
-                            {getLeaveTypeLabel(request.leaveType)}
-                          </p>
-                          <Badge className={`text-xs px-2 py-1 ${statusConfig.className}`}>
-                            <div className="flex items-center space-x-1">
-                              {getStatusIcon(request.status)}
-                              <span>{statusConfig.label}</span>
-                            </div>
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {formatDate(request.startDate)} - {formatDate(request.endDate)} ({request.daysCount} days)
-                        </p>
-                        {request.reason && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {request.reason}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-                <Link to="/leave-history" className="block">
-                  <Button variant="outline" className="w-full mt-4">
-                    View All Requests
-                  </Button>
-                </Link>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  {user?.role === 'admin' ? 'No leave requests from employees yet' : 'No leave requests yet'}
-                </p>
-                {user?.role !== 'admin' && (
-                  <Link to="/apply-leave" className="block mt-4">
-                    <Button>Apply for Leave</Button>
-                  </Link>
-                )}
-              </div>
-            )}
+            <div className="text-center py-8">
+              <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              {(() => {
+                const pendingCount = user?.role === 'admin' 
+                  ? adminRequests?.requests?.filter(req => req.status === 'pending').length || 0
+                  : dashboardData?.recentRequests?.filter(req => req.status === 'pending').length || 0;
+                
+                return pendingCount > 0 ? (
+                  <div>
+                    <p className="text-muted-foreground mb-4">
+                      {pendingCount} {pendingCount === 1 ? 'request' : 'requests'} awaiting review
+                    </p>
+                    <Link to={user?.role === 'admin' ? '/admin/calendar' : '/leave-history'} className="block">
+                      <Button variant="outline">
+                        {user?.role === 'admin' ? 'View Leave Calendar' : 'View All Requests'}
+                      </Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-muted-foreground mb-4">
+                      {user?.role === 'admin' ? 'No pending requests from employees' : 'No pending requests'}
+                    </p>
+                    {user?.role !== 'admin' && (
+                      <Link to="/apply-leave" className="block">
+                        <Button>Apply for Leave</Button>
+                      </Link>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
           </CardContent>
         </Card>
 
@@ -304,42 +346,64 @@ const Dashboard: React.FC = () => {
           </Card>
         )}
 
-        {/* Admin Dashboard Section */}
-        {user?.role === 'admin' && (
-          <Card className="shadow-professional-md border-0 bg-gradient-card">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Users className="h-5 w-5 mr-2 text-primary" />
-                Admin Panel
-              </CardTitle>
-              <CardDescription>System administration and management</CardDescription>
-            </CardHeader>
-            <CardContent>
+        {/* Upcoming Holidays Section - Right Side */}
+        <Card className="shadow-professional-md border-0 bg-gradient-card">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Calendar className="h-5 w-5 mr-2 text-accent" />
+              Upcoming Holidays
+            </CardTitle>
+            <CardDescription>
+              Company holidays in the next 30 days
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {upcomingHolidays && upcomingHolidays.length > 0 ? (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <Link to="/admin/employees">
-                    <Button variant="outline" className="w-full h-16 flex flex-col">
-                      <Users className="h-6 w-6 mb-1" />
-                      <span className="text-sm">Manage Employees</span>
+                {upcomingHolidays.slice(0, 5).map((holiday) => (
+                  <div key={holiday.id} className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
+                    <div className="flex-1">
+                      <p className="font-medium text-foreground">{holiday.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {formatDate(holiday.date)}
+                      </p>
+                      {holiday.description && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {holiday.description}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center">
+                      {holiday.isRecurring && (
+                        <Badge variant="outline" className="text-xs">
+                          Recurring
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {user?.role === 'admin' && (
+                  <Link to="/admin/settings" className="block">
+                    <Button variant="outline" className="w-full mt-4">
+                      Manage Holidays
                     </Button>
                   </Link>
-                  <Link to="/admin/reports">
-                    <Button variant="outline" className="w-full h-16 flex flex-col">
-                      <Calendar className="h-6 w-6 mb-1" />
-                      <span className="text-sm">Reports</span>
-                    </Button>
-                  </Link>
-                  <Link to="/admin/bulk-import">
-                    <Button variant="outline" className="w-full h-16 flex flex-col">
-                      <Plus className="h-6 w-6 mb-1" />
-                      <span className="text-sm">Bulk Import</span>
-                    </Button>
-                  </Link>
-                </div>
+                )}
               </div>
-            </CardContent>
-          </Card>
-        )}
+            ) : (
+              <div className="text-center py-8">
+                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No upcoming holidays</p>
+                {user?.role === 'admin' && (
+                  <Link to="/admin/settings" className="block mt-4">
+                    <Button>Add Holidays</Button>
+                  </Link>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
       </div>
     </div>
   );

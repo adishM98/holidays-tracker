@@ -1,6 +1,6 @@
 export type UserRole = 'employee' | 'manager' | 'admin';
 
-export type LeaveType = 'annual' | 'sick' | 'casual' | 'maternity' | 'paternity' | 'unpaid';
+export type LeaveType = 'sick' | 'casual' | 'earned' | 'compensation';
 
 export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 

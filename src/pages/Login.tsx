@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, Mail, Lock } from 'lucide-react';
+import { Mail, Lock } from 'lucide-react';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -49,16 +50,27 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-accent-light flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-accent-light flex items-center justify-center p-4 relative">
+      {/* Theme Toggle */}
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+      
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <div className="w-16 h-16 bg-gradient-primary rounded-2xl flex items-center justify-center shadow-professional-md">
-              <Calendar className="h-8 w-8 text-white" />
+            <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center shadow-professional-md p-3">
+              <img 
+                src="/tooljet-light.svg"
+                alt="ToolJet Logo" 
+                className="h-full w-full object-contain"
+                onError={(e) => {
+                  // Fallback to existing logo if new ones fail
+                  e.currentTarget.src = "/light/tooljet-light.svg";
+                }}
+              />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-foreground">LeaveManager</h1>
-          <p className="text-muted-foreground mt-2">Professional Leave Management System</p>
         </div>
 
         <Card className="shadow-professional-lg border-0 bg-gradient-card">
@@ -111,16 +123,6 @@ const Login: React.FC = () => {
               </Button>
             </form>
 
-            <div className="mt-6 p-4 bg-secondary/50 rounded-lg">
-              <p className="text-sm text-muted-foreground mb-2">Default Admin Credentials:</p>
-              <div className="text-sm space-y-1">
-                <p><strong>Email:</strong> admin@company.com</p>
-                <p><strong>Password:</strong> Admin@123</p>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Additional employees can be created via admin panel or bulk import
-              </p>
-            </div>
           </CardContent>
         </Card>
       </div>

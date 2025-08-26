@@ -35,6 +35,9 @@ export class Employee {
   @Column({ name: 'last_name' })
   lastName: string;
 
+  @Column({ unique: true })
+  email: string;
+
   @Column({ nullable: true })
   phone: string;
 

@@ -93,15 +93,6 @@ export class LeaveCalculationService {
       {
         employeeId,
         year: currentYear,
-        leaveType: LeaveType.ANNUAL,
-        totalAllocated: this.calculateProRataLeave(joiningDate, employee.annualLeaveDays),
-        usedDays: 0,
-        availableDays: this.calculateProRataLeave(joiningDate, employee.annualLeaveDays),
-        carryForward: 0,
-      },
-      {
-        employeeId,
-        year: currentYear,
         leaveType: LeaveType.SICK,
         totalAllocated: employee.sickLeaveDays,
         usedDays: 0,
@@ -117,6 +108,16 @@ export class LeaveCalculationService {
         availableDays: this.calculateProRataLeave(joiningDate, employee.casualLeaveDays),
         carryForward: 0,
       },
+      {
+        employeeId,
+        year: currentYear,
+        leaveType: LeaveType.EARNED,
+        totalAllocated: this.calculateProRataLeave(joiningDate, employee.annualLeaveDays),
+        usedDays: 0,
+        availableDays: this.calculateProRataLeave(joiningDate, employee.annualLeaveDays),
+        carryForward: 0,
+      },
+      // Note: COMPENSATION leave type is not included as it doesn't affect balance calculations
     ];
 
     const savedBalances = [];
@@ -137,6 +138,11 @@ export class LeaveCalculationService {
     leaveType: LeaveType, 
     daysChange: number
   ): Promise<void> {
+    // Skip balance update for compensation off as it doesn't affect leave balances
+    if (leaveType === LeaveType.COMPENSATION) {
+      return;
+    }
+
     const balance = await this.leaveBalanceRepository.findOne({
       where: { employeeId, year, leaveType }
     });
@@ -145,8 +151,23 @@ export class LeaveCalculationService {
       throw new Error('Leave balance not found');
     }
 
-    balance.usedDays += daysChange;
-    balance.availableDays = balance.totalAllocated + balance.carryForward - balance.usedDays;
+    // Ensure all values are properly converted to numbers
+    const currentUsedDays = Number(balance.usedDays) || 0;
+    const totalAllocated = Number(balance.totalAllocated) || 0;
+    const carryForward = Number(balance.carryForward) || 0;
+    const daysChangeNum = Number(daysChange) || 0;
+
+    // Validate that we have valid numbers
+    if (isNaN(currentUsedDays) || isNaN(totalAllocated) || isNaN(carryForward) || isNaN(daysChangeNum)) {
+      throw new Error(`Invalid numeric values: usedDays=${balance.usedDays}, totalAllocated=${balance.totalAllocated}, carryForward=${balance.carryForward}, daysChange=${daysChange}`);
+    }
+
+    // Calculate new values
+    const newUsedDays = Number((currentUsedDays + daysChangeNum).toFixed(2));
+    const newAvailableDays = Number((totalAllocated + carryForward - newUsedDays).toFixed(2));
+
+    balance.usedDays = newUsedDays;
+    balance.availableDays = newAvailableDays;
 
     // Ensure available days don't go negative
     if (balance.availableDays < 0) {
@@ -165,6 +186,11 @@ export class LeaveCalculationService {
     requestedDays: number,
     year?: number
   ): Promise<{ available: boolean; balance: number }> {
+    // Compensation off is always available as it doesn't affect leave balances
+    if (leaveType === LeaveType.COMPENSATION) {
+      return { available: true, balance: 0 };
+    }
+
     const currentYear = year || new Date().getFullYear();
     
     const balance = await this.leaveBalanceRepository.findOne({
@@ -198,14 +224,14 @@ export class LeaveCalculationService {
     });
 
     for (const balance of balances) {
-      if (balance.leaveType === LeaveType.ANNUAL) {
+      if (balance.leaveType === LeaveType.EARNED) {
         const carryForward = this.calculateCarryForward(balance.availableDays);
         
         // Create next year's balance
         const nextYearBalance = this.leaveBalanceRepository.create({
           employeeId: balance.employeeId,
           year: year + 1,
-          leaveType: LeaveType.ANNUAL,
+          leaveType: LeaveType.EARNED,
           totalAllocated: balance.employee.annualLeaveDays,
           usedDays: 0,
           availableDays: balance.employee.annualLeaveDays + carryForward,
@@ -213,7 +239,7 @@ export class LeaveCalculationService {
         });
 
         await this.leaveBalanceRepository.save(nextYearBalance);
-      } else {
+      } else if (balance.leaveType === LeaveType.SICK || balance.leaveType === LeaveType.CASUAL) {
         // Sick and casual leave don't carry forward, create fresh allocation
         const nextYearBalance = this.leaveBalanceRepository.create({
           employeeId: balance.employeeId,
@@ -231,6 +257,7 @@ export class LeaveCalculationService {
 
         await this.leaveBalanceRepository.save(nextYearBalance);
       }
+      // Note: COMPENSATION leave type is not processed as it doesn't affect balance calculations
     }
   }
 

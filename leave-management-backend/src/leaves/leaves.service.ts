@@ -4,7 +4,9 @@ import { Repository, Between } from 'typeorm';
 import { LeaveRequest } from './entities/leave-request.entity';
 import { LeaveBalance } from './entities/leave-balance.entity';
 import { Employee } from '../employees/entities/employee.entity';
+import { User } from '../users/entities/user.entity';
 import { CreateLeaveRequestDto } from './dto/create-leave-request.dto';
+import { UpdateLeaveRequestDto } from './dto/update-leave-request.dto';
 import { ApproveLeaveRequestDto } from './dto/approve-leave-request.dto';
 import { RejectLeaveRequestDto } from './dto/reject-leave-request.dto';
 import { LeaveCalculationService } from './services/leave-calculation.service';
@@ -21,6 +23,8 @@ export class LeavesService {
     private leaveBalanceRepository: Repository<LeaveBalance>,
     @InjectRepository(Employee)
     private employeeRepository: Repository<Employee>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
     private leaveCalculationService: LeaveCalculationService,
     private mailService: MailService,
   ) {}
@@ -160,39 +164,161 @@ export class LeavesService {
     }
 
     // Update leave balance
-    const year = leaveRequest.startDate.getFullYear();
+    const year = new Date(leaveRequest.startDate).getFullYear();
     await this.leaveCalculationService.updateLeaveBalance(
       leaveRequest.employeeId,
       year,
       leaveRequest.leaveType,
-      leaveRequest.daysCount,
+      Number(leaveRequest.daysCount),
     );
 
     // Update request status
     leaveRequest.status = LeaveStatus.APPROVED;
-    leaveRequest.approvedBy = approverId;
+    
+    // Check if approver is an employee (has employee record) or admin (user only)
+    const employeeApprover = await this.employeeRepository.findOne({
+      where: { id: approverId }
+    });
+    
+    if (employeeApprover) {
+      // Manager/Employee approval - set the employee ID
+      leaveRequest.approvedBy = approverId;
+    } else {
+      // Admin approval - leave approvedBy as null since admin has no employee record
+      leaveRequest.approvedBy = null;
+    }
+    
     leaveRequest.approvedAt = new Date();
 
     const updatedRequest = await this.leaveRequestRepository.save(leaveRequest);
 
     // Send notification to employee
-    const approver = await this.employeeRepository.findOne({
-      where: { id: approverId },
-      relations: ['user'],
-    });
+    // Use the employeeApprover we already found, but with relations if it exists
+    let approver = null;
+    if (employeeApprover) {
+      approver = await this.employeeRepository.findOne({
+        where: { id: approverId },
+        relations: ['user'],
+      });
+    }
+
+    // If no employee found (admin case), try to find user directly
+    let approverName = approver?.fullName;
+    if (!approver) {
+      const userApprover = await this.userRepository.findOne({
+        where: { id: approverId },
+      });
+      approverName = userApprover?.email || 'Admin';
+    }
 
     if (leaveRequest.employee.user) {
       await this.mailService.sendLeaveStatusNotification(
         leaveRequest.employee.user.email,
         leaveRequest.leaveType,
-        leaveRequest.startDate,
-        leaveRequest.endDate,
+        new Date(leaveRequest.startDate),
+        new Date(leaveRequest.endDate),
         'approved',
-        approver?.fullName,
+        approverName,
       );
     }
 
     return this.findOne(updatedRequest.id);
+  }
+
+  async updateLeaveRequest(
+    requestId: string,
+    updateLeaveRequestDto: UpdateLeaveRequestDto,
+  ): Promise<LeaveRequest> {
+    const leaveRequest = await this.findOne(requestId);
+
+    if (leaveRequest.status !== LeaveStatus.PENDING) {
+      throw new BadRequestException('Can only update pending leave requests');
+    }
+
+    // Update the leave request with new data
+    if (updateLeaveRequestDto.leaveType) {
+      leaveRequest.leaveType = updateLeaveRequestDto.leaveType;
+    }
+    if (updateLeaveRequestDto.startDate) {
+      leaveRequest.startDate = new Date(updateLeaveRequestDto.startDate);
+    }
+    if (updateLeaveRequestDto.endDate) {
+      leaveRequest.endDate = new Date(updateLeaveRequestDto.endDate);
+    }
+    if (updateLeaveRequestDto.reason !== undefined) {
+      leaveRequest.reason = updateLeaveRequestDto.reason;
+    }
+
+    // Recalculate days count if dates changed
+    if (updateLeaveRequestDto.startDate || updateLeaveRequestDto.endDate) {
+      const startDate = leaveRequest.startDate;
+      const endDate = leaveRequest.endDate;
+      
+      if (startDate > endDate) {
+        throw new BadRequestException('Start date must be before or equal to end date');
+      }
+
+      const timeDiff = endDate.getTime() - startDate.getTime();
+      const daysCount = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
+      leaveRequest.daysCount = daysCount;
+
+      // Validate leave availability with new values
+      const year = startDate.getFullYear();
+      const availability = await this.leaveCalculationService.checkLeaveAvailability(
+        leaveRequest.employeeId,
+        leaveRequest.leaveType,
+        daysCount,
+        year,
+      );
+
+      if (!availability.available) {
+        throw new BadRequestException(`Insufficient leave balance. Available: ${availability.balance} days, Requested: ${daysCount} days`);
+      }
+    }
+
+    return this.leaveRequestRepository.save(leaveRequest);
+  }
+
+  async deleteLeaveRequest(requestId: string): Promise<void> {
+    console.log('LeavesService: Starting delete for request ID:', requestId);
+    
+    const leaveRequest = await this.findOne(requestId);
+    console.log('LeavesService: Found leave request:', leaveRequest.id, 'Status:', leaveRequest.status);
+
+    if (leaveRequest.status === LeaveStatus.APPROVED) {
+      console.log('LeavesService: Restoring leave balance for approved request');
+      // If approved, we need to restore the leave balance by adding back the days
+      const year = new Date(leaveRequest.startDate).getFullYear();
+      
+      // Find the leave balance record
+      const leaveBalance = await this.leaveBalanceRepository.findOne({
+        where: {
+          employeeId: leaveRequest.employeeId,
+          year,
+          leaveType: leaveRequest.leaveType,
+        },
+      });
+
+      if (leaveBalance) {
+        console.log('LeavesService: Updating leave balance, restoring', leaveRequest.daysCount, 'days');
+        // Ensure all values are properly converted to numbers
+        const currentUsedDays = Number(leaveBalance.usedDays) || 0;
+        const daysToRestore = Number(leaveRequest.daysCount) || 0;
+        const totalAllocated = Number(leaveBalance.totalAllocated) || 0;
+        const carryForward = Number(leaveBalance.carryForward) || 0;
+        
+        const newUsedDays = Math.max(0, currentUsedDays - daysToRestore);
+        const newAvailableDays = totalAllocated + carryForward - newUsedDays;
+        
+        leaveBalance.usedDays = Number(newUsedDays.toFixed(2));
+        leaveBalance.availableDays = Number(newAvailableDays.toFixed(2));
+        await this.leaveBalanceRepository.save(leaveBalance);
+      }
+    }
+
+    console.log('LeavesService: Removing leave request from database');
+    await this.leaveRequestRepository.remove(leaveRequest);
+    console.log('LeavesService: Delete operation completed successfully');
   }
 
   async rejectLeaveRequest(
@@ -208,26 +334,52 @@ export class LeavesService {
 
     // Update request status
     leaveRequest.status = LeaveStatus.REJECTED;
-    leaveRequest.approvedBy = approverId;
+    
+    // Check if approver is an employee (has employee record) or admin (user only)
+    const employeeApprover = await this.employeeRepository.findOne({
+      where: { id: approverId }
+    });
+    
+    if (employeeApprover) {
+      // Manager/Employee rejection - set the employee ID
+      leaveRequest.approvedBy = approverId;
+    } else {
+      // Admin rejection - leave approvedBy as null since admin has no employee record
+      leaveRequest.approvedBy = null;
+    }
+    
     leaveRequest.approvedAt = new Date();
     leaveRequest.rejectionReason = rejectDto.rejectionReason;
 
     const updatedRequest = await this.leaveRequestRepository.save(leaveRequest);
 
     // Send notification to employee
-    const approver = await this.employeeRepository.findOne({
-      where: { id: approverId },
-      relations: ['user'],
-    });
+    // Use the employeeApprover we already found, but with relations if it exists
+    let approver = null;
+    if (employeeApprover) {
+      approver = await this.employeeRepository.findOne({
+        where: { id: approverId },
+        relations: ['user'],
+      });
+    }
+
+    // If no employee found (admin case), try to find user directly
+    let approverName = approver?.fullName;
+    if (!approver) {
+      const userApprover = await this.userRepository.findOne({
+        where: { id: approverId },
+      });
+      approverName = userApprover?.email || 'Admin';
+    }
 
     if (leaveRequest.employee.user) {
       await this.mailService.sendLeaveStatusNotification(
         leaveRequest.employee.user.email,
         leaveRequest.leaveType,
-        leaveRequest.startDate,
-        leaveRequest.endDate,
+        new Date(leaveRequest.startDate),
+        new Date(leaveRequest.endDate),
         'rejected',
-        approver?.fullName,
+        approverName,
         rejectDto.rejectionReason,
       );
     }
@@ -284,7 +436,7 @@ export class LeavesService {
       .leftJoinAndSelect('leaveRequest.employee', 'employee')
       .leftJoinAndSelect('employee.user', 'user')
       .leftJoinAndSelect('employee.department', 'department')
-      .where('leaveRequest.status = :status', { status: LeaveStatus.APPROVED })
+      .where('leaveRequest.status IN (:...statuses)', { statuses: [LeaveStatus.APPROVED, LeaveStatus.PENDING] })
       .andWhere(
         '(leaveRequest.startDate BETWEEN :startDate AND :endDate OR leaveRequest.endDate BETWEEN :startDate AND :endDate)',
         { startDate, endDate },

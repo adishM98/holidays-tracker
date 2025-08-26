@@ -35,7 +35,16 @@ export class LeaveRequest {
   @Column({ name: 'end_date', type: 'date' })
   endDate: Date;
 
-  @Column({ name: 'days_count', type: 'decimal', precision: 5, scale: 2 })
+  @Column({ 
+    name: 'days_count', 
+    type: 'decimal', 
+    precision: 5, 
+    scale: 2,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => parseFloat(value)
+    }
+  })
   daysCount: number;
 
   @Column({ type: 'text', nullable: true })
@@ -54,7 +63,7 @@ export class LeaveRequest {
   @Column({ name: 'approved_by', nullable: true })
   approvedBy: string;
 
-  @ManyToOne(() => Employee, { nullable: true })
+  @ManyToOne(() => Employee, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'approved_by' })
   approver: Employee;
 

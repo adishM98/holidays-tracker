@@ -15,10 +15,22 @@ export class EmployeesService {
   ) {}
 
   async create(createEmployeeDto: CreateEmployeeDto): Promise<Employee> {
-    // Check if employee ID already exists
-    const existingEmployee = await this.findByEmployeeId(createEmployeeDto.employeeId);
+    // Check if email already exists
+    const existingEmployee = await this.employeeRepository.findOne({
+      where: { email: createEmployeeDto.email }
+    });
     if (existingEmployee) {
-      throw new ConflictException('Employee ID already exists');
+      throw new ConflictException('Email already exists');
+    }
+
+    // Check if employeeId already exists
+    if (createEmployeeDto.employeeId) {
+      const existingEmployeeId = await this.employeeRepository.findOne({
+        where: { employeeId: createEmployeeDto.employeeId }
+      });
+      if (existingEmployeeId) {
+        throw new ConflictException('Employee ID already exists');
+      }
     }
 
     const employee = this.employeeRepository.create({
@@ -129,15 +141,30 @@ export class EmployeesService {
       managerId: employee.managerId,
     }, null, 2));
 
-    // Check if employee ID is being changed and already exists
-    if (updateEmployeeDto.employeeId && updateEmployeeDto.employeeId !== employee.employeeId) {
-      const existingEmployee = await this.findByEmployeeId(updateEmployeeDto.employeeId);
+    // Check if email is being changed and already exists
+    if (updateEmployeeDto.email && updateEmployeeDto.email !== employee.email) {
+      const existingEmployee = await this.employeeRepository.findOne({
+        where: { email: updateEmployeeDto.email }
+      });
       if (existingEmployee) {
+        throw new ConflictException('Email already exists');
+      }
+    }
+
+    // Check if employeeId is being changed and already exists
+    if (updateEmployeeDto.employeeId && updateEmployeeDto.employeeId !== employee.employeeId) {
+      const existingEmployeeId = await this.employeeRepository.findOne({
+        where: { employeeId: updateEmployeeDto.employeeId }
+      });
+      if (existingEmployeeId) {
         throw new ConflictException('Employee ID already exists');
       }
     }
 
     // Explicitly set each field to ensure TypeORM detects changes
+    if (updateEmployeeDto.employeeId !== undefined) {
+      employee.employeeId = updateEmployeeDto.employeeId;
+    }
     if (updateEmployeeDto.firstName !== undefined) {
       employee.firstName = updateEmployeeDto.firstName;
     }
@@ -173,8 +200,8 @@ export class EmployeesService {
     if (updateEmployeeDto.casualLeaveDays !== undefined) {
       employee.casualLeaveDays = updateEmployeeDto.casualLeaveDays;
     }
-    if (updateEmployeeDto.employeeId !== undefined) {
-      employee.employeeId = updateEmployeeDto.employeeId;
+    if (updateEmployeeDto.email !== undefined) {
+      employee.email = updateEmployeeDto.email;
     }
 
     console.log('Employee after manual assignment:', JSON.stringify({
@@ -189,6 +216,7 @@ export class EmployeesService {
     // Use repository update method for more direct database update
     const updateData: Partial<Employee> = {};
     
+    if (updateEmployeeDto.employeeId !== undefined) updateData.employeeId = updateEmployeeDto.employeeId;
     if (updateEmployeeDto.firstName !== undefined) updateData.firstName = updateEmployeeDto.firstName;
     if (updateEmployeeDto.lastName !== undefined) updateData.lastName = updateEmployeeDto.lastName;
     if (updateEmployeeDto.phone !== undefined) updateData.phone = updateEmployeeDto.phone;
@@ -202,7 +230,7 @@ export class EmployeesService {
     if (updateEmployeeDto.annualLeaveDays !== undefined) updateData.annualLeaveDays = updateEmployeeDto.annualLeaveDays;
     if (updateEmployeeDto.sickLeaveDays !== undefined) updateData.sickLeaveDays = updateEmployeeDto.sickLeaveDays;
     if (updateEmployeeDto.casualLeaveDays !== undefined) updateData.casualLeaveDays = updateEmployeeDto.casualLeaveDays;
-    if (updateEmployeeDto.employeeId !== undefined) updateData.employeeId = updateEmployeeDto.employeeId;
+    if (updateEmployeeDto.email !== undefined) updateData.email = updateEmployeeDto.email;
 
     console.log('Direct update data:', JSON.stringify(updateData, null, 2));
 

@@ -11,6 +11,10 @@ export class CreateEmployeeDto {
   @IsString()
   employeeId: string;
 
+  @ApiProperty({ example: 'john.doe@company.com' })
+  @IsEmail()
+  email: string;
+
   @ApiProperty({ example: 'John' })
   @IsString()
   firstName: string;

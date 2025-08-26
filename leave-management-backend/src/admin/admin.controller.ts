@@ -26,11 +26,18 @@ import { EmployeesService } from '../employees/employees.service';
 import { DepartmentsService } from '../departments/departments.service';
 import { LeavesService } from '../leaves/leaves.service';
 import { BulkImportService } from './services/bulk-import.service';
+import { HolidaysService } from '../holidays/holidays.service';
 import { CreateEmployeeDto } from '../employees/dto/create-employee.dto';
 import { UpdateEmployeeDto } from '../employees/dto/update-employee.dto';
 import { CreateDepartmentDto } from '../departments/dto/create-department.dto';
 import { UpdateDepartmentDto } from '../departments/dto/update-department.dto';
 import { BulkImportResultDto } from './dto/bulk-import-result.dto';
+import { CreateLeaveRequestDto } from '../leaves/dto/create-leave-request.dto';
+import { UpdateLeaveRequestDto } from '../leaves/dto/update-leave-request.dto';
+import { ApproveLeaveRequestDto } from '../leaves/dto/approve-leave-request.dto';
+import { RejectLeaveRequestDto } from '../leaves/dto/reject-leave-request.dto';
+import { CreateHolidayDto } from '../holidays/dto/create-holiday.dto';
+import { UpdateHolidayDto } from '../holidays/dto/update-holiday.dto';
 
 @ApiTags('Admin')
 @Controller('admin')
@@ -43,22 +50,25 @@ export class AdminController {
     private departmentsService: DepartmentsService,
     private leavesService: LeavesService,
     private bulkImportService: BulkImportService,
+    private holidaysService: HolidaysService,
   ) {}
 
   // Dashboard Stats
   @Get('dashboard-stats')
   @ApiOperation({ summary: 'Get admin dashboard statistics' })
   async getDashboardStats() {
-    const [employeeStats, departmentStats, leaveStats] = await Promise.all([
+    const [employeeStats, departmentStats, leaveStats, holidayStats] = await Promise.all([
       this.employeesService.getEmployeeStats(),
       this.departmentsService.getDepartmentStats(),
       this.leavesService.getLeaveStats(),
+      this.holidaysService.getHolidayStats(),
     ]);
 
     return {
       employees: employeeStats,
       departments: departmentStats,
       leaves: leaveStats,
+      holidays: holidayStats,
     };
   }
 
@@ -200,6 +210,77 @@ export class AdminController {
     });
   }
 
+  @Post('leave-requests')
+  @ApiOperation({ summary: 'Create leave request for an employee (admin only)' })
+  async createLeaveRequest(
+    @Body() body: CreateLeaveRequestDto & { employeeId: string },
+    @CurrentUser() user: User,
+  ) {
+    const { employeeId, ...createLeaveRequestDto } = body;
+    const leaveRequest = await this.leavesService.createLeaveRequest(employeeId, createLeaveRequestDto);
+    
+    // Auto-approve admin-created leaves
+    const employee = await this.employeesService.findByUserId(user.id);
+    if (employee) {
+      await this.leavesService.approveLeaveRequest(leaveRequest.id, employee.id, {
+        comments: 'Auto-approved by admin',
+      });
+    }
+    
+    return this.leavesService.findOne(leaveRequest.id);
+  }
+
+  @Put('leave-requests/:id')
+  @ApiOperation({ summary: 'Update leave request (admin only)' })
+  async updateLeaveRequest(
+    @Param('id') id: string,
+    @Body() updateLeaveRequestDto: UpdateLeaveRequestDto,
+  ) {
+    return this.leavesService.updateLeaveRequest(id, updateLeaveRequestDto);
+  }
+
+  @Put('leave-requests/:id/approve')
+  @ApiOperation({ summary: 'Approve leave request (admin only)' })
+  async approveLeaveRequest(
+    @Param('id') id: string,
+    @Body() approveDto: ApproveLeaveRequestDto,
+    @CurrentUser() user: User,
+  ) {
+    // Admin doesn't need employee profile - use user ID directly as approver
+    return this.leavesService.approveLeaveRequest(id, user.id, approveDto);
+  }
+
+  @Put('leave-requests/:id/reject')
+  @ApiOperation({ summary: 'Reject leave request (admin only)' })
+  async rejectLeaveRequest(
+    @Param('id') id: string,
+    @Body() rejectDto: RejectLeaveRequestDto,
+    @CurrentUser() user: User,
+  ) {
+    // Admin doesn't need employee profile - use user ID directly as approver  
+    return this.leavesService.rejectLeaveRequest(id, user.id, rejectDto);
+  }
+
+  @Delete('leave-requests/:id')
+  @ApiOperation({ summary: 'Delete leave request (admin only)' })
+  async deleteLeaveRequest(@Param('id') id: string) {
+    await this.leavesService.deleteLeaveRequest(id);
+    return { message: 'Leave request deleted successfully' };
+  }
+
+  @Get('leave-calendar')
+  @ApiOperation({ summary: 'Get leave calendar for all employees' })
+  async getLeaveCalendar(
+    @Query('month') month?: number,
+    @Query('year') year?: number,
+    @Query('department') departmentId?: string,
+  ) {
+    const targetMonth = month || new Date().getMonth() + 1;
+    const targetYear = year || new Date().getFullYear();
+
+    return this.leavesService.getLeaveCalendar(targetMonth, targetYear, departmentId);
+  }
+
   @Get('reports/leave-summary')
   @ApiOperation({ summary: 'Get leave summary report' })
   async getLeaveSummaryReport(
@@ -258,5 +339,52 @@ export class AdminController {
       year: year || new Date().getFullYear(),
       employees: employeeBalances,
     };
+  }
+
+  // Holiday Management
+  @Get('holidays')
+  @ApiOperation({ summary: 'Get all holidays' })
+  async getHolidays(
+    @Query('year') year?: number,
+    @Query('isActive') isActive?: boolean,
+  ) {
+    return this.holidaysService.findAll({
+      year: year ? parseInt(year.toString()) : undefined,
+      isActive: isActive !== undefined ? isActive === true : undefined,
+    });
+  }
+
+  @Get('holidays/:id')
+  @ApiOperation({ summary: 'Get holiday by ID' })
+  async getHoliday(@Param('id') id: string) {
+    return this.holidaysService.findOne(id);
+  }
+
+  @Post('holidays')
+  @ApiOperation({ summary: 'Create new holiday' })
+  async createHoliday(@Body() createHolidayDto: CreateHolidayDto) {
+    return this.holidaysService.create(createHolidayDto);
+  }
+
+  @Put('holidays/:id')
+  @ApiOperation({ summary: 'Update holiday' })
+  async updateHoliday(
+    @Param('id') id: string,
+    @Body() updateHolidayDto: UpdateHolidayDto,
+  ) {
+    return this.holidaysService.update(id, updateHolidayDto);
+  }
+
+  @Delete('holidays/:id')
+  @ApiOperation({ summary: 'Delete holiday' })
+  async deleteHoliday(@Param('id') id: string) {
+    await this.holidaysService.remove(id);
+    return { message: 'Holiday deleted successfully' };
+  }
+
+  @Get('holidays/upcoming/:days')
+  @ApiOperation({ summary: 'Get upcoming holidays' })
+  async getUpcomingHolidays(@Param('days') days: string) {
+    return this.holidaysService.getUpcomingHolidays(parseInt(days));
   }
 }

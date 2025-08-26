@@ -12,6 +12,7 @@ import { DepartmentsModule } from '../departments/departments.module';
 import { LeavesModule } from '../leaves/leaves.module';
 import { AuthModule } from '../auth/auth.module';
 import { MailModule } from '../mail/mail.module';
+import { HolidaysModule } from '../holidays/holidays.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { MailModule } from '../mail/mail.module';
     LeavesModule,
     AuthModule,
     MailModule,
+    HolidaysModule,
   ],
   controllers: [AdminController],
   providers: [BulkImportService],

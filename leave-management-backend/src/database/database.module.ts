@@ -7,6 +7,7 @@ import { Department } from '../departments/entities/department.entity';
 import { LeaveRequest } from '../leaves/entities/leave-request.entity';
 import { LeaveBalance } from '../leaves/entities/leave-balance.entity';
 import { PasswordResetToken } from '../auth/entities/password-reset-token.entity';
+import { Holiday } from '../holidays/entities/holiday.entity';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { PasswordResetToken } from '../auth/entities/password-reset-token.entity
           LeaveRequest,
           LeaveBalance,
           PasswordResetToken,
+          Holiday,
         ],
         synchronize: configService.get('NODE_ENV') === 'development',
         dropSchema: false,

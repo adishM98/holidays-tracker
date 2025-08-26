@@ -89,7 +89,7 @@
 
   .dark {
     /* Dark Corporate Theme */
-    --background: 222 25% 8%;
+    --background: 222 30% 8%;
     --foreground: 220 15% 92%;
 
     --card: 222 25% 10%;
@@ -104,7 +104,7 @@
     --primary-glow: 214 84% 75%;
 
     /* Dark Secondary */
-    --secondary: 222 15% 15%;
+    --secondary: 222 25% 15%;
     --secondary-foreground: 220 15% 85%;
 
     /* Dark Muted */
@@ -129,7 +129,7 @@
     /* Dark Accent */
     --accent: 177 56% 55%;
     --accent-foreground: 222 25% 8%;
-    --accent-light: 177 40% 15%;
+    --accent-light: 214 50% 25%;
 
     /* Dark Borders */
     --border: 222 15% 20%;
@@ -165,5 +165,24 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Ensure cards have proper contrast on gradient backgrounds */
+  .dark .bg-card {
+    background: hsl(var(--card) / 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid hsl(var(--border) / 0.5);
+    box-shadow: 0 4px 20px hsl(222 25% 5% / 0.4);
+  }
+
+  .dark .shadow-professional-md,
+  .dark .shadow-professional-lg {
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* Sidebar transparency for gradient background */
+  .dark .bg-sidebar-background {
+    background: hsl(var(--sidebar-background) / 0.98);
+    backdrop-filter: blur(12px);
   }
 }

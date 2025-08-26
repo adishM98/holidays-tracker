@@ -16,6 +16,7 @@ interface Employee {
   employeeId: string;
   firstName: string;
   lastName: string;
+  email: string;
   position: string;
   joiningDate: string;
   annualLeaveDays: number;
@@ -57,6 +58,7 @@ const EmployeesDebug: React.FC = () => {
   console.log('Current departments state:', departments);
 
   const [formData, setFormData] = useState({
+    employeeId: '',
     firstName: '',
     lastName: '',
     email: '',
@@ -71,6 +73,7 @@ const EmployeesDebug: React.FC = () => {
 
   const resetForm = () => {
     setFormData({
+      employeeId: '',
       firstName: '',
       lastName: '',
       email: '',
@@ -85,12 +88,20 @@ const EmployeesDebug: React.FC = () => {
     setEditingEmployee(null);
   };
 
+  const handleOpenAddDialog = async () => {
+    console.log('Opening Add Employee dialog');
+    await fetchDepartments(); // Refresh departments when opening dialog
+    resetForm(); // Reset form with empty fields
+    setIsAddDialogOpen(true);
+  };
+
   const populateFormForEdit = (employee: Employee) => {
     console.log('Populating form for employee:', employee);
     setFormData({
+      employeeId: employee.employeeId || '',
       firstName: employee.firstName,
       lastName: employee.lastName,
-      email: employee.user?.email || '', // Get email from user object
+      email: employee.email || employee.user?.email || '', // Get email directly from employee or fallback to user.email
       departmentId: employee.department.id,
       position: employee.position,
       managerId: employee.manager?.id || 'none',
@@ -99,6 +110,7 @@ const EmployeesDebug: React.FC = () => {
       sickLeaveDays: employee.sickLeaveDays,
       casualLeaveDays: employee.casualLeaveDays,
     });
+    console.log('Form data populated with email:', employee.email || employee.user?.email || '');
   };
 
   const fetchEmployees = async () => {
@@ -154,6 +166,7 @@ const EmployeesDebug: React.FC = () => {
       if (editingEmployee) {
         // Update existing employee
         const employeeData = {
+          employeeId: formData.employeeId,
           firstName: formData.firstName,
           lastName: formData.lastName,
           position: formData.position,
@@ -198,9 +211,10 @@ const EmployeesDebug: React.FC = () => {
 
         // Create new employee
         const employeeData = {
+          employeeId: formData.employeeId,
           firstName: formData.firstName,
           lastName: formData.lastName,
-          employeeId: `EMP${Date.now()}`, // Generate unique employee ID
+          email: formData.email,
           position: formData.position,
           departmentId: formData.departmentId,
           managerId: formData.managerId && formData.managerId !== 'none' ? formData.managerId : undefined,
@@ -306,38 +320,114 @@ const EmployeesDebug: React.FC = () => {
 
   const showLeaveStatus = async (employee: Employee) => {
     setLeaveStatusEmployee(employee);
+    setLeaveStatus(null); // Reset previous data
+    setIsLeaveStatusDialogOpen(true);
+    
     try {
-      // Mock leave status data - in real implementation, fetch from API
-      // For new employees, show 0 usage and 0 pending requests
-      const isNewEmployee = new Date(employee.joiningDate) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // Joined within last 30 days
+      // Fetch real leave requests data - we'll calculate balances manually
+      const leaveRequestsData = await adminAPI.getAllLeaveRequests();
+
+      // Filter requests for this employee
+      const employeeRequests = leaveRequestsData?.requests?.filter(req => req.employee?.id === employee.id) || [];
+      const pendingRequests = employeeRequests.filter(req => req.status === 'pending').length;
       
-      const mockLeaveStatus = {
-        annualLeave: {
+      // Check if employee is currently on leave
+      const today = new Date();
+      const currentLeaveRequest = employeeRequests.find(req => {
+        if (req.status !== 'approved') return false;
+        const startDate = new Date(req.startDate);
+        const endDate = new Date(req.endDate);
+        return today >= startDate && today <= endDate;
+      });
+
+      // Calculate leave balances manually from approved requests
+      const approvedRequests = employeeRequests.filter(req => req.status === 'approved');
+      
+      const calculateUsedDays = (leaveType: string) => {
+        return approvedRequests
+          .filter(req => req.leaveType === leaveType)
+          .reduce((total, req) => {
+            const startDate = new Date(req.startDate);
+            const endDate = new Date(req.endDate);
+            const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end dates
+            return total + diffDays;
+          }, 0);
+      };
+
+      const earnedUsed = calculateUsedDays('earned');
+      const sickUsed = calculateUsedDays('sick');
+      const casualUsed = calculateUsedDays('casual');
+
+      const earnedBalance = {
+        totalAllocated: employee.annualLeaveDays, // Still using annualLeaveDays field for earned leave
+        usedDays: earnedUsed,
+        availableDays: employee.annualLeaveDays - earnedUsed
+      };
+
+      const sickBalance = {
+        totalAllocated: employee.sickLeaveDays,
+        usedDays: sickUsed,
+        availableDays: employee.sickLeaveDays - sickUsed
+      };
+
+      const casualBalance = {
+        totalAllocated: employee.casualLeaveDays,
+        usedDays: casualUsed,
+        availableDays: employee.casualLeaveDays - casualUsed
+      };
+
+      const leaveStatus = {
+        earnedLeave: {
+          total: earnedBalance.totalAllocated,
+          used: earnedBalance.usedDays,
+          remaining: earnedBalance.availableDays
+        },
+        sickLeave: {
+          total: sickBalance.totalAllocated,
+          used: sickBalance.usedDays,
+          remaining: sickBalance.availableDays
+        },
+        casualLeave: {
+          total: casualBalance.totalAllocated,
+          used: casualBalance.usedDays,
+          remaining: casualBalance.availableDays
+        },
+        currentStatus: currentLeaveRequest ? `On ${currentLeaveRequest.leaveType} leave` : 'Available',
+        onLeave: !!currentLeaveRequest,
+        pendingRequests: pendingRequests
+      };
+
+      setLeaveStatus(leaveStatus);
+    } catch (error) {
+      console.error('Failed to fetch leave status:', error);
+      // Fallback to basic data from employee record
+      const fallbackStatus = {
+        earnedLeave: {
           total: employee.annualLeaveDays,
-          used: isNewEmployee ? 0 : Math.floor(employee.annualLeaveDays * 0.4),
-          remaining: isNewEmployee ? employee.annualLeaveDays : Math.ceil(employee.annualLeaveDays * 0.6)
+          used: 0,
+          remaining: employee.annualLeaveDays
         },
         sickLeave: {
           total: employee.sickLeaveDays,
-          used: isNewEmployee ? 0 : Math.floor(employee.sickLeaveDays * 0.2),
-          remaining: isNewEmployee ? employee.sickLeaveDays : Math.ceil(employee.sickLeaveDays * 0.8)
+          used: 0,
+          remaining: employee.sickLeaveDays
         },
         casualLeave: {
           total: employee.casualLeaveDays,
-          used: isNewEmployee ? 0 : Math.floor(employee.casualLeaveDays * 0.3),
-          remaining: isNewEmployee ? employee.casualLeaveDays : Math.ceil(employee.casualLeaveDays * 0.7)
+          used: 0,
+          remaining: employee.casualLeaveDays
         },
         currentStatus: 'Available',
         onLeave: false,
-        pendingRequests: isNewEmployee ? 0 : Math.floor(Math.random() * 3)
+        pendingRequests: 0
       };
-      setLeaveStatus(mockLeaveStatus);
-      setIsLeaveStatusDialogOpen(true);
-    } catch (error) {
+      setLeaveStatus(fallbackStatus);
+      
       toast({
-        title: "Error",
-        description: "Failed to fetch leave status.",
-        variant: "destructive",
+        title: "Warning",
+        description: "Could not load complete leave data. Showing basic information.",
+        variant: "default",
       });
     }
   };
@@ -347,17 +437,6 @@ const EmployeesDebug: React.FC = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Employees</h1>
         <div className="flex items-center space-x-3">
-          <Button
-            variant="outline"
-            onClick={() => {
-              console.log('Manual refresh clicked');
-              fetchEmployees();
-            }}
-            size="sm"
-          >
-            🔄 Refresh
-          </Button>
-          
           <input
             ref={fileInputRef}
             type="file"
@@ -380,8 +459,7 @@ const EmployeesDebug: React.FC = () => {
               e.preventDefault();
               e.stopPropagation();
               console.log('Add Employee button clicked!');
-              fetchDepartments(); // Refresh departments when opening dialog
-              setIsAddDialogOpen(true);
+              handleOpenAddDialog();
             }}
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -400,7 +478,9 @@ const EmployeesDebug: React.FC = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Serial No.</TableHead>
+                <TableHead>Employee ID</TableHead>
                 <TableHead>Employee Name</TableHead>
+                <TableHead>Email</TableHead>
                 <TableHead>Department</TableHead>
                 <TableHead>Position</TableHead>
                 <TableHead>Manager</TableHead>
@@ -411,7 +491,9 @@ const EmployeesDebug: React.FC = () => {
               {employees.map((employee, index) => (
                 <TableRow key={employee.id}>
                   <TableCell>{index + 1}</TableCell>
+                  <TableCell>{employee.employeeId || 'N/A'}</TableCell>
                   <TableCell>{`${employee.firstName} ${employee.lastName}`}</TableCell>
+                  <TableCell>{employee.email}</TableCell>
                   <TableCell>{employee.department.name}</TableCell>
                   <TableCell>{employee.position}</TableCell>
                   <TableCell>
@@ -490,6 +572,17 @@ const EmployeesDebug: React.FC = () => {
                   required
                 />
               </div>
+            </div>
+
+            <div>
+              <Label htmlFor="employeeId">Employee ID *</Label>
+              <Input
+                id="employeeId"
+                value={formData.employeeId}
+                onChange={(e) => handleInputChange('employeeId', e.target.value)}
+                placeholder="Enter employee ID (e.g., EMP001)"
+                required
+              />
             </div>
 
             {/* Email */}
@@ -575,7 +668,7 @@ const EmployeesDebug: React.FC = () => {
               <h3 className="font-semibold mb-3">Leave Entitlements</h3>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="annualLeave">Annual Leave Days</Label>
+                  <Label htmlFor="annualLeave">Earned/Privilege Leave Days</Label>
                   <Input
                     id="annualLeave"
                     type="number"
@@ -637,55 +730,74 @@ const EmployeesDebug: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Leave Status</DialogTitle>
           </DialogHeader>
-          {leaveStatusEmployee && leaveStatus && (
+          {leaveStatusEmployee && (
             <div className="space-y-4">
               <div className="text-center border-b pb-4">
                 <h3 className="text-lg font-semibold">
                   {leaveStatusEmployee.firstName} {leaveStatusEmployee.lastName}
                 </h3>
                 <p className="text-sm text-muted-foreground">{leaveStatusEmployee.position}</p>
-                <Badge variant={leaveStatus.onLeave ? "destructive" : "default"} className="mt-2">
-                  {leaveStatus.currentStatus}
-                </Badge>
+                {leaveStatus ? (
+                  <Badge variant={leaveStatus.onLeave ? "destructive" : "default"} className="mt-2">
+                    {leaveStatus.currentStatus}
+                  </Badge>
+                ) : (
+                  <div className="flex items-center justify-center mt-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                    <span className="ml-2 text-sm text-muted-foreground">Loading status...</span>
+                  </div>
+                )}
               </div>
               
-              <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-blue-900">Annual Leave</p>
-                    <p className="text-sm text-blue-700">Used: {leaveStatus.annualLeave.used}/{leaveStatus.annualLeave.total}</p>
+              {leaveStatus && (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-blue-900">Earned/Privilege Leave</p>
+                      <p className="text-sm text-blue-700">Used: {leaveStatus.earnedLeave.used}/{leaveStatus.earnedLeave.total}</p>
+                    </div>
+                    <Badge variant="outline" className="bg-blue-100 text-blue-800">
+                      {leaveStatus.earnedLeave.remaining} left
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="bg-blue-100 text-blue-800">
-                    {leaveStatus.annualLeave.remaining} left
-                  </Badge>
-                </div>
-                
-                <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-green-900">Sick Leave</p>
-                    <p className="text-sm text-green-700">Used: {leaveStatus.sickLeave.used}/{leaveStatus.sickLeave.total}</p>
+                  
+                  <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-red-900">Sick Leave</p>
+                      <p className="text-sm text-red-700">Used: {leaveStatus.sickLeave.used}/{leaveStatus.sickLeave.total}</p>
+                    </div>
+                    <Badge variant="outline" className="bg-red-100 text-red-800">
+                      {leaveStatus.sickLeave.remaining} left
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="bg-green-100 text-green-800">
-                    {leaveStatus.sickLeave.remaining} left
-                  </Badge>
-                </div>
-                
-                <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-orange-900">Casual Leave</p>
-                    <p className="text-sm text-orange-700">Used: {leaveStatus.casualLeave.used}/{leaveStatus.casualLeave.total}</p>
+                  
+                  <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-green-900">Casual Leave</p>
+                      <p className="text-sm text-green-700">Used: {leaveStatus.casualLeave.used}/{leaveStatus.casualLeave.total}</p>
+                    </div>
+                    <Badge variant="outline" className="bg-green-100 text-green-800">
+                      {leaveStatus.casualLeave.remaining} left
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="bg-orange-100 text-orange-800">
-                    {leaveStatus.casualLeave.remaining} left
-                  </Badge>
-                </div>
-              </div>
-              
-              {leaveStatus.pendingRequests > 0 && (
-                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <p className="text-sm text-yellow-800">
-                    <span className="font-medium">{leaveStatus.pendingRequests}</span> pending leave request(s)
-                  </p>
+                  
+                  <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-purple-900">Compensation Off</p>
+                      <p className="text-sm text-purple-700">No balance tracking</p>
+                    </div>
+                    <Badge variant="outline" className="bg-purple-100 text-purple-800">
+                      Available
+                    </Badge>
+                  </div>
+                  
+                  {leaveStatus.pendingRequests > 0 && (
+                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-sm text-yellow-800">
+                        <span className="font-medium">{leaveStatus.pendingRequests}</span> pending leave request(s)
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
               

@@ -1,29 +1,69 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileText, Search, Filter, Calendar, Clock, CheckCircle, XCircle } from 'lucide-react';
-import { mockLeaveRequests, statusConfig, leaveTypeLabels } from '@/data/mockData';
-import { LeaveRequest, LeaveStatus } from '@/types';
+import { FileText, Search, Filter, Calendar, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { statusConfig, leaveTypeLabels } from '@/data/mockData';
+import { employeeAPI, managerAPI } from '@/services/api';
+import { useToast } from '@/hooks/use-toast';
 
 const LeaveHistory: React.FC = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<LeaveStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-  // Filter requests based on user role
-  const allRequests = user?.role === 'manager' 
-    ? mockLeaveRequests 
-    : mockLeaveRequests.filter(req => req.employeeId === user?.id);
+  useEffect(() => {
+    fetchLeaveHistory();
+  }, [user]);
+
+  const fetchLeaveHistory = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      let data;
+
+      if (user.role === 'employee') {
+        data = await employeeAPI.getLeaveHistory();
+      } else if (user.role === 'manager') {
+        data = await managerAPI.getTeamRequests();
+      } else {
+        // For admin, we don't have a specific endpoint yet
+        data = { requests: [] };
+      }
+
+      setLeaveRequests(data?.requests || data || []);
+    } catch (error) {
+      console.error('Failed to fetch leave history:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch leave history",
+        variant: "destructive",
+      });
+      setLeaveRequests([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Apply filters
-  const filteredRequests = allRequests.filter(request => {
-    const matchesSearch = request.reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         request.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         leaveTypeLabels[request.leaveType].toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredRequests = leaveRequests.filter(request => {
+    const searchFields = [
+      request.reason || '',
+      request.employee?.firstName || '',
+      request.employee?.lastName || '',
+      leaveTypeLabels[request.leaveType] || request.leaveType || ''
+    ];
+    
+    const matchesSearch = searchFields.some(field => 
+      field.toLowerCase().includes(searchTerm.toLowerCase())
+    );
     
     const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
     
@@ -82,7 +122,7 @@ const LeaveHistory: React.FC = () => {
             </div>
             <div className="flex items-center space-x-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as LeaveStatus | 'all')}>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-40 bg-background/50">
                   <SelectValue />
                 </SelectTrigger>
@@ -96,108 +136,73 @@ const LeaveHistory: React.FC = () => {
             </div>
           </div>
 
-          {/* Desktop Table View */}
-          <div className="hidden md:block">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {user?.role === 'manager' && <TableHead>Employee</TableHead>}
-                  <TableHead>Leave Type</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>Applied Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Reason</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRequests.map((request: LeaveRequest) => (
-                  <TableRow key={request.id} className="hover:bg-secondary/50 transition-smooth">
-                    {user?.role === 'manager' && (
-                      <TableCell className="font-medium">{request.employeeName}</TableCell>
-                    )}
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Calendar className="h-4 w-4 text-primary" />
-                        <span>{leaveTypeLabels[request.leaveType]}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{formatDate(request.startDate)} - {formatDate(request.endDate)}</p>
-                        <p className="text-sm text-muted-foreground">{request.days} days</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {formatDate(request.appliedAt.split('T')[0])}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={`${statusConfig[request.status].className}`}>
-                        <div className="flex items-center space-x-1">
-                          {getStatusIcon(request.status)}
-                          <span>{statusConfig[request.status].label}</span>
-                        </div>
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="max-w-xs">
-                      <p className="truncate" title={request.reason}>
-                        {request.reason}
-                      </p>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          {/* Mobile Card View */}
-          <div className="md:hidden space-y-4">
-            {filteredRequests.map((request: LeaveRequest) => (
-              <Card key={request.id} className="bg-background/50 border shadow-professional-sm">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <p className="font-medium text-foreground">{leaveTypeLabels[request.leaveType]}</p>
-                      {user?.role === 'manager' && (
-                        <p className="text-sm text-muted-foreground">{request.employeeName}</p>
-                      )}
-                    </div>
-                    <Badge className={`${statusConfig[request.status].className}`}>
-                      <div className="flex items-center space-x-1">
-                        {getStatusIcon(request.status)}
-                        <span>{statusConfig[request.status].label}</span>
-                      </div>
-                    </Badge>
-                  </div>
-                  
-                  <div className="space-y-2 text-sm">
-                    <p>
-                      <span className="text-muted-foreground">Duration:</span>{' '}
-                      {formatDate(request.startDate)} - {formatDate(request.endDate)} ({request.days} days)
-                    </p>
-                    <p>
-                      <span className="text-muted-foreground">Applied:</span>{' '}
-                      {formatDate(request.appliedAt.split('T')[0])}
-                    </p>
-                    <p>
-                      <span className="text-muted-foreground">Reason:</span>{' '}
-                      {request.reason}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {filteredRequests.length === 0 && (
-            <div className="text-center py-12">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin mr-2" />
+              <span>Loading leave history...</span>
+            </div>
+          ) : filteredRequests.length === 0 ? (
+            <div className="text-center py-8">
               <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground">No leave requests found</p>
-              {searchTerm || statusFilter !== 'all' ? (
-                <p className="text-sm text-muted-foreground mt-2">
-                  Try adjusting your filters
-                </p>
-              ) : null}
             </div>
+          ) : (
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {user?.role === 'manager' && <TableHead>Employee</TableHead>}
+                      <TableHead>Leave Type</TableHead>
+                      <TableHead>Duration</TableHead>
+                      <TableHead>Applied Date</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Reason</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredRequests.map((request) => (
+                      <TableRow key={request.id} className="hover:bg-secondary/50 transition-smooth">
+                        {user?.role === 'manager' && (
+                          <TableCell className="font-medium">
+                            {request.employee ? `${request.employee.firstName} ${request.employee.lastName}` : 'Unknown'}
+                          </TableCell>
+                        )}
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Calendar className="h-4 w-4 text-primary" />
+                            <span>{leaveTypeLabels[request.leaveType] || request.leaveType}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{formatDate(request.startDate)} - {formatDate(request.endDate)}</p>
+                            <p className="text-sm text-muted-foreground">{request.daysCount || request.days || 0} days</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {formatDate(request.createdAt || request.appliedAt)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={`${statusConfig[request.status]?.className || statusConfig.pending.className}`}>
+                            <div className="flex items-center space-x-1">
+                              {getStatusIcon(request.status)}
+                              <span>{statusConfig[request.status]?.label || request.status}</span>
+                            </div>
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="max-w-xs">
+                          <p className="truncate" title={request.reason}>
+                            {request.reason || 'No reason provided'}
+                          </p>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

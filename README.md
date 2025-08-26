@@ -67,13 +67,19 @@ A comprehensive leave management application with role-based access control, fea
    ```
 
 4. **Access the applications**
-   - Frontend: http://localhost:8081
+   - Frontend: http://localhost:5173
    - Backend API: http://localhost:3000/api
    - API Documentation: http://localhost:3000/api/docs
 
-### Default Admin Credentials
+### 🔑 Default Login Credentials
+
+Use these credentials to log into the system for the first time:
+
+**Admin Account**
 - **Email**: admin@company.com
 - **Password**: Admin@123
+
+**Note**: After first login, you can create additional employees through the admin panel or use the bulk CSV import feature. It's recommended to change the default admin password after initial setup.
 
 ## 📁 Project Structure
 

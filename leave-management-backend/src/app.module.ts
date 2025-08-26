@@ -9,6 +9,7 @@ import { EmployeesModule } from './employees/employees.module';
 import { DepartmentsModule } from './departments/departments.module';
 import { LeavesModule } from './leaves/leaves.module';
 import { MailModule } from './mail/mail.module';
+import { HolidaysModule } from './holidays/holidays.module';
 import { AdminModule } from './admin/admin.module';
 import { ManagerModule } from './manager/manager.module';
 import { EmployeeModule } from './employee/employee.module';
@@ -32,6 +33,7 @@ import { EmployeeModule } from './employee/employee.module';
     DepartmentsModule,
     LeavesModule,
     MailModule,
+    HolidaysModule,
     AdminModule,
     ManagerModule,
     EmployeeModule,
