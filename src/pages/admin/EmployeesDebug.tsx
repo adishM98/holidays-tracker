@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Pencil, Trash2, Upload, Info, Clipboard } from 'lucide-react';
+import { Plus, Pencil, Trash2, Upload, Info, Clipboard, MoreHorizontal, Key, CheckCircle, UserX, UserCheck, RefreshCw, Clock } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -33,6 +34,10 @@ interface Employee {
   };
   user?: {
     email: string;
+    isActive: boolean;
+    inviteStatus: 'invited' | 'invite_expired' | 'active' | null;
+    invitedAt: string;
+    inviteExpiresAt: string;
   };
 }
 
@@ -52,6 +57,15 @@ const EmployeesDebug: React.FC = () => {
   const [isLeaveStatusDialogOpen, setIsLeaveStatusDialogOpen] = useState(false);
   const [leaveStatusEmployee, setLeaveStatusEmployee] = useState<Employee | null>(null);
   const [leaveStatus, setLeaveStatus] = useState<any>(null);
+  const [isPasswordResetDialogOpen, setIsPasswordResetDialogOpen] = useState(false);
+  const [tempPassword, setTempPassword] = useState<string>('');
+  const [resetEmployee, setResetEmployee] = useState<Employee | null>(null);
+  const [isOffboardDialogOpen, setIsOffboardDialogOpen] = useState(false);
+  const [offboardEmployee, setOffboardEmployee] = useState<Employee | null>(null);
+  const [isOffboarding, setIsOffboarding] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteEmployee, setDeleteEmployee] = useState<Employee | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -117,18 +131,25 @@ const EmployeesDebug: React.FC = () => {
 
       // Check if this employee was created with manual balances by comparing
       // current available days with what pro-rata calculation would give
-      const calculateProRataLeave = (joiningDate: string, annualEntitlement: number): number => {
-        if (!joiningDate) return annualEntitlement;
-        const currentYear = new Date().getFullYear();
+      const calculateExpectedLeave = (joiningDate: string, leaveType: 'earned' | 'casual' | 'sick'): number => {
+        if (!joiningDate) {
+          return leaveType === 'earned' ? 12 : 8;
+        }
         const joinDate = new Date(joiningDate);
-        const monthsRemaining = Math.max(0, 12 - joinDate.getMonth());
-        const proRataLeave = (annualEntitlement / 12) * monthsRemaining;
-        return Math.round(proRataLeave * 100) / 100;
+        const joiningMonth = joinDate.getMonth() + 1;
+        
+        const hrProRataTable = {
+          earned: { 1: 12, 2: 11, 3: 10, 4: 9, 5: 8, 6: 7, 7: 6, 8: 5, 9: 4, 10: 3, 11: 2, 12: 1 },
+          casual: { 1: 8, 2: 7, 3: 7, 4: 6, 5: 6, 6: 5, 7: 4, 8: 4, 9: 3, 10: 2, 11: 2, 12: 1 },
+          sick: { 1: 8, 2: 7, 3: 7, 4: 6, 5: 6, 6: 5, 7: 4, 8: 4, 9: 3, 10: 2, 11: 2, 12: 1 }
+        };
+        
+        return hrProRataTable[leaveType][joiningMonth] || 0;
       };
 
-      const expectedEarned = calculateProRataLeave(employee.joiningDate, employee.annualLeaveDays);
-      const expectedCasual = calculateProRataLeave(employee.joiningDate, employee.casualLeaveDays);
-      const expectedSick = employee.sickLeaveDays; // Sick leave is typically not pro-rated
+      const expectedEarned = calculateExpectedLeave(employee.joiningDate, 'earned');
+      const expectedCasual = calculateExpectedLeave(employee.joiningDate, 'casual');
+      const expectedSick = calculateExpectedLeave(employee.joiningDate, 'sick');
 
       // If available days differ significantly from expected, assume manual balances were used
       const earnedDiffers = Math.abs((earnedBalance?.availableDays || 0) - expectedEarned) > 0.1;
@@ -335,26 +356,33 @@ const EmployeesDebug: React.FC = () => {
     }));
   };
 
-  // Calculate pro-rata leave based on joining date
-  const calculateProRataLeave = (joiningDate: string, annualEntitlement: number): number => {
-    if (!joiningDate) return annualEntitlement;
+  // Calculate pro-rata leave based on HR-provided table
+  const calculateProRataLeave = (joiningDate: string, leaveType: 'earned' | 'casual' | 'sick'): number => {
+    if (!joiningDate) {
+      // Return default values if no joining date
+      return leaveType === 'earned' ? 12 : 8;
+    }
     
-    const currentYear = new Date().getFullYear();
-    const yearStart = new Date(currentYear, 0, 1);
-    const yearEnd = new Date(currentYear, 11, 31);
     const joinDate = new Date(joiningDate);
+    const joiningMonth = joinDate.getMonth() + 1; // 1-based month (Jan=1, Dec=12)
     
-    // If joined before year start, give full entitlement
-    const startDate = joinDate > yearStart ? joinDate : yearStart;
+    // HR-provided pro-rata table based on month of joining
+    const hrProRataTable = {
+      // Privilege/Earned Leave (annual = 12 days)
+      earned: {
+        1: 12, 2: 11, 3: 10, 4: 9, 5: 8, 6: 7, 7: 6, 8: 5, 9: 4, 10: 3, 11: 2, 12: 1
+      },
+      // Casual Leave (annual = 8 days)  
+      casual: {
+        1: 8, 2: 7, 3: 7, 4: 6, 5: 6, 6: 5, 7: 4, 8: 4, 9: 3, 10: 2, 11: 2, 12: 1
+      },
+      // Sick Leave (annual = 8 days)
+      sick: {
+        1: 8, 2: 7, 3: 7, 4: 6, 5: 6, 6: 5, 7: 4, 8: 4, 9: 3, 10: 2, 11: 2, 12: 1
+      }
+    };
     
-    // Calculate months remaining in the year
-    const monthsRemaining = Math.max(0, 12 - startDate.getMonth());
-    
-    // Pro-rata calculation
-    const proRataLeave = (annualEntitlement / 12) * monthsRemaining;
-    
-    // Round to 2 decimal places
-    return Math.round(proRataLeave * 100) / 100;
+    return hrProRataTable[leaveType][joiningMonth] || 0;
   };
 
   const handleBulkUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -423,23 +451,142 @@ const EmployeesDebug: React.FC = () => {
     setIsAddDialogOpen(true);
   };
 
-  const handleDeleteEmployee = async (employeeId: string) => {
-    if (!confirm('Are you sure you want to delete this employee?')) {
-      return;
-    }
+  const handleDeleteEmployee = (employee: Employee) => {
+    setDeleteEmployee(employee);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteEmployee = async () => {
+    if (!deleteEmployee) return;
 
     try {
-      await adminAPI.deleteEmployee(employeeId);
+      setIsDeleting(true);
+      await adminAPI.deleteEmployee(deleteEmployee.id);
+      
       toast({
-        title: "Success",
-        description: "Employee deleted successfully",
+        title: "Employee Deleted",
+        description: `${deleteEmployee.firstName} ${deleteEmployee.lastName} has been permanently deleted`,
       });
+      
       fetchEmployees(); // Refresh the list
+      setIsDeleteDialogOpen(false);
+      setDeleteEmployee(null);
     } catch (error) {
       console.error('Error deleting employee:', error);
       toast({
         title: "Error",
         description: "Failed to delete employee",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleResetPassword = async (employee: Employee) => {
+    setResetEmployee(employee);
+    setTempPassword('');
+    setIsPasswordResetDialogOpen(true);
+    
+    try {
+      // Generate temporary password
+      const response = await adminAPI.resetEmployeePassword(employee.id);
+      setTempPassword(response.tempPassword);
+      
+      toast({
+        title: "Password Reset Successful",
+        description: `Temporary password generated for ${employee.firstName} ${employee.lastName}`,
+      });
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reset password",
+        variant: "destructive",
+      });
+      setIsPasswordResetDialogOpen(false);
+    }
+  };
+
+  const copyTempPassword = async () => {
+    try {
+      await navigator.clipboard.writeText(tempPassword);
+      toast({
+        title: "Password Copied",
+        description: "Temporary password has been copied to clipboard",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to copy password to clipboard",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleOffboardEmployee = (employee: Employee) => {
+    setOffboardEmployee(employee);
+    setIsOffboardDialogOpen(true);
+  };
+
+  const confirmOffboardEmployee = async () => {
+    if (!offboardEmployee) return;
+
+    try {
+      setIsOffboarding(true);
+      await adminAPI.deactivateEmployee(offboardEmployee.id);
+      
+      toast({
+        title: "Employee Off-boarded",
+        description: `${offboardEmployee.firstName} ${offboardEmployee.lastName} has been off-boarded successfully`,
+      });
+      
+      fetchEmployees(); // Refresh the list
+      setIsOffboardDialogOpen(false);
+      setOffboardEmployee(null);
+    } catch (error) {
+      console.error('Error off-boarding employee:', error);
+      toast({
+        title: "Error",
+        description: "Failed to off-board employee",
+        variant: "destructive",
+      });
+    } finally {
+      setIsOffboarding(false);
+    }
+  };
+
+  const handleActivateEmployee = async (employee: Employee) => {
+    try {
+      await adminAPI.activateEmployee(employee.id);
+      toast({
+        title: "Employee Activated",
+        description: `${employee.firstName} ${employee.lastName} has been activated successfully`,
+      });
+      fetchEmployees(); // Refresh the list
+    } catch (error) {
+      console.error('Error activating employee:', error);
+      toast({
+        title: "Error",
+        description: "Failed to activate employee",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRegenerateInvite = async (employee: Employee) => {
+    try {
+      await adminAPI.regenerateInvite(employee.id);
+      toast({
+        title: "Invite Regenerated",
+        description: `New invite has been generated for ${employee.firstName} ${employee.lastName}`,
+      });
+      fetchEmployees(); // Refresh the list
+    } catch (error) {
+      console.error('Error regenerating invite:', error);
+      toast({
+        title: "Error",
+        description: "Failed to regenerate invite",
         variant: "destructive",
       });
     }
@@ -580,6 +727,7 @@ const EmployeesDebug: React.FC = () => {
                 <TableHead>Department</TableHead>
                 <TableHead>Position</TableHead>
                 <TableHead>Manager</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -599,24 +747,34 @@ const EmployeesDebug: React.FC = () => {
                     }
                   </TableCell>
                   <TableCell>
-                    <div className="flex space-x-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleEditEmployee(employee)}
-                        title="Edit Employee"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => showLeaveStatus(employee)}
-                        title="View Leave Status"
-                        className="text-blue-600 hover:text-blue-700"
-                      >
-                        <Info className="w-4 h-4" />
-                      </Button>
+                    <Badge 
+                      variant={
+                        employee.user?.inviteStatus === 'active' && employee.user?.isActive ? "default" : 
+                        employee.user?.inviteStatus === 'invited' ? "secondary" : 
+                        employee.user?.inviteStatus === 'invite_expired' ? "destructive" :
+                        !employee.user?.isActive ? "destructive" : "default"
+                      }
+                      className={
+                        employee.user?.inviteStatus === 'active' && employee.user?.isActive
+                          ? "bg-green-100 text-green-800 hover:bg-green-200" : 
+                        employee.user?.inviteStatus === 'invited' 
+                          ? "bg-blue-100 text-blue-800 hover:bg-blue-200" :
+                        employee.user?.inviteStatus === 'invite_expired' 
+                          ? "bg-orange-100 text-orange-800 hover:bg-orange-200" :
+                        !employee.user?.isActive 
+                          ? "bg-red-100 text-red-800 hover:bg-red-200" 
+                          : "bg-green-100 text-green-800 hover:bg-green-200"
+                      }
+                    >
+                      {employee.user?.inviteStatus === 'active' && employee.user?.isActive ? 'Active' :
+                       employee.user?.inviteStatus === 'invited' ? 'Invited' :
+                       employee.user?.inviteStatus === 'invite_expired' ? 'Invite Expired' :
+                       !employee.user?.isActive ? 'Offboarded' : 'Active'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center space-x-2">
+                      {/* Main visible actions */}
                       <Button 
                         variant="outline" 
                         size="sm"
@@ -626,21 +784,86 @@ const EmployeesDebug: React.FC = () => {
                       >
                         <Clipboard className="w-4 h-4" />
                       </Button>
+                      
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => handleDeleteEmployee(employee.id)}
-                        title="Delete Employee"
+                        onClick={() => showLeaveStatus(employee)}
+                        title="View Leave Status"
+                        className="text-blue-600 hover:text-blue-700"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <CheckCircle className="w-4 h-4" />
                       </Button>
+                      
+                      {/* More actions dropdown */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" title="More actions">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEditEmployee(employee)}>
+                            <Pencil className="w-4 h-4 mr-2" />
+                            Edit Employee
+                          </DropdownMenuItem>
+                          
+                          {employee.user?.inviteStatus === 'active' && (
+                            <DropdownMenuItem onClick={() => handleResetPassword(employee)}>
+                              <Key className="w-4 h-4 mr-2" />
+                              Reset Password
+                            </DropdownMenuItem>
+                          )}
+                          
+                          {employee.user?.inviteStatus === 'invite_expired' && (
+                            <DropdownMenuItem 
+                              onClick={() => handleRegenerateInvite(employee)}
+                              className="text-blue-600 hover:text-blue-700"
+                            >
+                              <RefreshCw className="w-4 h-4 mr-2" />
+                              Regenerate Invite
+                            </DropdownMenuItem>
+                          )}
+                          
+                          {employee.user?.inviteStatus === 'active' && employee.user?.isActive ? (
+                            <DropdownMenuItem 
+                              onClick={() => handleOffboardEmployee(employee)}
+                              className="text-orange-600 hover:text-orange-700"
+                            >
+                              <UserX className="w-4 h-4 mr-2" />
+                              Off-board Employee
+                            </DropdownMenuItem>
+                          ) : employee.user?.inviteStatus === 'invited' ? (
+                            <DropdownMenuItem className="text-muted-foreground opacity-50 cursor-not-allowed">
+                              <Clock className="w-4 h-4 mr-2" />
+                              Pending Invite
+                            </DropdownMenuItem>
+                          ) : !employee.user?.isActive ? (
+                            <DropdownMenuItem 
+                              onClick={() => handleActivateEmployee(employee)}
+                              className="text-green-600 hover:text-green-700"
+                            >
+                              <UserCheck className="w-4 h-4 mr-2" />
+                              Reactivate Employee
+                            </DropdownMenuItem>
+                          ) : null}
+                          
+                          <DropdownMenuItem 
+                            onClick={() => handleDeleteEmployee(employee)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete Employee
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </TableCell>
                 </TableRow>
               ))}
               {employees.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-gray-500">
+                  <TableCell colSpan={8} className="text-center text-gray-500">
                     No employees found
                   </TableCell>
                 </TableRow>
@@ -770,17 +993,17 @@ const EmployeesDebug: React.FC = () => {
 
             {/* Leave Entitlements */}
             <div className="border rounded p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold">Leave Entitlements</h3>
+              <div className="flex items-start justify-between mb-4">
+                <h3 className="font-semibold text-lg">Leave Entitlements</h3>
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
                     id="manualBalances"
                     checked={useManualBalances}
                     onChange={(e) => setUseManualBalances(e.target.checked)}
-                    className="w-4 h-4"
+                    className="w-4 h-4 mt-0.5"
                   />
-                  <Label htmlFor="manualBalances" className="text-sm cursor-pointer">
+                  <Label htmlFor="manualBalances" className="text-sm cursor-pointer text-right leading-tight">
                     Existing Employee (Set current balances manually)
                   </Label>
                 </div>
@@ -789,9 +1012,11 @@ const EmployeesDebug: React.FC = () => {
               {!useManualBalances ? (
                 <>
                   {/* Annual Allocation Fields */}
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <Label htmlFor="annualLeave">Earned/Privilege Leave Days</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="annualLeave" className="text-sm font-medium">
+                        Earned/Privilege Days
+                      </Label>
                       <Input
                         id="annualLeave"
                         type="number"
@@ -800,8 +1025,10 @@ const EmployeesDebug: React.FC = () => {
                         onChange={(e) => handleInputChange('annualLeaveDays', parseInt(e.target.value) || 0)}
                       />
                     </div>
-                    <div>
-                      <Label htmlFor="sickLeave">Sick Leave Days</Label>
+                    <div className="space-y-2">
+                      <Label htmlFor="sickLeave" className="text-sm font-medium">
+                        Sick Leave Days
+                      </Label>
                       <Input
                         id="sickLeave"
                         type="number"
@@ -810,8 +1037,10 @@ const EmployeesDebug: React.FC = () => {
                         onChange={(e) => handleInputChange('sickLeaveDays', parseInt(e.target.value) || 0)}
                       />
                     </div>
-                    <div>
-                      <Label htmlFor="casualLeave">Casual Leave Days</Label>
+                    <div className="space-y-2">
+                      <Label htmlFor="casualLeave" className="text-sm font-medium">
+                        Casual Leave Days
+                      </Label>
                       <Input
                         id="casualLeave"
                         type="number"
@@ -831,9 +1060,11 @@ const EmployeesDebug: React.FC = () => {
                     </p>
                   </div>
                   
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <Label htmlFor="manualEarned">Current Earned/Privilege Balance</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="manualEarned" className="text-sm font-medium">
+                        Current Earned/Privilege Balance
+                      </Label>
                       <Input
                         id="manualEarned"
                         type="number"
@@ -843,10 +1074,12 @@ const EmployeesDebug: React.FC = () => {
                         onChange={(e) => handleInputChange('manualEarnedBalance', parseFloat(e.target.value) || 0)}
                         placeholder="e.g. 4.5"
                       />
-                      <p className="text-xs text-muted-foreground mt-1">Available days remaining</p>
+                      <p className="text-xs text-muted-foreground">Available days remaining</p>
                     </div>
-                    <div>
-                      <Label htmlFor="manualSick">Current Sick Leave Balance</Label>
+                    <div className="space-y-2">
+                      <Label htmlFor="manualSick" className="text-sm font-medium">
+                        Current Sick Leave Balance
+                      </Label>
                       <Input
                         id="manualSick"
                         type="number"
@@ -856,10 +1089,12 @@ const EmployeesDebug: React.FC = () => {
                         onChange={(e) => handleInputChange('manualSickBalance', parseFloat(e.target.value) || 0)}
                         placeholder="e.g. 8"
                       />
-                      <p className="text-xs text-muted-foreground mt-1">Available days remaining</p>
+                      <p className="text-xs text-muted-foreground">Available days remaining</p>
                     </div>
-                    <div>
-                      <Label htmlFor="manualCasual">Current Casual Leave Balance</Label>
+                    <div className="space-y-2">
+                      <Label htmlFor="manualCasual" className="text-sm font-medium">
+                        Current Casual Leave Balance
+                      </Label>
                       <Input
                         id="manualCasual"
                         type="number"
@@ -869,16 +1104,18 @@ const EmployeesDebug: React.FC = () => {
                         onChange={(e) => handleInputChange('manualCasualBalance', parseFloat(e.target.value) || 0)}
                         placeholder="e.g. 2.5"
                       />
-                      <p className="text-xs text-muted-foreground mt-1">Available days remaining</p>
+                      <p className="text-xs text-muted-foreground">Available days remaining</p>
                     </div>
                   </div>
 
                   {/* Annual Allocation Fields (still needed for future calculations) */}
-                  <div className="mt-4">
-                    <h4 className="text-sm font-medium mb-2">Annual Leave Allocations (for next year)</h4>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <Label htmlFor="annualLeave" className="text-sm">Earned/Privilege Leave Days</Label>
+                  <div className="mt-6">
+                    <h4 className="text-sm font-medium mb-4">Annual Leave Allocations (for next year)</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="annualLeave" className="text-sm font-medium">
+                          Earned/Privilege Days
+                        </Label>
                         <Input
                           id="annualLeave"
                           type="number"
@@ -887,8 +1124,10 @@ const EmployeesDebug: React.FC = () => {
                           onChange={(e) => handleInputChange('annualLeaveDays', parseInt(e.target.value) || 0)}
                         />
                       </div>
-                      <div>
-                        <Label htmlFor="sickLeave" className="text-sm">Sick Leave Days</Label>
+                      <div className="space-y-2">
+                        <Label htmlFor="sickLeave" className="text-sm font-medium">
+                          Sick Leave Days
+                        </Label>
                         <Input
                           id="sickLeave"
                           type="number"
@@ -897,8 +1136,10 @@ const EmployeesDebug: React.FC = () => {
                           onChange={(e) => handleInputChange('sickLeaveDays', parseInt(e.target.value) || 0)}
                         />
                       </div>
-                      <div>
-                        <Label htmlFor="casualLeave" className="text-sm">Casual Leave Days</Label>
+                      <div className="space-y-2">
+                        <Label htmlFor="casualLeave" className="text-sm font-medium">
+                          Casual Leave Days
+                        </Label>
                         <Input
                           id="casualLeave"
                           type="number"
@@ -922,33 +1163,33 @@ const EmployeesDebug: React.FC = () => {
                     <div className="text-center">
                       <div className="font-medium text-blue-700 dark:text-blue-300">Earned/Privilege</div>
                       <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                        {calculateProRataLeave(formData.joiningDate, formData.annualLeaveDays || 0)}
+                        {calculateProRataLeave(formData.joiningDate, 'earned')}
                       </div>
                       <div className="text-xs text-blue-500 dark:text-blue-400">
-                        of {formData.annualLeaveDays || 0} days
+                        of {formData.annualLeaveDays || 0} days allocated
                       </div>
                     </div>
                     <div className="text-center">
                       <div className="font-medium text-red-700 dark:text-red-300">Sick Leave</div>
                       <div className="text-lg font-bold text-red-600 dark:text-red-400">
-                        {formData.sickLeaveDays || 0}
+                        {calculateProRataLeave(formData.joiningDate, 'sick')}
                       </div>
                       <div className="text-xs text-red-500 dark:text-red-400">
-                        full allocation
+                        of {formData.sickLeaveDays || 0} days allocated
                       </div>
                     </div>
                     <div className="text-center">
                       <div className="font-medium text-green-700 dark:text-green-300">Casual Leave</div>
                       <div className="text-lg font-bold text-green-600 dark:text-green-400">
-                        {calculateProRataLeave(formData.joiningDate, formData.casualLeaveDays || 0)}
+                        {calculateProRataLeave(formData.joiningDate, 'casual')}
                       </div>
                       <div className="text-xs text-green-500 dark:text-green-400">
-                        of {formData.casualLeaveDays || 0} days
+                        of {formData.casualLeaveDays || 0} days allocated
                       </div>
                     </div>
                   </div>
                   <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 text-center">
-                    * Leave entitlements are calculated pro-rata based on joining date for the current year
+                    * Leave entitlements are calculated using HR-provided pro-rata table based on joining month
                   </p>
                 </div>
               )}
@@ -975,6 +1216,246 @@ const EmployeesDebug: React.FC = () => {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Reset Dialog */}
+      <Dialog open={isPasswordResetDialogOpen} onOpenChange={setIsPasswordResetDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Password Reset</DialogTitle>
+          </DialogHeader>
+          {resetEmployee && (
+            <div className="space-y-4">
+              <div className="text-center border-b pb-4">
+                <h3 className="text-lg font-semibold">
+                  {resetEmployee.firstName} {resetEmployee.lastName}
+                </h3>
+                <p className="text-sm text-muted-foreground">{resetEmployee.position}</p>
+              </div>
+              
+              {tempPassword ? (
+                <div className="space-y-4">
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-sm text-green-800 mb-2">
+                      <strong>Temporary Password Generated Successfully!</strong>
+                    </p>
+                    <div className="flex items-center space-x-2">
+                      <Input 
+                        value={tempPassword} 
+                        readOnly 
+                        className="font-mono text-center bg-white border-green-300"
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={copyTempPassword}
+                        className="text-green-600 hover:text-green-700"
+                      >
+                        <Clipboard className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-sm text-amber-800">
+                      <strong>Important:</strong> Share this password securely with the employee. They will be required to change it upon first login.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center p-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-600"></div>
+                  <span className="ml-2 text-sm text-muted-foreground">Generating password...</span>
+                </div>
+              )}
+              
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsPasswordResetDialogOpen(false);
+                    setTempPassword('');
+                    setResetEmployee(null);
+                  }}
+                >
+                  Close
+                </Button>
+                {tempPassword && (
+                  <Button 
+                    onClick={copyTempPassword}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    Copy Password
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Off-board Confirmation Dialog */}
+      <Dialog open={isOffboardDialogOpen} onOpenChange={setIsOffboardDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600 flex items-center space-x-2">
+              <UserX className="h-5 w-5" />
+              <span>Off-board Employee</span>
+            </DialogTitle>
+          </DialogHeader>
+          {offboardEmployee && (
+            <div className="space-y-4">
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    <UserX className="h-6 w-6 text-red-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-red-900 mb-2">
+                      Are you sure you want to off-board this employee?
+                    </h3>
+                    <div className="text-sm text-red-800 mb-3">
+                      <p className="font-medium">
+                        {offboardEmployee.firstName} {offboardEmployee.lastName}
+                      </p>
+                      <p>{offboardEmployee.position} • {offboardEmployee.department.name}</p>
+                      <p>{offboardEmployee.email}</p>
+                    </div>
+                    <div className="text-sm text-red-700 space-y-1">
+                      <p>⚠️ <strong>This action will:</strong></p>
+                      <ul className="ml-4 space-y-1">
+                        <li>• Prevent the employee from logging into the system</li>
+                        <li>• Block access to all leave management features</li>
+                        <li>• Preserve all historical data and records</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p className="text-sm text-amber-800">
+                  <strong>Note:</strong> The employee can be reactivated later if needed. All data will be preserved.
+                </p>
+              </div>
+              
+              <div className="flex space-x-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsOffboardDialogOpen(false);
+                    setOffboardEmployee(null);
+                  }}
+                  className="flex-1"
+                  disabled={isOffboarding}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={confirmOffboardEmployee}
+                  disabled={isOffboarding}
+                  className="flex-1 bg-red-600 hover:bg-red-700"
+                >
+                  {isOffboarding ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Off-boarding...
+                    </>
+                  ) : (
+                    <>
+                      <UserX className="h-4 w-4 mr-2" />
+                      Off-board Employee
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-700 flex items-center space-x-2">
+              <Trash2 className="h-5 w-5" />
+              <span>Delete Employee</span>
+            </DialogTitle>
+          </DialogHeader>
+          {deleteEmployee && (
+            <div className="space-y-4">
+              <div className="p-4 bg-red-100 border border-red-300 rounded-lg">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    <Trash2 className="h-6 w-6 text-red-700" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-red-900 mb-2">
+                      Are you sure you want to permanently delete this employee?
+                    </h3>
+                    <div className="text-sm text-red-800 mb-3">
+                      <p className="font-medium">
+                        {deleteEmployee.firstName} {deleteEmployee.lastName}
+                      </p>
+                      <p>{deleteEmployee.position} • {deleteEmployee.department.name}</p>
+                      <p>{deleteEmployee.email}</p>
+                    </div>
+                    <div className="text-sm text-red-800 space-y-1">
+                      <p>🚨 <strong>This action will PERMANENTLY:</strong></p>
+                      <ul className="ml-4 space-y-1">
+                        <li>• Delete all employee information</li>
+                        <li>• Remove all leave history and records</li>
+                        <li>• Delete user account and login access</li>
+                        <li>• Remove from all department assignments</li>
+                        <li>• Clear manager relationships</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-sm text-red-800">
+                  <strong>⚠️ WARNING:</strong> This action cannot be undone! Consider using "Off-board Employee" instead to preserve data while removing access.
+                </p>
+              </div>
+              
+              <div className="flex space-x-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsDeleteDialogOpen(false);
+                    setDeleteEmployee(null);
+                  }}
+                  className="flex-1"
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={confirmDeleteEmployee}
+                  disabled={isDeleting}
+                  className="flex-1 bg-red-700 hover:bg-red-800"
+                >
+                  {isDeleting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Permanently Delete
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

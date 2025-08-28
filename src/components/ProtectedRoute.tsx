@@ -1,6 +1,9 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLocation } from 'react-router-dom';
 import Login from '@/pages/Login';
+import Profile from '@/pages/Profile';
+import Layout from '@/components/Layout/Layout';
 import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
@@ -9,6 +12,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -23,6 +27,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   if (!user) {
     return <Login />;
+  }
+
+  // If user must change password and is not already on profile page, redirect to profile
+  if (user.mustChangePassword && location.pathname !== '/profile') {
+    return (
+      <Layout>
+        <Profile />
+      </Layout>
+    );
   }
 
   return <>{children}</>;

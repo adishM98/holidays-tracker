@@ -317,7 +317,7 @@ const Dashboard: React.FC = () => {
                   ))}
                   <Link to="/leave-history" className="block">
                     <Button variant="outline" className="w-full mt-4">
-                      View All Requests
+                      View All in Leave History
                     </Button>
                   </Link>
                 </div>

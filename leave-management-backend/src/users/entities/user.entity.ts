@@ -35,6 +35,15 @@ export class User {
   @Column({ name: 'must_change_password', default: false })
   mustChangePassword: boolean;
 
+  @Column({ name: 'invite_status', default: 'active', nullable: true })
+  inviteStatus: 'invited' | 'invite_expired' | 'active' | null;
+
+  @Column({ name: 'invited_at', nullable: true })
+  invitedAt: Date;
+
+  @Column({ name: 'invite_expires_at', nullable: true })
+  inviteExpiresAt: Date;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

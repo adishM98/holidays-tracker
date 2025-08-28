@@ -8,6 +8,7 @@ export interface User {
   id: string;
   email: string;
   role: UserRole;
+  mustChangePassword?: boolean;
   employee?: {
     id: string;
     employeeId: string;
@@ -92,4 +93,5 @@ export interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  updateUser: (userData: Partial<User>) => void;
 }

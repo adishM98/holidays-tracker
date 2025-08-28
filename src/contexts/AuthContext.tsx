@@ -54,6 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: response.user.id,
         email: response.user.email,
         role: response.user.role as any,
+        mustChangePassword: response.user.mustChangePassword,
       };
       
       // Get employee profile data if user is not admin
@@ -110,8 +111,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateUser = (userData: Partial<User>) => {
+    if (!user) return;
+    
+    const updatedUser = { ...user, ...userData };
+    setUser(updatedUser);
+    localStorage.setItem('user_data', JSON.stringify(updatedUser));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, refreshUser, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -319,25 +319,25 @@ const ApplyLeave: React.FC = () => {
     let baseColor = '';
     switch (type) {
       case 'sick':
-        baseColor = 'bg-red-100 text-red-800 border-red-200';
+        baseColor = 'bg-red-100 dark:bg-red-950 text-red-800 dark:text-red-200 border-red-200 dark:border-red-800';
         break;
       case 'casual':
-        baseColor = 'bg-green-100 text-green-800 border-green-200';
+        baseColor = 'bg-green-100 dark:bg-green-950 text-green-800 dark:text-green-200 border-green-200 dark:border-green-800';
         break;
       case 'earned':
-        baseColor = 'bg-blue-100 text-blue-800 border-blue-200';
+        baseColor = 'bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-800';
         break;
       case 'compensation':
-        baseColor = 'bg-purple-100 text-purple-800 border-purple-200';
+        baseColor = 'bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-200 border-purple-200 dark:border-purple-800';
         break;
       default:
-        baseColor = 'bg-gray-100 text-gray-800 border-gray-200';
+        baseColor = 'bg-muted text-muted-foreground border-border';
     }
     
     if (status === 'pending') {
       baseColor += ' border-dashed';
     } else if (status === 'rejected') {
-      baseColor = 'bg-gray-100 text-gray-500 border-gray-300 line-through';
+      baseColor = 'bg-muted text-muted-foreground border-border line-through';
     }
     
     return `${baseColor} ${opacity}`;
@@ -453,18 +453,18 @@ const ApplyLeave: React.FC = () => {
               return (
                 <div
                   key={day}
-                  className={`h-24 border-b border-r p-2 cursor-pointer transition-colors relative ${
+                  className={`h-24 border-b border-r border-border p-2 cursor-pointer transition-colors relative ${
                     isDisabled 
-                      ? 'bg-gray-50 cursor-not-allowed' 
+                      ? 'bg-muted/30 cursor-not-allowed' 
                       : isSelected
-                      ? 'bg-blue-50 hover:bg-blue-100'
-                      : 'hover:bg-gray-50'
+                      ? 'bg-primary/10 hover:bg-primary/20'
+                      : 'hover:bg-muted/50'
                   }`}
                   onClick={() => !isDisabled && isSelecting && handleDateClick(day)}
                 >
                   <div className="flex flex-col h-full">
                     <span className={`text-sm font-medium ${
-                      isDisabled ? 'text-gray-400' : 'text-foreground'
+                      isDisabled ? 'text-muted-foreground' : 'text-foreground'
                     }`}>
                       {day}
                     </span>
@@ -488,7 +488,7 @@ const ApplyLeave: React.FC = () => {
                       {/* Show selection indicator */}
                       {isSelected && (
                         <div className="absolute top-1 right-1">
-                          <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                          <div className="w-3 h-3 bg-primary rounded-full"></div>
                         </div>
                       )}
                     </div>
@@ -505,27 +505,27 @@ const ApplyLeave: React.FC = () => {
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-4 text-sm">
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-blue-600 rounded-full"></div>
+              <div className="w-4 h-4 bg-primary rounded-full"></div>
               <span>Selected for new request</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-green-100 border border-green-200 rounded"></div>
+              <div className="w-4 h-4 bg-green-100 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded"></div>
               <span>Casual Leave</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-blue-100 border border-blue-200 rounded"></div>
+              <div className="w-4 h-4 bg-blue-100 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded"></div>
               <span>Earned Leave</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-red-100 border border-red-200 rounded"></div>
+              <div className="w-4 h-4 bg-red-100 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded"></div>
               <span>Sick Leave</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-purple-100 border border-purple-200 rounded"></div>
+              <div className="w-4 h-4 bg-purple-100 dark:bg-purple-950 border border-purple-200 dark:border-purple-800 rounded"></div>
               <span>Compensation Off</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-gray-100 border border-gray-300 border-dashed rounded"></div>
+              <div className="w-4 h-4 bg-muted border border-border border-dashed rounded"></div>
               <span>Pending Approval</span>
             </div>
           </div>
@@ -628,13 +628,13 @@ const ApplyLeave: React.FC = () => {
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm font-medium text-gray-500">Leave Type</Label>
+                  <Label className="text-sm font-medium text-muted-foreground">Leave Type</Label>
                   <div className="mt-1 text-sm">
                     {leaveTypeLabels[selectedLeaveRequest.leaveType as LeaveType] || selectedLeaveRequest.leaveType}
                   </div>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-500">Status</Label>
+                  <Label className="text-sm font-medium text-muted-foreground">Status</Label>
                   <div className="mt-1">
                     <Badge
                       variant={
@@ -648,9 +648,9 @@ const ApplyLeave: React.FC = () => {
                       }
                       className={
                         selectedLeaveRequest.status === 'approved'
-                          ? 'bg-green-100 text-green-800 border-green-200'
+                          ? 'bg-green-100 dark:bg-green-950 text-green-800 dark:text-green-200 border-green-200 dark:border-green-800'
                           : selectedLeaveRequest.status === 'pending'
-                          ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                          ? 'bg-yellow-100 dark:bg-yellow-950 text-yellow-800 dark:text-yellow-200 border-yellow-200 dark:border-yellow-800'
                           : ''
                       }
                     >
@@ -662,13 +662,13 @@ const ApplyLeave: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm font-medium text-gray-500">Start Date</Label>
+                  <Label className="text-sm font-medium text-muted-foreground">Start Date</Label>
                   <div className="mt-1 text-sm">
                     {new Date(selectedLeaveRequest.startDate).toLocaleDateString()}
                   </div>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-500">End Date</Label>
+                  <Label className="text-sm font-medium text-muted-foreground">End Date</Label>
                   <div className="mt-1 text-sm">
                     {new Date(selectedLeaveRequest.endDate).toLocaleDateString()}
                   </div>
@@ -676,7 +676,7 @@ const ApplyLeave: React.FC = () => {
               </div>
 
               <div>
-                <Label className="text-sm font-medium text-gray-500">Duration</Label>
+                <Label className="text-sm font-medium text-muted-foreground">Duration</Label>
                 <div className="mt-1 text-sm">
                   {selectedLeaveRequest.daysCount} day(s)
                 </div>
@@ -684,8 +684,8 @@ const ApplyLeave: React.FC = () => {
 
               {selectedLeaveRequest.reason && (
                 <div>
-                  <Label className="text-sm font-medium text-gray-500">Reason</Label>
-                  <div className="mt-1 text-sm bg-gray-50 p-3 rounded-md">
+                  <Label className="text-sm font-medium text-muted-foreground">Reason</Label>
+                  <div className="mt-1 text-sm bg-muted p-3 rounded-md">
                     {selectedLeaveRequest.reason}
                   </div>
                 </div>
@@ -693,23 +693,23 @@ const ApplyLeave: React.FC = () => {
 
               {selectedLeaveRequest.rejectionReason && (
                 <div>
-                  <Label className="text-sm font-medium text-gray-500">Rejection Reason</Label>
-                  <div className="mt-1 text-sm bg-red-50 p-3 rounded-md border border-red-200">
+                  <Label className="text-sm font-medium text-muted-foreground">Rejection Reason</Label>
+                  <div className="mt-1 text-sm bg-red-50 dark:bg-red-950/50 p-3 rounded-md border border-red-200 dark:border-red-800">
                     {selectedLeaveRequest.rejectionReason}
                   </div>
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4 text-xs text-gray-500">
+              <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
                 <div>
-                  <Label className="text-sm font-medium text-gray-500">Applied On</Label>
+                  <Label className="text-sm font-medium text-muted-foreground">Applied On</Label>
                   <div className="mt-1">
                     {new Date(selectedLeaveRequest.createdAt).toLocaleDateString()}
                   </div>
                 </div>
                 {selectedLeaveRequest.approvedAt && (
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">
+                    <Label className="text-sm font-medium text-muted-foreground">
                       {selectedLeaveRequest.status === 'approved' ? 'Approved On' : 
                        selectedLeaveRequest.status === 'rejected' ? 'Rejected On' : 'Updated On'}
                     </Label>

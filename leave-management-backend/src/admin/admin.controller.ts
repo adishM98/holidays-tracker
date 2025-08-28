@@ -119,6 +119,33 @@ export class AdminController {
     return { message: 'Employee deleted successfully' };
   }
 
+  @Post('employees/:id/reset-password')
+  @ApiOperation({ summary: 'Reset employee password and generate temporary password' })
+  async resetEmployeePassword(@Param('id') id: string) {
+    return this.employeesService.resetEmployeePassword(id);
+  }
+
+  @Put('employees/:id/deactivate')
+  @ApiOperation({ summary: 'Deactivate employee (off-board)' })
+  async deactivateEmployee(@Param('id') id: string) {
+    await this.employeesService.deactivateEmployee(id);
+    return { message: 'Employee deactivated successfully' };
+  }
+
+  @Put('employees/:id/activate')
+  @ApiOperation({ summary: 'Activate employee' })
+  async activateEmployee(@Param('id') id: string) {
+    await this.employeesService.activateEmployee(id);
+    return { message: 'Employee activated successfully' };
+  }
+
+  @Post('employees/:id/regenerate-invite')
+  @ApiOperation({ summary: 'Regenerate invite for employee with expired invite' })
+  async regenerateInvite(@Param('id') id: string) {
+    await this.employeesService.regenerateInvite(id);
+    return { message: 'Invite regenerated successfully' };
+  }
+
   // Bulk Import
   @Post('employees/bulk-import')
   @ApiOperation({ summary: 'Bulk import employees from CSV file' })

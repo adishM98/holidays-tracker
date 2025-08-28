@@ -239,11 +239,12 @@ export class AuthService {
       // Hash the new password
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      // Update user's password
+      // Update user's password and set them as active
       await this.userRepository.update(user.id, { 
         passwordHash: hashedPassword,
         mustChangePassword: false,
-        isActive: true
+        isActive: true,
+        inviteStatus: 'active'
       });
 
       return { message: 'Account activated successfully' };

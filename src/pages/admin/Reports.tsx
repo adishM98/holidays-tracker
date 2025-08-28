@@ -56,6 +56,7 @@ const Reports: React.FC = () => {
   const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
+  const [selectedReportType, setSelectedReportType] = useState<string>('all');
   const [dateRange, setDateRange] = useState({
     startDate: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], // Start of current year
     endDate: new Date().toISOString().split('T')[0] // Today
@@ -487,11 +488,27 @@ const Reports: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center">
             <Filter className="w-5 h-5 mr-2" />
-            Filters & Settings
+            Filters
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Types</label>
+              <Select value={selectedReportType} onValueChange={setSelectedReportType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select report type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="pending">Pending Requests</SelectItem>
+                  <SelectItem value="attendance">Day-wise Attendance</SelectItem>
+                  <SelectItem value="opening">Opening Balance</SelectItem>
+                  <SelectItem value="closing">Closing Balance</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div>
               <label className="text-sm font-medium mb-2 block">Start Date</label>
               <input
@@ -558,15 +575,32 @@ const Reports: React.FC = () => {
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem 
                     onClick={() => {
-                      const { reportData, headers } = generateComprehensiveReport();
-                      const filename = selectedEmployee !== 'all' 
-                        ? `employee_detailed_report_${dateRange.startDate}_to_${dateRange.endDate}`
-                        : `employees_comprehensive_report_${dateRange.startDate}_to_${dateRange.endDate}`;
+                      let reportData, headers, filename;
+                      
+                      if (selectedReportType === 'pending') {
+                        ({ reportData, headers } = generatePendingRequestsReport());
+                        filename = `pending_requests_${dateRange.startDate}_to_${dateRange.endDate}`;
+                      } else if (selectedReportType === 'attendance') {
+                        ({ reportData, headers } = generateAttendanceReport());
+                        filename = `attendance_report_${dateRange.startDate}_to_${dateRange.endDate}`;
+                      } else if (selectedReportType === 'opening') {
+                        ({ reportData, headers } = generateLeaveBalanceReport('opening'));
+                        filename = `opening_balance_${dateRange.startDate}_to_${dateRange.endDate}`;
+                      } else if (selectedReportType === 'closing') {
+                        ({ reportData, headers } = generateLeaveBalanceReport('closing'));
+                        filename = `closing_balance_${dateRange.startDate}_to_${dateRange.endDate}`;
+                      } else {
+                        ({ reportData, headers } = generateComprehensiveReport());
+                        filename = selectedEmployee !== 'all' 
+                          ? `employee_detailed_report_${dateRange.startDate}_to_${dateRange.endDate}`
+                          : `employees_comprehensive_report_${dateRange.startDate}_to_${dateRange.endDate}`;
+                      }
+                      
                       exportToCSV(reportData, filename, headers);
                       
                       toast({
                         title: "CSV Export Complete",
-                        description: `Generated CSV report with ${reportData.length} employee(s)`,
+                        description: `Generated ${selectedReportType === 'all' ? 'comprehensive' : selectedReportType} report with ${reportData.length} record(s)`,
                       });
                     }}
                     className="flex items-center"
@@ -577,15 +611,32 @@ const Reports: React.FC = () => {
                   
                   <DropdownMenuItem 
                     onClick={() => {
-                      const { reportData, headers } = generateComprehensiveReport();
-                      const filename = selectedEmployee !== 'all' 
-                        ? `employee_detailed_report_${dateRange.startDate}_to_${dateRange.endDate}`
-                        : `employees_comprehensive_report_${dateRange.startDate}_to_${dateRange.endDate}`;
+                      let reportData, headers, filename;
+                      
+                      if (selectedReportType === 'pending') {
+                        ({ reportData, headers } = generatePendingRequestsReport());
+                        filename = `pending_requests_${dateRange.startDate}_to_${dateRange.endDate}`;
+                      } else if (selectedReportType === 'attendance') {
+                        ({ reportData, headers } = generateAttendanceReport());
+                        filename = `attendance_report_${dateRange.startDate}_to_${dateRange.endDate}`;
+                      } else if (selectedReportType === 'opening') {
+                        ({ reportData, headers } = generateLeaveBalanceReport('opening'));
+                        filename = `opening_balance_${dateRange.startDate}_to_${dateRange.endDate}`;
+                      } else if (selectedReportType === 'closing') {
+                        ({ reportData, headers } = generateLeaveBalanceReport('closing'));
+                        filename = `closing_balance_${dateRange.startDate}_to_${dateRange.endDate}`;
+                      } else {
+                        ({ reportData, headers } = generateComprehensiveReport());
+                        filename = selectedEmployee !== 'all' 
+                          ? `employee_detailed_report_${dateRange.startDate}_to_${dateRange.endDate}`
+                          : `employees_comprehensive_report_${dateRange.startDate}_to_${dateRange.endDate}`;
+                      }
+                      
                       exportToExcel(reportData, filename, headers);
                       
                       toast({
                         title: "Excel Export Complete",
-                        description: `Generated Excel report with ${reportData.length} employee(s)`,
+                        description: `Generated ${selectedReportType === 'all' ? 'comprehensive' : selectedReportType} report with ${reportData.length} record(s)`,
                       });
                     }}
                     className="flex items-center"
@@ -596,15 +647,32 @@ const Reports: React.FC = () => {
                   
                   <DropdownMenuItem 
                     onClick={() => {
-                      const { reportData, headers } = generateComprehensiveReport();
-                      const filename = selectedEmployee !== 'all' 
-                        ? `employee_detailed_report_${dateRange.startDate}_to_${dateRange.endDate}`
-                        : `employees_comprehensive_report_${dateRange.startDate}_to_${dateRange.endDate}`;
+                      let reportData, headers, filename;
+                      
+                      if (selectedReportType === 'pending') {
+                        ({ reportData, headers } = generatePendingRequestsReport());
+                        filename = `pending_requests_${dateRange.startDate}_to_${dateRange.endDate}`;
+                      } else if (selectedReportType === 'attendance') {
+                        ({ reportData, headers } = generateAttendanceReport());
+                        filename = `attendance_report_${dateRange.startDate}_to_${dateRange.endDate}`;
+                      } else if (selectedReportType === 'opening') {
+                        ({ reportData, headers } = generateLeaveBalanceReport('opening'));
+                        filename = `opening_balance_${dateRange.startDate}_to_${dateRange.endDate}`;
+                      } else if (selectedReportType === 'closing') {
+                        ({ reportData, headers } = generateLeaveBalanceReport('closing'));
+                        filename = `closing_balance_${dateRange.startDate}_to_${dateRange.endDate}`;
+                      } else {
+                        ({ reportData, headers } = generateComprehensiveReport());
+                        filename = selectedEmployee !== 'all' 
+                          ? `employee_detailed_report_${dateRange.startDate}_to_${dateRange.endDate}`
+                          : `employees_comprehensive_report_${dateRange.startDate}_to_${dateRange.endDate}`;
+                      }
+                      
                       exportToPDF(reportData, filename, headers);
                       
                       toast({
                         title: "PDF Export Complete",
-                        description: `Generated PDF report with ${reportData.length} employee(s)`,
+                        description: `Generated ${selectedReportType === 'all' ? 'comprehensive' : selectedReportType} report with ${reportData.length} record(s)`,
                       });
                     }}
                     className="flex items-center"
@@ -616,6 +684,210 @@ const Reports: React.FC = () => {
               </DropdownMenu>
             </div>
           </div>
+          
+          {/* Report Preview based on selected type */}
+          {selectedReportType !== 'all' && (
+            <div className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      {selectedReportType === 'pending' && <Clock className="w-5 h-5 mr-2 text-orange-600" />}
+                      {selectedReportType === 'attendance' && <Calendar className="w-5 h-5 mr-2 text-blue-600" />}
+                      {selectedReportType === 'opening' && <TrendingUp className="w-5 h-5 mr-2 text-green-600" />}
+                      {selectedReportType === 'closing' && <Target className="w-5 h-5 mr-2 text-purple-600" />}
+                      <span>
+                        {selectedReportType === 'pending' && 'Pending Requests Preview'}
+                        {selectedReportType === 'attendance' && 'Day-wise Attendance Preview'}
+                        {selectedReportType === 'opening' && 'Opening Balance Preview'}
+                        {selectedReportType === 'closing' && 'Closing Balance Preview'}
+                      </span>
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {/* Preview Content */}
+                    {selectedReportType === 'pending' && (() => {
+                      const { reportData } = generatePendingRequestsReport();
+                      const previewData = reportData.slice(0, 3);
+                      return (
+                        <div>
+                          <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                            <p className="text-orange-800 dark:text-orange-200 font-medium">Total: {reportData.length} pending requests found</p>
+                            <p className="text-sm text-orange-600 dark:text-orange-300">Showing preview of first 3 records</p>
+                          </div>
+                          {previewData.length > 0 ? (
+                            <div className="overflow-x-auto">
+                              <table className="w-full border-collapse border border-border">
+                                <thead>
+                                  <tr className="bg-muted">
+                                    <th className="border border-border p-2 text-left">Employee</th>
+                                    <th className="border border-border p-2 text-left">Department</th>
+                                    <th className="border border-border p-2 text-left">Leave Type</th>
+                                    <th className="border border-border p-2 text-left">Duration</th>
+                                    <th className="border border-border p-2 text-left">Days Pending</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {previewData.map((row, index) => (
+                                    <tr key={index} className="hover:bg-muted/50">
+                                      <td className="border border-border p-2">{row['Employee Name']}</td>
+                                      <td className="border border-border p-2">{row['Department']}</td>
+                                      <td className="border border-border p-2">
+                                        <Badge variant="outline">{row['Leave Type']}</Badge>
+                                      </td>
+                                      <td className="border border-border p-2">{row['Start Date']} - {row['End Date']}</td>
+                                      <td className="border border-border p-2">
+                                        <Badge variant="destructive">{row['Days Pending']} days</Badge>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : (
+                            <p className="text-muted-foreground text-center py-4">No pending requests found</p>
+                          )}
+                        </div>
+                      );
+                    })()}
+                    
+                    {selectedReportType === 'attendance' && (() => {
+                      const { reportData } = generateAttendanceReport();
+                      const previewData = reportData.slice(0, 3);
+                      return (
+                        <div>
+                          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                            <p className="text-blue-800 dark:text-blue-200 font-medium">Total: {reportData.length} attendance records found</p>
+                            <p className="text-sm text-blue-600 dark:text-blue-300">Showing preview of first 3 records</p>
+                          </div>
+                          <div className="overflow-x-auto">
+                            <table className="w-full border-collapse border border-border">
+                              <thead>
+                                <tr className="bg-muted">
+                                  <th className="border border-border p-2 text-left">Date</th>
+                                  <th className="border border-border p-2 text-left">Day</th>
+                                  <th className="border border-border p-2 text-left">Present</th>
+                                  <th className="border border-border p-2 text-left">On Leave</th>
+                                  <th className="border border-border p-2 text-left">Attendance %</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {previewData.map((row, index) => (
+                                  <tr key={index} className="hover:bg-muted/50">
+                                    <td className="border border-border p-2">{row['Date']}</td>
+                                    <td className="border border-border p-2">{row['Day']}</td>
+                                    <td className="border border-border p-2">
+                                      <Badge variant="default">{row['Present']}</Badge>
+                                    </td>
+                                    <td className="border border-border p-2">
+                                      <Badge variant="outline">{row['Employees on Leave']}</Badge>
+                                    </td>
+                                    <td className="border border-border p-2">
+                                      <Badge variant={row['Attendance %'] >= 90 ? 'default' : 'destructive'}>
+                                        {row['Attendance %']}%
+                                      </Badge>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    
+                    {selectedReportType === 'opening' && (() => {
+                      const { reportData } = generateLeaveBalanceReport('opening');
+                      const previewData = reportData.slice(0, 3);
+                      return (
+                        <div>
+                          <div className="mb-4 p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                            <p className="text-green-800 dark:text-green-200 font-medium">Total: {reportData.length} employee records found</p>
+                            <p className="text-sm text-green-600 dark:text-green-300">Showing preview of first 3 records</p>
+                          </div>
+                          <div className="overflow-x-auto">
+                            <table className="w-full border-collapse border border-border">
+                              <thead>
+                                <tr className="bg-muted">
+                                  <th className="border border-border p-2 text-left">Employee</th>
+                                  <th className="border border-border p-2 text-left">Department</th>
+                                  <th className="border border-border p-2 text-left">Earned Leave</th>
+                                  <th className="border border-border p-2 text-left">Sick Leave</th>
+                                  <th className="border border-border p-2 text-left">Casual Leave</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {previewData.map((row, index) => (
+                                  <tr key={index} className="hover:bg-muted/50">
+                                    <td className="border border-border p-2">{row['Employee Name']}</td>
+                                    <td className="border border-border p-2">{row['Department']}</td>
+                                    <td className="border border-border p-2">
+                                      <Badge variant="default">{row['Earned Leave - Opening']}</Badge>
+                                    </td>
+                                    <td className="border border-border p-2">
+                                      <Badge variant="secondary">{row['Sick Leave - Opening']}</Badge>
+                                    </td>
+                                    <td className="border border-border p-2">
+                                      <Badge variant="outline">{row['Casual Leave - Opening']}</Badge>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    
+                    {selectedReportType === 'closing' && (() => {
+                      const { reportData } = generateLeaveBalanceReport('closing');
+                      const previewData = reportData.slice(0, 3);
+                      return (
+                        <div>
+                          <div className="mb-4 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                            <p className="text-purple-800 dark:text-purple-200 font-medium">Total: {reportData.length} employee records found</p>
+                            <p className="text-sm text-purple-600 dark:text-purple-300">Showing preview of first 3 records</p>
+                          </div>
+                          <div className="overflow-x-auto">
+                            <table className="w-full border-collapse border border-border">
+                              <thead>
+                                <tr className="bg-muted">
+                                  <th className="border border-border p-2 text-left">Employee</th>
+                                  <th className="border border-border p-2 text-left">Department</th>
+                                  <th className="border border-border p-2 text-left">Earned Remaining</th>
+                                  <th className="border border-border p-2 text-left">Sick Remaining</th>
+                                  <th className="border border-border p-2 text-left">Casual Remaining</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {previewData.map((row, index) => (
+                                  <tr key={index} className="hover:bg-muted/50">
+                                    <td className="border border-border p-2">{row['Employee Name']}</td>
+                                    <td className="border border-border p-2">{row['Department']}</td>
+                                    <td className="border border-border p-2">
+                                      <Badge variant="default">{row['Earned Leave - Balance']}</Badge>
+                                    </td>
+                                    <td className="border border-border p-2">
+                                      <Badge variant="secondary">{row['Sick Leave - Balance']}</Badge>
+                                    </td>
+                                    <td className="border border-border p-2">
+                                      <Badge variant="outline">{row['Casual Leave - Balance']}</Badge>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -660,197 +932,6 @@ const Reports: React.FC = () => {
         </CardContent>
       </Card>
       
-      {/* HR Reports Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <FileText className="w-5 h-5 mr-2" />
-            HR Reports
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">Generate specific reports as requested by HR team</p>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Pending Requests Report */}
-            <Card className="p-4">
-              <div className="flex items-center space-x-3 mb-3">
-                <Clock className="w-8 h-8 text-orange-600" />
-                <div>
-                  <h3 className="font-medium">Pending Requests</h3>
-                  <p className="text-sm text-muted-foreground">Manager pending approvals</p>
-                </div>
-              </div>
-              <div className="mb-3">
-                <span className="text-2xl font-bold text-orange-600">
-                  {leaveRequests.filter(req => req.status === 'pending').length}
-                </span>
-                <p className="text-xs text-muted-foreground">Requests awaiting approval</p>
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="sm" className="w-full">
-                    <Download className="w-4 h-4 mr-2" />
-                    Export Report
-                    <ChevronDown className="w-4 h-4 ml-2" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => {
-                    const { reportData, headers } = generatePendingRequestsReport();
-                    exportToExcel(reportData, `pending_requests_${dateRange.startDate}_to_${dateRange.endDate}`, headers);
-                    toast({ title: "Excel Export Complete", description: `Generated pending requests report` });
-                  }}>
-                    <FileText className="w-4 h-4 mr-2" />Export as Excel
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => {
-                    const { reportData, headers } = generatePendingRequestsReport();
-                    exportToPDF(reportData, `pending_requests_${dateRange.startDate}_to_${dateRange.endDate}`, headers);
-                    toast({ title: "PDF Export Complete", description: `Generated pending requests report` });
-                  }}>
-                    <FileDown className="w-4 h-4 mr-2" />Export as PDF
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </Card>
-
-            {/* Day-wise Attendance Report */}
-            <Card className="p-4">
-              <div className="flex items-center space-x-3 mb-3">
-                <Calendar className="w-8 h-8 text-blue-600" />
-                <div>
-                  <h3 className="font-medium">Day-wise Attendance</h3>
-                  <p className="text-sm text-muted-foreground">Daily attendance tracking</p>
-                </div>
-              </div>
-              <div className="mb-3">
-                <span className="text-2xl font-bold text-blue-600">
-                  {employees.length > 0 ? Math.round(((employees.length - leaveRequests.filter(req => {
-                    const today = new Date();
-                    const startDate = new Date(req.startDate);
-                    const endDate = new Date(req.endDate);
-                    return req.status === 'approved' && today >= startDate && today <= endDate;
-                  }).length) / employees.length) * 100) : 0}%
-                </span>
-                <p className="text-xs text-muted-foreground">Today's attendance</p>
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="sm" className="w-full">
-                    <Download className="w-4 h-4 mr-2" />
-                    Export Report
-                    <ChevronDown className="w-4 h-4 ml-2" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => {
-                    const { reportData, headers } = generateAttendanceReport();
-                    exportToExcel(reportData, `attendance_report_${new Date().toISOString().split('T')[0]}`, headers);
-                    toast({ title: "Excel Export Complete", description: `Generated attendance report` });
-                  }}>
-                    <FileText className="w-4 h-4 mr-2" />Export as Excel
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => {
-                    const { reportData, headers } = generateAttendanceReport();
-                    exportToPDF(reportData, `attendance_report_${new Date().toISOString().split('T')[0]}`, headers);
-                    toast({ title: "PDF Export Complete", description: `Generated attendance report` });
-                  }}>
-                    <FileDown className="w-4 h-4 mr-2" />Export as PDF
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </Card>
-
-            {/* Leave Opening Balance Report */}
-            <Card className="p-4">
-              <div className="flex items-center space-x-3 mb-3">
-                <TrendingUp className="w-8 h-8 text-green-600" />
-                <div>
-                  <h3 className="font-medium">Opening Balance</h3>
-                  <p className="text-sm text-muted-foreground">Leave opening balances</p>
-                </div>
-              </div>
-              <div className="mb-3">
-                <span className="text-2xl font-bold text-green-600">
-                  {employees.reduce((sum, emp) => sum + (emp.annualLeaveDays || 0) + (emp.sickLeaveDays || 0) + (emp.casualLeaveDays || 0), 0)}
-                </span>
-                <p className="text-xs text-muted-foreground">Total allocated days</p>
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="sm" className="w-full">
-                    <Download className="w-4 h-4 mr-2" />
-                    Export Report
-                    <ChevronDown className="w-4 h-4 ml-2" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => {
-                    const { reportData, headers } = generateLeaveBalanceReport('opening');
-                    exportToExcel(reportData, `leave_opening_balance_${dateRange.startDate}`, headers);
-                    toast({ title: "Excel Export Complete", description: `Generated opening balance report` });
-                  }}>
-                    <FileText className="w-4 h-4 mr-2" />Export as Excel
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => {
-                    const { reportData, headers } = generateLeaveBalanceReport('opening');
-                    exportToPDF(reportData, `leave_opening_balance_${dateRange.startDate}`, headers);
-                    toast({ title: "PDF Export Complete", description: `Generated opening balance report` });
-                  }}>
-                    <FileDown className="w-4 h-4 mr-2" />Export as PDF
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </Card>
-
-            {/* Leave Closing Balance Report */}
-            <Card className="p-4">
-              <div className="flex items-center space-x-3 mb-3">
-                <Target className="w-8 h-8 text-purple-600" />
-                <div>
-                  <h3 className="font-medium">Closing Balance</h3>
-                  <p className="text-sm text-muted-foreground">Leave closing balances</p>
-                </div>
-              </div>
-              <div className="mb-3">
-                <span className="text-2xl font-bold text-purple-600">
-                  {employees.reduce((sum, emp) => {
-                    const earnedBalance = calculateLeaveBalance(emp, 'earned');
-                    const sickBalance = calculateLeaveBalance(emp, 'sick');
-                    const casualBalance = calculateLeaveBalance(emp, 'casual');
-                    return sum + earnedBalance.remaining + sickBalance.remaining + casualBalance.remaining;
-                  }, 0)}
-                </span>
-                <p className="text-xs text-muted-foreground">Total remaining days</p>
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="sm" className="w-full">
-                    <Download className="w-4 h-4 mr-2" />
-                    Export Report
-                    <ChevronDown className="w-4 h-4 ml-2" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => {
-                    const { reportData, headers } = generateLeaveBalanceReport('closing');
-                    exportToExcel(reportData, `leave_closing_balance_${dateRange.endDate}`, headers);
-                    toast({ title: "Excel Export Complete", description: `Generated closing balance report` });
-                  }}>
-                    <FileText className="w-4 h-4 mr-2" />Export as Excel
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => {
-                    const { reportData, headers } = generateLeaveBalanceReport('closing');
-                    exportToPDF(reportData, `leave_closing_balance_${dateRange.endDate}`, headers);
-                    toast({ title: "PDF Export Complete", description: `Generated closing balance report` });
-                  }}>
-                    <FileDown className="w-4 h-4 mr-2" />Export as PDF
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </Card>
-          </div>
-        </CardContent>
-      </Card>
 
     </div>
   );

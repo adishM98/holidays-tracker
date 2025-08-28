@@ -471,6 +471,30 @@ export const adminAPI = {
   getUpcomingHolidays: async (days: number = 30) => {
     return apiRequest(`/admin/holidays/upcoming/${days}`);
   },
+
+  resetEmployeePassword: async (employeeId: string): Promise<{ tempPassword: string }> => {
+    return apiRequest(`/admin/employees/${employeeId}/reset-password`, {
+      method: 'POST',
+    });
+  },
+
+  deactivateEmployee: async (employeeId: string): Promise<void> => {
+    return apiRequest(`/admin/employees/${employeeId}/deactivate`, {
+      method: 'PUT',
+    });
+  },
+
+  activateEmployee: async (employeeId: string): Promise<void> => {
+    return apiRequest(`/admin/employees/${employeeId}/activate`, {
+      method: 'PUT',
+    });
+  },
+
+  regenerateInvite: async (employeeId: string): Promise<void> => {
+    return apiRequest(`/admin/employees/${employeeId}/regenerate-invite`, {
+      method: 'POST',
+    });
+  },
 };
 
 export { getAuthToken, setAuthToken, removeAuthToken };

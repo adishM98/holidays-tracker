@@ -9,6 +9,8 @@ import { User } from '../users/entities/user.entity';
 import { UserRole } from '../common/enums/user-role.enum';
 import { LeaveRequest } from '../leaves/entities/leave-request.entity';
 import { LeaveBalance } from '../leaves/entities/leave-balance.entity';
+import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class EmployeesService {
@@ -48,12 +50,18 @@ export class EmployeesService {
     }
 
     // Create user record without password (they'll set it via invite)
+    const now = new Date();
+    const inviteExpiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
+    
     const user = this.userRepository.create({
       email: createEmployeeDto.email,
       passwordHash: '', // Empty password hash - they'll set it via invite
       role: UserRole.EMPLOYEE,
-      isActive: true,
+      isActive: false, // Set to false initially until they complete onboarding
       mustChangePassword: false,
+      inviteStatus: 'invited',
+      invitedAt: now,
+      inviteExpiresAt: inviteExpiresAt,
     });
     const savedUser = await this.userRepository.save(user);
 
@@ -368,5 +376,97 @@ export class EmployeesService {
         count: parseInt(item.count),
       })),
     };
+  }
+
+  private generateSecurePassword(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789@#$%';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  }
+
+  async resetEmployeePassword(employeeId: string): Promise<{ tempPassword: string }> {
+    const employee = await this.findOne(employeeId);
+    if (!employee.user) {
+      throw new NotFoundException('User account not found for this employee');
+    }
+
+    // Generate a secure temporary password
+    const tempPassword = this.generateSecurePassword();
+    
+    // Hash the temporary password
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+    
+    // Update user's password and set mustChangePassword flag
+    await this.userRepository.update(employee.user.id, {
+      passwordHash: hashedPassword,
+      mustChangePassword: true,
+    });
+
+    return { tempPassword };
+  }
+
+  async deactivateEmployee(employeeId: string): Promise<void> {
+    const employee = await this.findOne(employeeId);
+    if (!employee.user) {
+      throw new NotFoundException('User account not found for this employee');
+    }
+
+    // Deactivate the user account
+    await this.userRepository.update(employee.user.id, {
+      isActive: false,
+    });
+  }
+
+  async activateEmployee(employeeId: string): Promise<void> {
+    const employee = await this.findOne(employeeId);
+    if (!employee.user) {
+      throw new NotFoundException('User account not found for this employee');
+    }
+
+    // Activate the user account
+    await this.userRepository.update(employee.user.id, {
+      isActive: true,
+      inviteStatus: 'active',
+    });
+  }
+
+  async regenerateInvite(employeeId: string): Promise<void> {
+    const employee = await this.findOne(employeeId);
+    if (!employee.user) {
+      throw new NotFoundException('User account not found for this employee');
+    }
+
+    const now = new Date();
+    const inviteExpiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
+
+    // Reset invite status and extend expiry
+    await this.userRepository.update(employee.user.id, {
+      inviteStatus: 'invited',
+      invitedAt: now,
+      inviteExpiresAt: inviteExpiresAt,
+      isActive: false, // Keep inactive until they complete onboarding
+      passwordHash: '', // Clear any existing password
+    });
+  }
+
+  async checkAndUpdateExpiredInvites(): Promise<void> {
+    const now = new Date();
+    
+    // Find all users with expired invites
+    const expiredInvites = await this.userRepository
+      .createQueryBuilder('user')
+      .where('user.inviteStatus = :status', { status: 'invited' })
+      .andWhere('user.inviteExpiresAt < :now', { now })
+      .getMany();
+
+    // Update their status to invite_expired
+    for (const user of expiredInvites) {
+      await this.userRepository.update(user.id, {
+        inviteStatus: 'invite_expired',
+      });
+    }
   }
 }
