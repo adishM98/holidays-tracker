@@ -8,10 +8,12 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Layout from "@/components/Layout/Layout";
 import Login from "@/pages/Login";
+import Invite from "@/pages/Invite";
 import Dashboard from "@/pages/Dashboard";
 import ApplyLeave from "@/pages/ApplyLeave";
 import LeaveHistory from "@/pages/LeaveHistory";
 import PendingApprovals from "@/pages/PendingApprovals";
+import Profile from "@/pages/Profile";
 import EmployeesDebug from "@/pages/admin/EmployeesDebug";
 import LeaveCalendar from "@/pages/admin/LeaveCalendar";
 import Reports from "@/pages/admin/Reports";
@@ -30,6 +32,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/invite" element={<Invite />} />
             <Route path="/" element={
               <ProtectedRoute>
                 <Layout>
@@ -69,6 +72,13 @@ const App = () => (
               <ProtectedRoute>
                 <Layout>
                   <LeaveHistory />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Layout>
+                  <Profile />
                 </Layout>
               </ProtectedRoute>
             } />

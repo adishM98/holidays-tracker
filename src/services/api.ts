@@ -80,10 +80,10 @@ export const authAPI = {
     localStorage.removeItem('user_data');
   },
 
-  changePassword: async (currentPassword: string, newPassword: string): Promise<void> => {
+  changePassword: async (data: { currentPassword: string; newPassword: string }): Promise<void> => {
     return apiRequest('/auth/change-password', {
       method: 'PUT',
-      body: JSON.stringify({ currentPassword, newPassword }),
+      body: JSON.stringify(data),
     });
   },
 
@@ -310,6 +310,11 @@ export const adminAPI = {
     return apiRequest('/admin/departments');
   },
 
+  getEmployeeLeaveBalance: async (employeeId: string, year?: number) => {
+    const queryParam = year ? `?year=${year}` : '';
+    return apiRequest(`/admin/employees/${employeeId}/leave-balance${queryParam}`);
+  },
+
   createDepartment: async (data: { name: string; managerId?: string }) => {
     return apiRequest('/admin/departments', {
       method: 'POST',
@@ -338,7 +343,7 @@ export const adminAPI = {
 
   createLeaveForEmployee: async (data: {
     employeeId: string;
-    leaveType: 'annual' | 'sick' | 'casual';
+    leaveType: 'earned' | 'sick' | 'casual' | 'compensation';
     startDate: string;
     endDate: string;
     reason: string;
@@ -351,7 +356,7 @@ export const adminAPI = {
   },
 
   updateLeaveRequest: async (id: string, data: {
-    leaveType?: 'annual' | 'sick' | 'casual';
+    leaveType?: 'earned' | 'sick' | 'casual' | 'compensation';
     startDate?: string;
     endDate?: string;
     reason?: string;

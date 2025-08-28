@@ -17,6 +17,7 @@ import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { CompleteInviteDto } from './dto/complete-invite.dto';
 
 @Injectable()
 export class AuthService {
@@ -24,6 +25,8 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private mailService: MailService,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
     @InjectRepository(PasswordResetToken)
     private passwordResetTokenRepository: Repository<PasswordResetToken>,
   ) {}
@@ -193,5 +196,62 @@ export class AuthService {
       password += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return password;
+  }
+
+  async completeInvite(completeInviteDto: CompleteInviteDto): Promise<{ message: string }> {
+    const { email, token, password } = completeInviteDto;
+
+    try {
+      // Decode the invite token
+      // Convert URL-safe base64 back to standard base64
+      const standardBase64 = token.replace(/-/g, '+').replace(/_/g, '/');
+      // Add padding if needed
+      const paddedBase64 = standardBase64 + '='.repeat((4 - standardBase64.length % 4) % 4);
+      
+      const decodedToken = Buffer.from(paddedBase64, 'base64').toString('utf-8');
+      const [employeeId, tokenEmail, timestamp] = decodedToken.split('|');
+
+      // Validate token
+      if (tokenEmail !== email) {
+        throw new BadRequestException('Invalid invite token');
+      }
+
+      // Check if token is not too old (24 hours)
+      const tokenAge = Date.now() - parseInt(timestamp);
+      if (tokenAge > 24 * 60 * 60 * 1000) {
+        throw new BadRequestException('Invite token has expired');
+      }
+
+      // Find user by email
+      const user = await this.userRepository.findOne({ where: { email } });
+      if (!user) {
+        throw new BadRequestException('User not found');
+      }
+
+      // Check if user already has a password
+      if (user.passwordHash && user.passwordHash.length > 0) {
+        throw new BadRequestException('User account is already activated');
+      }
+
+      // Validate password strength
+      this.validatePasswordStrength(password);
+
+      // Hash the new password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Update user's password
+      await this.userRepository.update(user.id, { 
+        passwordHash: hashedPassword,
+        mustChangePassword: false,
+        isActive: true
+      });
+
+      return { message: 'Account activated successfully' };
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException('Invalid invite token');
+    }
   }
 }

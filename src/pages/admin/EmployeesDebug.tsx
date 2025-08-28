@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Pencil, Trash2, Upload, Info } from 'lucide-react';
+import { Plus, Pencil, Trash2, Upload, Info, Clipboard } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -48,6 +48,7 @@ const EmployeesDebug: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [useManualBalances, setUseManualBalances] = useState(false);
   const [isLeaveStatusDialogOpen, setIsLeaveStatusDialogOpen] = useState(false);
   const [leaveStatusEmployee, setLeaveStatusEmployee] = useState<Employee | null>(null);
   const [leaveStatus, setLeaveStatus] = useState<any>(null);
@@ -69,6 +70,10 @@ const EmployeesDebug: React.FC = () => {
     annualLeaveDays: 12,
     sickLeaveDays: 8,
     casualLeaveDays: 8,
+    // Manual balance overrides for existing employees
+    manualEarnedBalance: 0,
+    manualSickBalance: 0,
+    manualCasualBalance: 0,
   });
 
   const resetForm = () => {
@@ -84,8 +89,12 @@ const EmployeesDebug: React.FC = () => {
       annualLeaveDays: 12,
       sickLeaveDays: 8,
       casualLeaveDays: 8,
+      manualEarnedBalance: 0,
+      manualSickBalance: 0,
+      manualCasualBalance: 0,
     });
     setEditingEmployee(null);
+    setUseManualBalances(false);
   };
 
   const handleOpenAddDialog = async () => {
@@ -95,22 +104,80 @@ const EmployeesDebug: React.FC = () => {
     setIsAddDialogOpen(true);
   };
 
-  const populateFormForEdit = (employee: Employee) => {
+  const populateFormForEdit = async (employee: Employee) => {
     console.log('Populating form for employee:', employee);
-    setFormData({
-      employeeId: employee.employeeId || '',
-      firstName: employee.firstName,
-      lastName: employee.lastName,
-      email: employee.email || employee.user?.email || '', // Get email directly from employee or fallback to user.email
-      departmentId: employee.department.id,
-      position: employee.position,
-      managerId: employee.manager?.id || 'none',
-      joiningDate: employee.joiningDate.split('T')[0], // Convert to YYYY-MM-DD format
-      annualLeaveDays: employee.annualLeaveDays,
-      sickLeaveDays: employee.sickLeaveDays,
-      casualLeaveDays: employee.casualLeaveDays,
-    });
-    console.log('Form data populated with email:', employee.email || employee.user?.email || '');
+    
+    try {
+      // Fetch current leave balances to determine if manual balances were used
+      const balanceData = await adminAPI.getEmployeeLeaveBalance(employee.id);
+      const balances = balanceData.balances || [];
+      const earnedBalance = balances.find(b => b.leaveType === 'earned');
+      const sickBalance = balances.find(b => b.leaveType === 'sick');
+      const casualBalance = balances.find(b => b.leaveType === 'casual');
+
+      // Check if this employee was created with manual balances by comparing
+      // current available days with what pro-rata calculation would give
+      const calculateProRataLeave = (joiningDate: string, annualEntitlement: number): number => {
+        if (!joiningDate) return annualEntitlement;
+        const currentYear = new Date().getFullYear();
+        const joinDate = new Date(joiningDate);
+        const monthsRemaining = Math.max(0, 12 - joinDate.getMonth());
+        const proRataLeave = (annualEntitlement / 12) * monthsRemaining;
+        return Math.round(proRataLeave * 100) / 100;
+      };
+
+      const expectedEarned = calculateProRataLeave(employee.joiningDate, employee.annualLeaveDays);
+      const expectedCasual = calculateProRataLeave(employee.joiningDate, employee.casualLeaveDays);
+      const expectedSick = employee.sickLeaveDays; // Sick leave is typically not pro-rated
+
+      // If available days differ significantly from expected, assume manual balances were used
+      const earnedDiffers = Math.abs((earnedBalance?.availableDays || 0) - expectedEarned) > 0.1;
+      const casualDiffers = Math.abs((casualBalance?.availableDays || 0) - expectedCasual) > 0.1;
+      const sickDiffers = Math.abs((sickBalance?.availableDays || 0) - expectedSick) > 0.1;
+      
+      const wasManuallySet = earnedDiffers || casualDiffers || sickDiffers;
+
+      setFormData({
+        employeeId: employee.employeeId || '',
+        firstName: employee.firstName,
+        lastName: employee.lastName,
+        email: employee.email || employee.user?.email || '',
+        departmentId: employee.department.id,
+        position: employee.position,
+        managerId: employee.manager?.id || 'none',
+        joiningDate: employee.joiningDate.split('T')[0],
+        annualLeaveDays: employee.annualLeaveDays,
+        sickLeaveDays: employee.sickLeaveDays,
+        casualLeaveDays: employee.casualLeaveDays,
+        manualEarnedBalance: earnedBalance?.availableDays || 0,
+        manualSickBalance: sickBalance?.availableDays || 0,
+        manualCasualBalance: casualBalance?.availableDays || 0,
+      });
+
+      setUseManualBalances(wasManuallySet);
+      console.log('Form data populated with manual balances detected:', wasManuallySet);
+      
+    } catch (error) {
+      console.error('Failed to fetch balance data for edit form:', error);
+      // Fallback to basic form population without balance data
+      setFormData({
+        employeeId: employee.employeeId || '',
+        firstName: employee.firstName,
+        lastName: employee.lastName,
+        email: employee.email || employee.user?.email || '',
+        departmentId: employee.department.id,
+        position: employee.position,
+        managerId: employee.manager?.id || 'none',
+        joiningDate: employee.joiningDate.split('T')[0],
+        annualLeaveDays: employee.annualLeaveDays,
+        sickLeaveDays: employee.sickLeaveDays,
+        casualLeaveDays: employee.casualLeaveDays,
+        manualEarnedBalance: 0,
+        manualSickBalance: 0,
+        manualCasualBalance: 0,
+      });
+      setUseManualBalances(false);
+    }
   };
 
   const fetchEmployees = async () => {
@@ -222,6 +289,13 @@ const EmployeesDebug: React.FC = () => {
           annualLeaveDays: formData.annualLeaveDays,
           sickLeaveDays: formData.sickLeaveDays,
           casualLeaveDays: formData.casualLeaveDays,
+          // Include manual balance overrides if using manual mode
+          useManualBalances,
+          manualBalances: useManualBalances ? {
+            earned: formData.manualEarnedBalance,
+            sick: formData.manualSickBalance,
+            casual: formData.manualCasualBalance,
+          } : undefined,
         };
 
         console.log('Creating employee data:', employeeData);
@@ -261,6 +335,28 @@ const EmployeesDebug: React.FC = () => {
     }));
   };
 
+  // Calculate pro-rata leave based on joining date
+  const calculateProRataLeave = (joiningDate: string, annualEntitlement: number): number => {
+    if (!joiningDate) return annualEntitlement;
+    
+    const currentYear = new Date().getFullYear();
+    const yearStart = new Date(currentYear, 0, 1);
+    const yearEnd = new Date(currentYear, 11, 31);
+    const joinDate = new Date(joiningDate);
+    
+    // If joined before year start, give full entitlement
+    const startDate = joinDate > yearStart ? joinDate : yearStart;
+    
+    // Calculate months remaining in the year
+    const monthsRemaining = Math.max(0, 12 - startDate.getMonth());
+    
+    // Pro-rata calculation
+    const proRataLeave = (annualEntitlement / 12) * monthsRemaining;
+    
+    // Round to 2 decimal places
+    return Math.round(proRataLeave * 100) / 100;
+  };
+
   const handleBulkUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -288,10 +384,41 @@ const EmployeesDebug: React.FC = () => {
     }
   };
 
+  const generateInviteURL = (employee: Employee) => {
+    // Generate a secure invite token (in a real implementation, this would be generated on the backend)
+    // Use | as delimiter since it's unlikely to appear in IDs or emails
+    const tokenData = `${employee.id}|${employee.email}|${Date.now()}`;
+    // Use URL-safe base64 encoding to avoid issues with + and = characters
+    const inviteToken = btoa(tokenData).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    const baseURL = window.location.origin;
+    const inviteURL = `${baseURL}/invite?token=${inviteToken}&email=${encodeURIComponent(employee.email)}`;
+    console.log('Generated invite URL:', inviteURL); // Debug log
+    console.log('Token data:', tokenData); // Debug log
+    return inviteURL;
+  };
 
-  const handleEditEmployee = (employee: Employee) => {
+  const copyInviteURL = async (employee: Employee) => {
+    try {
+      const inviteURL = generateInviteURL(employee);
+      await navigator.clipboard.writeText(inviteURL);
+      
+      toast({
+        title: "Invite URL Copied",
+        description: `Invite URL for ${employee.firstName} ${employee.lastName} has been copied to clipboard`,
+      });
+    } catch (error) {
+      console.error('Failed to copy invite URL:', error);
+      toast({
+        title: "Error",
+        description: "Failed to copy invite URL to clipboard",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditEmployee = async (employee: Employee) => {
     setEditingEmployee(employee);
-    populateFormForEdit(employee);
+    await populateFormForEdit(employee);
     fetchDepartments(); // Refresh departments
     setIsAddDialogOpen(true);
   };
@@ -324,74 +451,43 @@ const EmployeesDebug: React.FC = () => {
     setIsLeaveStatusDialogOpen(true);
     
     try {
-      // Fetch real leave requests data - we'll calculate balances manually
+      // Fetch actual leave balance data from the database
+      const balanceData = await adminAPI.getEmployeeLeaveBalance(employee.id);
+      
+      // Fetch leave requests to check current status
       const leaveRequestsData = await adminAPI.getAllLeaveRequests();
-
-      // Filter requests for this employee
       const employeeRequests = leaveRequestsData?.requests?.filter(req => req.employee?.id === employee.id) || [];
       const pendingRequests = employeeRequests.filter(req => req.status === 'pending').length;
       
-      // Check if employee is currently on leave
-      const today = new Date();
-      const currentLeaveRequest = employeeRequests.find(req => {
-        if (req.status !== 'approved') return false;
-        const startDate = new Date(req.startDate);
-        const endDate = new Date(req.endDate);
-        return today >= startDate && today <= endDate;
-      });
+      // Check if employee is currently on leave (approved request covering today's date)
+      const today = new Date().toISOString().split('T')[0];
+      const currentLeaveRequest = employeeRequests.find(req => 
+        req.status === 'approved' && 
+        req.startDate <= today && 
+        req.endDate >= today
+      );
 
-      // Calculate leave balances manually from approved requests
-      const approvedRequests = employeeRequests.filter(req => req.status === 'approved');
-      
-      const calculateUsedDays = (leaveType: string) => {
-        return approvedRequests
-          .filter(req => req.leaveType === leaveType)
-          .reduce((total, req) => {
-            const startDate = new Date(req.startDate);
-            const endDate = new Date(req.endDate);
-            const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end dates
-            return total + diffDays;
-          }, 0);
-      };
-
-      const earnedUsed = calculateUsedDays('earned');
-      const sickUsed = calculateUsedDays('sick');
-      const casualUsed = calculateUsedDays('casual');
-
-      const earnedBalance = {
-        totalAllocated: employee.annualLeaveDays, // Still using annualLeaveDays field for earned leave
-        usedDays: earnedUsed,
-        availableDays: employee.annualLeaveDays - earnedUsed
-      };
-
-      const sickBalance = {
-        totalAllocated: employee.sickLeaveDays,
-        usedDays: sickUsed,
-        availableDays: employee.sickLeaveDays - sickUsed
-      };
-
-      const casualBalance = {
-        totalAllocated: employee.casualLeaveDays,
-        usedDays: casualUsed,
-        availableDays: employee.casualLeaveDays - casualUsed
-      };
+      // Use actual balance data from database instead of manual calculation
+      const balances = balanceData.balances || [];
+      const earnedBalance = balances.find(b => b.leaveType === 'earned');
+      const sickBalance = balances.find(b => b.leaveType === 'sick');
+      const casualBalance = balances.find(b => b.leaveType === 'casual');
 
       const leaveStatus = {
         earnedLeave: {
-          total: earnedBalance.totalAllocated,
-          used: earnedBalance.usedDays,
-          remaining: earnedBalance.availableDays
+          total: earnedBalance?.totalAllocated || employee.annualLeaveDays,
+          used: earnedBalance?.usedDays || 0,
+          remaining: earnedBalance?.availableDays || employee.annualLeaveDays
         },
         sickLeave: {
-          total: sickBalance.totalAllocated,
-          used: sickBalance.usedDays,
-          remaining: sickBalance.availableDays
+          total: sickBalance?.totalAllocated || employee.sickLeaveDays,
+          used: sickBalance?.usedDays || 0,
+          remaining: sickBalance?.availableDays || employee.sickLeaveDays
         },
         casualLeave: {
-          total: casualBalance.totalAllocated,
-          used: casualBalance.usedDays,
-          remaining: casualBalance.availableDays
+          total: casualBalance?.totalAllocated || employee.casualLeaveDays,
+          used: casualBalance?.usedDays || 0,
+          remaining: casualBalance?.availableDays || employee.casualLeaveDays
         },
         currentStatus: currentLeaveRequest ? `On ${currentLeaveRequest.leaveType} leave` : 'Available',
         onLeave: !!currentLeaveRequest,
@@ -520,6 +616,15 @@ const EmployeesDebug: React.FC = () => {
                         className="text-blue-600 hover:text-blue-700"
                       >
                         <Info className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => copyInviteURL(employee)}
+                        title="Copy Invite URL"
+                        className="text-green-600 hover:text-green-700"
+                      >
+                        <Clipboard className="w-4 h-4" />
                       </Button>
                       <Button 
                         variant="outline" 
@@ -665,39 +770,188 @@ const EmployeesDebug: React.FC = () => {
 
             {/* Leave Entitlements */}
             <div className="border rounded p-4">
-              <h3 className="font-semibold mb-3">Leave Entitlements</h3>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="annualLeave">Earned/Privilege Leave Days</Label>
-                  <Input
-                    id="annualLeave"
-                    type="number"
-                    min="0"
-                    value={formData.annualLeaveDays}
-                    onChange={(e) => handleInputChange('annualLeaveDays', parseInt(e.target.value) || 0)}
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold">Leave Entitlements</h3>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="manualBalances"
+                    checked={useManualBalances}
+                    onChange={(e) => setUseManualBalances(e.target.checked)}
+                    className="w-4 h-4"
                   />
-                </div>
-                <div>
-                  <Label htmlFor="sickLeave">Sick Leave Days</Label>
-                  <Input
-                    id="sickLeave"
-                    type="number"
-                    min="0"
-                    value={formData.sickLeaveDays}
-                    onChange={(e) => handleInputChange('sickLeaveDays', parseInt(e.target.value) || 0)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="casualLeave">Casual Leave Days</Label>
-                  <Input
-                    id="casualLeave"
-                    type="number"
-                    min="0"
-                    value={formData.casualLeaveDays}
-                    onChange={(e) => handleInputChange('casualLeaveDays', parseInt(e.target.value) || 0)}
-                  />
+                  <Label htmlFor="manualBalances" className="text-sm cursor-pointer">
+                    Existing Employee (Set current balances manually)
+                  </Label>
                 </div>
               </div>
+
+              {!useManualBalances ? (
+                <>
+                  {/* Annual Allocation Fields */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="annualLeave">Earned/Privilege Leave Days</Label>
+                      <Input
+                        id="annualLeave"
+                        type="number"
+                        min="0"
+                        value={formData.annualLeaveDays}
+                        onChange={(e) => handleInputChange('annualLeaveDays', parseInt(e.target.value) || 0)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="sickLeave">Sick Leave Days</Label>
+                      <Input
+                        id="sickLeave"
+                        type="number"
+                        min="0"
+                        value={formData.sickLeaveDays}
+                        onChange={(e) => handleInputChange('sickLeaveDays', parseInt(e.target.value) || 0)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="casualLeave">Casual Leave Days</Label>
+                      <Input
+                        id="casualLeave"
+                        type="number"
+                        min="0"
+                        value={formData.casualLeaveDays}
+                        onChange={(e) => handleInputChange('casualLeaveDays', parseInt(e.target.value) || 0)}
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Manual Current Balance Fields */}
+                  <div className="bg-orange-50 dark:bg-orange-950/30 p-3 rounded-lg border dark:border-orange-800/50 mb-4">
+                    <p className="text-sm text-orange-800 dark:text-orange-200 mb-2">
+                      🔄 <strong>Migration Mode:</strong> Enter the employee's current leave balances from your previous system
+                    </p>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="manualEarned">Current Earned/Privilege Balance</Label>
+                      <Input
+                        id="manualEarned"
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        value={formData.manualEarnedBalance}
+                        onChange={(e) => handleInputChange('manualEarnedBalance', parseFloat(e.target.value) || 0)}
+                        placeholder="e.g. 4.5"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Available days remaining</p>
+                    </div>
+                    <div>
+                      <Label htmlFor="manualSick">Current Sick Leave Balance</Label>
+                      <Input
+                        id="manualSick"
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        value={formData.manualSickBalance}
+                        onChange={(e) => handleInputChange('manualSickBalance', parseFloat(e.target.value) || 0)}
+                        placeholder="e.g. 8"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Available days remaining</p>
+                    </div>
+                    <div>
+                      <Label htmlFor="manualCasual">Current Casual Leave Balance</Label>
+                      <Input
+                        id="manualCasual"
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        value={formData.manualCasualBalance}
+                        onChange={(e) => handleInputChange('manualCasualBalance', parseFloat(e.target.value) || 0)}
+                        placeholder="e.g. 2.5"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Available days remaining</p>
+                    </div>
+                  </div>
+
+                  {/* Annual Allocation Fields (still needed for future calculations) */}
+                  <div className="mt-4">
+                    <h4 className="text-sm font-medium mb-2">Annual Leave Allocations (for next year)</h4>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label htmlFor="annualLeave" className="text-sm">Earned/Privilege Leave Days</Label>
+                        <Input
+                          id="annualLeave"
+                          type="number"
+                          min="0"
+                          value={formData.annualLeaveDays}
+                          onChange={(e) => handleInputChange('annualLeaveDays', parseInt(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="sickLeave" className="text-sm">Sick Leave Days</Label>
+                        <Input
+                          id="sickLeave"
+                          type="number"
+                          min="0"
+                          value={formData.sickLeaveDays}
+                          onChange={(e) => handleInputChange('sickLeaveDays', parseInt(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="casualLeave" className="text-sm">Casual Leave Days</Label>
+                        <Input
+                          id="casualLeave"
+                          type="number"
+                          min="0"
+                          value={formData.casualLeaveDays}
+                          onChange={(e) => handleInputChange('casualLeaveDays', parseInt(e.target.value) || 0)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Pro-rata Leave Calculation Preview - Only for new employees */}
+              {!useManualBalances && formData.joiningDate && (
+                <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border dark:border-blue-800/50">
+                  <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+                    📊 Calculated Leave Entitlements (Pro-rata based on joining date)
+                  </h4>
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div className="text-center">
+                      <div className="font-medium text-blue-700 dark:text-blue-300">Earned/Privilege</div>
+                      <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                        {calculateProRataLeave(formData.joiningDate, formData.annualLeaveDays || 0)}
+                      </div>
+                      <div className="text-xs text-blue-500 dark:text-blue-400">
+                        of {formData.annualLeaveDays || 0} days
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-medium text-red-700 dark:text-red-300">Sick Leave</div>
+                      <div className="text-lg font-bold text-red-600 dark:text-red-400">
+                        {formData.sickLeaveDays || 0}
+                      </div>
+                      <div className="text-xs text-red-500 dark:text-red-400">
+                        full allocation
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-medium text-green-700 dark:text-green-300">Casual Leave</div>
+                      <div className="text-lg font-bold text-green-600 dark:text-green-400">
+                        {calculateProRataLeave(formData.joiningDate, formData.casualLeaveDays || 0)}
+                      </div>
+                      <div className="text-xs text-green-500 dark:text-green-400">
+                        of {formData.casualLeaveDays || 0} days
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 text-center">
+                    * Leave entitlements are calculated pro-rata based on joining date for the current year
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Form Actions */}

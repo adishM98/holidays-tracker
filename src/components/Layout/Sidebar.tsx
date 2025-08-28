@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Calendar, FileText, Home, Users, LogOut, Clock, Menu, X, Settings, Upload } from 'lucide-react';
+import { Calendar, FileText, Home, Users, LogOut, Clock, Menu, X, Settings, Upload, UserCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -109,7 +109,12 @@ const Sidebar: React.FC = () => {
 
           <div className="p-4 border-b border-border">
             <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-3">
+              <Link 
+                to="/profile" 
+                className="flex items-center space-x-3 flex-1 hover:bg-secondary rounded-lg p-2 transition-colors"
+                title="View Profile"
+                onClick={() => setIsOpen(false)}
+              >
                 <div className="w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center text-white font-semibold">
                   {getUserInitials()}
                 </div>
@@ -117,7 +122,7 @@ const Sidebar: React.FC = () => {
                   <p className="font-medium text-foreground">{getUserDisplayName()}</p>
                   <p className="text-sm text-muted-foreground capitalize">{user?.role} • {getUserDepartment()}</p>
                 </div>
-              </div>
+              </Link>
               <ThemeToggle />
             </div>
           </div>
@@ -182,7 +187,11 @@ const Sidebar: React.FC = () => {
 
       <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center space-x-3">
+          <Link 
+            to="/profile" 
+            className="flex items-center space-x-3 flex-1 hover:bg-secondary rounded-lg p-2 transition-colors"
+            title="View Profile"
+          >
             <div className="w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center text-white font-semibold">
               {getUserInitials()}
             </div>
@@ -190,7 +199,7 @@ const Sidebar: React.FC = () => {
               <p className="font-medium text-foreground">{getUserDisplayName()}</p>
               <p className="text-sm text-muted-foreground capitalize">{user?.role} • {getUserDepartment()}</p>
             </div>
-          </div>
+          </Link>
           <ThemeToggle />
         </div>
       </div>

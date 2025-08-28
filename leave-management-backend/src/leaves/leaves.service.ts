@@ -81,6 +81,7 @@ export class LeavesService {
       daysCount,
       reason: createLeaveRequestDto.reason,
       status: LeaveStatus.PENDING,
+      approvedBy: employee.manager?.id, // Assign manager as approver
     });
 
     const savedRequest = await this.leaveRequestRepository.save(leaveRequest);
@@ -116,6 +117,7 @@ export class LeavesService {
       .leftJoinAndSelect('leaveRequest.employee', 'employee')
       .leftJoinAndSelect('employee.user', 'user')
       .leftJoinAndSelect('employee.department', 'department')
+      .leftJoinAndSelect('employee.manager', 'manager')
       .leftJoinAndSelect('leaveRequest.approver', 'approver');
 
     if (options?.status) {
@@ -142,7 +144,7 @@ export class LeavesService {
   async findOne(id: string): Promise<LeaveRequest> {
     const leaveRequest = await this.leaveRequestRepository.findOne({
       where: { id },
-      relations: ['employee', 'employee.user', 'employee.department', 'approver'],
+      relations: ['employee', 'employee.user', 'employee.department', 'employee.manager', 'approver'],
     });
 
     if (!leaveRequest) {
@@ -436,6 +438,8 @@ export class LeavesService {
       .leftJoinAndSelect('leaveRequest.employee', 'employee')
       .leftJoinAndSelect('employee.user', 'user')
       .leftJoinAndSelect('employee.department', 'department')
+      .leftJoinAndSelect('leaveRequest.approver', 'approver')
+      .leftJoinAndSelect('approver.user', 'approverUser')
       .where('leaveRequest.status IN (:...statuses)', { statuses: [LeaveStatus.APPROVED, LeaveStatus.PENDING] })
       .andWhere(
         '(leaveRequest.startDate BETWEEN :startDate AND :endDate OR leaveRequest.endDate BETWEEN :startDate AND :endDate)',

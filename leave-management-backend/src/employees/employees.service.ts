@@ -5,21 +5,35 @@ import { Employee } from './entities/employee.entity';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { LeaveCalculationService } from '../leaves/services/leave-calculation.service';
+import { User } from '../users/entities/user.entity';
+import { UserRole } from '../common/enums/user-role.enum';
+import { LeaveRequest } from '../leaves/entities/leave-request.entity';
+import { LeaveBalance } from '../leaves/entities/leave-balance.entity';
 
 @Injectable()
 export class EmployeesService {
   constructor(
     @InjectRepository(Employee)
     private employeeRepository: Repository<Employee>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
     private leaveCalculationService: LeaveCalculationService,
   ) {}
 
   async create(createEmployeeDto: CreateEmployeeDto): Promise<Employee> {
-    // Check if email already exists
+    // Check if email already exists in employees
     const existingEmployee = await this.employeeRepository.findOne({
       where: { email: createEmployeeDto.email }
     });
     if (existingEmployee) {
+      throw new ConflictException('Email already exists');
+    }
+
+    // Check if email already exists in users
+    const existingUser = await this.userRepository.findOne({
+      where: { email: createEmployeeDto.email }
+    });
+    if (existingUser) {
       throw new ConflictException('Email already exists');
     }
 
@@ -33,8 +47,19 @@ export class EmployeesService {
       }
     }
 
+    // Create user record without password (they'll set it via invite)
+    const user = this.userRepository.create({
+      email: createEmployeeDto.email,
+      passwordHash: '', // Empty password hash - they'll set it via invite
+      role: UserRole.EMPLOYEE,
+      isActive: true,
+      mustChangePassword: false,
+    });
+    const savedUser = await this.userRepository.save(user);
+
     const employee = this.employeeRepository.create({
       ...createEmployeeDto,
+      userId: savedUser.id,
       joiningDate: new Date(createEmployeeDto.joiningDate),
       probationEndDate: createEmployeeDto.probationEndDate 
         ? new Date(createEmployeeDto.probationEndDate) 
@@ -44,9 +69,14 @@ export class EmployeesService {
     const savedEmployee = await this.employeeRepository.save(employee);
 
     // Initialize leave balances for the new employee
+    const manualBalances = createEmployeeDto.useManualBalances && createEmployeeDto.manualBalances
+      ? createEmployeeDto.manualBalances
+      : undefined;
+      
     await this.leaveCalculationService.initializeLeaveBalances(
       savedEmployee.id,
       savedEmployee.joiningDate,
+      manualBalances,
     );
 
     return savedEmployee;
@@ -253,10 +283,55 @@ export class EmployeesService {
   }
 
   async remove(id: string): Promise<void> {
-    const result = await this.employeeRepository.delete(id);
-    if (result.affected === 0) {
-      throw new NotFoundException('Employee not found');
-    }
+    // Start a transaction to ensure all deletions happen atomically
+    await this.employeeRepository.manager.transaction(async (manager) => {
+      // First, find the employee to get their user ID
+      const employee = await manager.findOne(Employee, { 
+        where: { id },
+        relations: ['user']
+      });
+      
+      if (!employee) {
+        throw new NotFoundException('Employee not found');
+      }
+
+      console.log(`Starting cascading delete for employee: ${employee.firstName} ${employee.lastName} (ID: ${id})`);
+
+      // Step 1: Remove this employee as manager from any departments
+      await manager.query(
+        `UPDATE departments SET manager_id = NULL WHERE manager_id = $1`,
+        [id]
+      );
+      console.log('Updated departments to remove as manager');
+
+      // Step 2: Remove this employee as manager from any subordinate employees  
+      await manager.query(
+        `UPDATE employees SET manager_id = NULL WHERE manager_id = $1`,
+        [id]
+      );
+      console.log('Updated subordinate employees to remove as manager');
+
+      // Step 3: Delete leave requests (should cascade but doing explicitly for clarity)
+      const deletedRequests = await manager.delete(LeaveRequest, { employeeId: id });
+      console.log(`Deleted ${deletedRequests.affected || 0} leave requests`);
+
+      // Step 4: Delete leave balances (should cascade but doing explicitly for clarity)  
+      const deletedBalances = await manager.delete(LeaveBalance, { employeeId: id });
+      console.log(`Deleted ${deletedBalances.affected || 0} leave balances`);
+
+      // Step 5: Delete the employee record
+      const deletedEmployee = await manager.delete(Employee, { id });
+      console.log(`Deleted employee record: ${deletedEmployee.affected || 0}`);
+
+      // Step 6: Delete the associated user account (should cascade but doing explicitly)
+      if (employee.user) {
+        // This will also cascade delete any password_reset_tokens
+        const deletedUser = await manager.delete(User, { id: employee.user.id });
+        console.log(`Deleted user account: ${deletedUser.affected || 0}`);
+      }
+
+      console.log('Cascading delete completed successfully');
+    });
   }
 
   async getEmployeeStats(): Promise<{

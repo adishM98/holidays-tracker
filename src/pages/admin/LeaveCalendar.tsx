@@ -25,6 +25,12 @@ interface LeaveRequest {
       name: string;
     };
   };
+  approver?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+  approvedAt?: string;
   reason?: string;
 }
 
@@ -549,7 +555,7 @@ const LeaveCalendar: React.FC = () => {
       {/* Leave Details Summary */}
       <Card className="shadow-professional-md">
         <CardHeader>
-          <CardTitle className="text-lg">Leave Summary for {monthNames[currentMonth]} {currentYear}</CardTitle>
+          <CardTitle className="text-lg">Pending Approvals for {monthNames[currentMonth]} {currentYear}</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -557,85 +563,89 @@ const LeaveCalendar: React.FC = () => {
               <Clock className="h-6 w-6 animate-spin mr-2" />
               <span>Loading leave data...</span>
             </div>
-          ) : leaveRequests.length > 0 ? (
-            <div className="space-y-3">
-              {leaveRequests.map((leave) => (
-                <div
-                  key={leave.id}
-                  className="flex items-center justify-between p-3 border border-border rounded-lg bg-secondary/20"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                      {leave.employee.firstName[0]}{leave.employee.lastName[0]}
-                    </div>
-                    <div>
-                      <p className="font-medium text-foreground">
-                        {leave.employee.firstName} {leave.employee.lastName}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {leave.employee.department.name}
-                      </p>
+          ) : leaveRequests.filter(leave => leave.status === 'pending').length > 0 ? (
+            <div className="space-y-4">
+              {/* Group pending requests by approver */}
+              {Object.entries(
+                leaveRequests
+                  .filter(leave => leave.status === 'pending')
+                  .reduce((groups, leave) => {
+                    const approverKey = leave.approver 
+                      ? `${leave.approver.firstName} ${leave.approver.lastName}`
+                      : 'No approver assigned';
+                    if (!groups[approverKey]) {
+                      groups[approverKey] = [];
+                    }
+                    groups[approverKey].push(leave);
+                    return groups;
+                  }, {} as Record<string, LeaveRequest[]>)
+              ).map(([approverName, requests]) => (
+                <div key={approverName} className="border border-border rounded-lg p-4 bg-secondary/10">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                        {approverName === 'No approver assigned' ? '?' : approverName.split(' ').map(n => n[0]).join('')}
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground">{approverName}</p>
+                        <p className="text-sm text-muted-foreground">{requests.length} pending approval{requests.length !== 1 ? 's' : ''}</p>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <Badge variant="outline" className={getLeaveTypeColor(leave.leaveType, leave.status)}>
-                      {leave.leaveType} - {leave.status}
-                    </Badge>
-                    <div className="text-right flex-grow">
-                      <p className="text-sm font-medium text-foreground">
-                        {new Date(leave.startDate).toLocaleDateString()} - {new Date(leave.endDate).toLocaleDateString()}
-                      </p>
-                      {leave.reason && (
-                        <p className="text-xs text-muted-foreground max-w-40 truncate" title={leave.reason}>
-                          {leave.reason}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      {leave.status === 'pending' && (
-                        <>
-                          <Button
-                            onClick={() => handleLeaveApproval(leave.id, 'approved')}
-                            disabled={isProcessingApproval === leave.id}
-                            size="sm"
-                            className="bg-gradient-success hover:opacity-90 h-8"
-                            title="Approve leave"
-                          >
-                            <Check className="h-4 w-4 mr-1" />
-                            {isProcessingApproval === leave.id ? 'Processing...' : 'Approve'}
-                          </Button>
-                          <Button
-                            onClick={() => handleLeaveApproval(leave.id, 'rejected')}
-                            disabled={isProcessingApproval === leave.id}
-                            variant="outline"
-                            size="sm"
-                            className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground h-8"
-                            title="Reject leave"
-                          >
-                            <X className="h-4 w-4 mr-1" />
-                            Reject
-                          </Button>
-                        </>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditLeave(leave)}
-                        className="h-8 w-8 p-0"
-                        title="Edit leave"
+                  <div className="space-y-2">
+                    {requests.map((leave) => (
+                      <div
+                        key={leave.id}
+                        className="flex items-center justify-between p-3 border border-border/50 rounded-lg bg-background/50"
                       >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteLeave(leave.id)}
-                        className="h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                        title="Delete leave"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-secondary rounded-full flex items-center justify-center text-foreground font-medium text-xs">
+                            {leave.employee.firstName[0]}{leave.employee.lastName[0]}
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground text-sm">
+                              {leave.employee.firstName} {leave.employee.lastName}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {leave.employee.department.name}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <Badge variant="outline" className={getLeaveTypeColor(leave.leaveType, leave.status)}>
+                            {leave.leaveType}
+                          </Badge>
+                          <div className="text-right">
+                            <p className="text-xs font-medium text-foreground">
+                              {new Date(leave.startDate).toLocaleDateString()} - {new Date(leave.endDate).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Button
+                              onClick={() => handleLeaveApproval(leave.id, 'approved')}
+                              disabled={isProcessingApproval === leave.id}
+                              size="sm"
+                              className="bg-gradient-success hover:opacity-90 h-7 px-2"
+                            >
+                              {isProcessingApproval === leave.id ? (
+                                <Clock className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Check className="h-3 w-3" />
+                              )}
+                            </Button>
+                            <Button
+                              onClick={() => handleLeaveApproval(leave.id, 'rejected')}
+                              disabled={isProcessingApproval === leave.id}
+                              variant="destructive"
+                              size="sm"
+                              className="h-7 px-2"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
@@ -643,7 +653,7 @@ const LeaveCalendar: React.FC = () => {
           ) : (
             <div className="text-center py-8 text-muted-foreground">
               <Calendar className="h-12 w-12 mx-auto mb-4 opacity-40" />
-              <p>No leaves for this month</p>
+              <p>No pending approvals for this month</p>
             </div>
           )}
         </CardContent>

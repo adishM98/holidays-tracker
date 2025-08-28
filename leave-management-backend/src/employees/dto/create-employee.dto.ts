@@ -1,5 +1,23 @@
-import { IsString, IsEmail, IsOptional, IsDateString, IsNumber, IsUUID } from 'class-validator';
+import { IsString, IsEmail, IsOptional, IsDateString, IsNumber, IsUUID, IsBoolean, ValidateNested } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+
+export class ManualBalancesDto {
+  @ApiPropertyOptional({ example: 15.5, description: 'Current earned/privilege leave balance' })
+  @IsOptional()
+  @IsNumber()
+  earned?: number;
+
+  @ApiPropertyOptional({ example: 8, description: 'Current sick leave balance' })
+  @IsOptional()
+  @IsNumber()
+  sick?: number;
+
+  @ApiPropertyOptional({ example: 4, description: 'Current casual leave balance' })
+  @IsOptional()
+  @IsNumber()
+  casual?: number;
+}
 
 export class CreateEmployeeDto {
   @ApiPropertyOptional()
@@ -66,4 +84,15 @@ export class CreateEmployeeDto {
   @IsOptional()
   @IsNumber()
   casualLeaveDays?: number;
+
+  @ApiPropertyOptional({ description: 'Whether to use manual balance overrides for existing employees' })
+  @IsOptional()
+  @IsBoolean()
+  useManualBalances?: boolean;
+
+  @ApiPropertyOptional({ description: 'Manual balances for existing employees' })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ManualBalancesDto)
+  manualBalances?: ManualBalancesDto;
 }

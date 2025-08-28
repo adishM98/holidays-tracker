@@ -25,6 +25,7 @@ import { User } from '../users/entities/user.entity';
 import { EmployeesService } from '../employees/employees.service';
 import { DepartmentsService } from '../departments/departments.service';
 import { LeavesService } from '../leaves/leaves.service';
+import { LeaveCleanupService } from '../leaves/services/leave-cleanup.service';
 import { BulkImportService } from './services/bulk-import.service';
 import { HolidaysService } from '../holidays/holidays.service';
 import { CreateEmployeeDto } from '../employees/dto/create-employee.dto';
@@ -49,6 +50,7 @@ export class AdminController {
     private employeesService: EmployeesService,
     private departmentsService: DepartmentsService,
     private leavesService: LeavesService,
+    private leaveCleanupService: LeaveCleanupService,
     private bulkImportService: BulkImportService,
     private holidaysService: HolidaysService,
   ) {}
@@ -309,6 +311,20 @@ export class AdminController {
     };
   }
 
+  @Get('employees/:id/leave-balance')
+  @ApiOperation({ summary: 'Get leave balance for a specific employee' })
+  async getEmployeeLeaveBalance(
+    @Param('id') employeeId: string,
+    @Query('year') year?: number,
+  ) {
+    const balances = await this.leavesService.getLeaveBalance(employeeId, year);
+    return {
+      year: year || new Date().getFullYear(),
+      employeeId,
+      balances,
+    };
+  }
+
   @Get('reports/employee-leave-balance')
   @ApiOperation({ summary: 'Get employee leave balances report' })
   async getEmployeeLeaveBalances(
@@ -386,5 +402,25 @@ export class AdminController {
   @ApiOperation({ summary: 'Get upcoming holidays' })
   async getUpcomingHolidays(@Param('days') days: string) {
     return this.holidaysService.getUpcomingHolidays(parseInt(days));
+  }
+
+  // Leave Cleanup Management
+  @Get('cleanup/stats')
+  @ApiOperation({ summary: 'Get cleanup statistics for cancelled leave requests' })
+  async getCleanupStats() {
+    return this.leaveCleanupService.getCleanupStats();
+  }
+
+  @Post('cleanup/manual')
+  @ApiOperation({ summary: 'Manually trigger cleanup of old cancelled leave requests' })
+  @ApiResponse({ status: 200, description: 'Cleanup completed successfully' })
+  async manualCleanup() {
+    const result = await this.leaveCleanupService.manualCleanup();
+    
+    return {
+      message: `Successfully cleaned up ${result.deletedCount} cancelled leave requests`,
+      deletedCount: result.deletedCount,
+      deletedRequests: result.deletedRequests,
+    };
   }
 }

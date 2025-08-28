@@ -16,23 +16,76 @@ export class LeaveCalculationService {
 
   /**
    * Calculate pro-rata leave for new joiners based on joining date
+   * Uses HR-provided calculation table that starts from the beginning of joining month
    */
   calculateProRataLeave(joiningDate: Date, annualEntitlement: number): number {
-    const currentYear = new Date().getFullYear();
-    const yearStart = new Date(currentYear, 0, 1);
-    const yearEnd = new Date(currentYear, 11, 31);
+    const joiningMonth = joiningDate.getMonth() + 1; // 1-based month (Jan=1, Dec=12)
     
-    // If joined before year start, give full entitlement
-    const startDate = joiningDate > yearStart ? joiningDate : yearStart;
+    // HR-provided pro-rata table based on month of joining
+    // Values represent leave days available for each leave type based on joining month
+    const hrProRataTable = {
+      // Privilege/Earned Leave (annual = 12 days typically)
+      earned: {
+        1: 12, 2: 11, 3: 10, 4: 9, 5: 8, 6: 7, 7: 6, 8: 5, 9: 4, 10: 3, 11: 2, 12: 1
+      },
+      // Casual Leave (annual = 8 days typically)  
+      casual: {
+        1: 8, 2: 7, 3: 7, 4: 6, 5: 6, 6: 5, 7: 4, 8: 4, 9: 3, 10: 2, 11: 2, 12: 1
+      },
+      // Sick Leave (annual = 8 days typically)
+      sick: {
+        1: 8, 2: 7, 3: 7, 4: 6, 5: 6, 6: 5, 7: 4, 8: 4, 9: 3, 10: 2, 11: 2, 12: 1
+      }
+    };
     
-    // Calculate months remaining in the year
-    const monthsRemaining = this.getMonthsRemaining(startDate, yearEnd);
+    // Determine leave type based on annual entitlement
+    let leaveType: 'earned' | 'casual' | 'sick';
+    if (annualEntitlement === 12) {
+      leaveType = 'earned';
+    } else if (annualEntitlement === 8) {
+      // Need to differentiate between casual and sick - for now, assume casual
+      // This will be handled differently in the calling function
+      leaveType = 'casual';
+    } else {
+      // Fallback to proportional calculation for non-standard entitlements
+      const monthsRemaining = 13 - joiningMonth; // Months from joining month to end of year
+      return Math.round((annualEntitlement / 12) * monthsRemaining * 100) / 100;
+    }
     
-    // Pro-rata calculation
-    const proRataLeave = (annualEntitlement / 12) * monthsRemaining;
-    
-    // Round to 2 decimal places
-    return Math.round(proRataLeave * 100) / 100;
+    return hrProRataTable[leaveType][joiningMonth] || 0;
+  }
+
+  /**
+   * Calculate pro-rata casual leave based on HR table
+   */
+  calculateCasualLeave(joiningDate: Date): number {
+    const joiningMonth = joiningDate.getMonth() + 1;
+    const casualTable = {
+      1: 8, 2: 7, 3: 7, 4: 6, 5: 6, 6: 5, 7: 4, 8: 4, 9: 3, 10: 2, 11: 2, 12: 1
+    };
+    return casualTable[joiningMonth] || 0;
+  }
+
+  /**
+   * Calculate pro-rata sick leave based on HR table
+   */
+  calculateSickLeave(joiningDate: Date): number {
+    const joiningMonth = joiningDate.getMonth() + 1;
+    const sickTable = {
+      1: 8, 2: 7, 3: 7, 4: 6, 5: 6, 6: 5, 7: 4, 8: 4, 9: 3, 10: 2, 11: 2, 12: 1
+    };
+    return sickTable[joiningMonth] || 0;
+  }
+
+  /**
+   * Calculate pro-rata earned/privilege leave based on HR table
+   */
+  calculateEarnedLeave(joiningDate: Date): number {
+    const joiningMonth = joiningDate.getMonth() + 1;
+    const earnedTable = {
+      1: 12, 2: 11, 3: 10, 4: 9, 5: 8, 6: 7, 7: 6, 8: 5, 9: 4, 10: 3, 11: 2, 12: 1
+    };
+    return earnedTable[joiningMonth] || 0;
   }
 
   /**
@@ -79,7 +132,11 @@ export class LeaveCalculationService {
   /**
    * Initialize leave balances for a new employee
    */
-  async initializeLeaveBalances(employeeId: string, joiningDate: Date): Promise<LeaveBalance[]> {
+  async initializeLeaveBalances(
+    employeeId: string, 
+    joiningDate: Date, 
+    manualBalances?: { earned?: number; sick?: number; casual?: number }
+  ): Promise<LeaveBalance[]> {
     const currentYear = new Date().getFullYear();
     const employee = await this.employeeRepository.findOne({ 
       where: { id: employeeId } 
@@ -89,32 +146,45 @@ export class LeaveCalculationService {
       throw new Error('Employee not found');
     }
 
+    // Calculate balances based on whether manual balances are provided or using HR table
+    const sickBalance = manualBalances?.sick !== undefined 
+      ? manualBalances.sick 
+      : this.calculateSickLeave(joiningDate);
+    
+    const casualBalance = manualBalances?.casual !== undefined
+      ? manualBalances.casual
+      : this.calculateCasualLeave(joiningDate);
+    
+    const earnedBalance = manualBalances?.earned !== undefined
+      ? manualBalances.earned
+      : this.calculateEarnedLeave(joiningDate);
+
     const balances = [
       {
         employeeId,
         year: currentYear,
         leaveType: LeaveType.SICK,
-        totalAllocated: employee.sickLeaveDays,
+        totalAllocated: sickBalance,
         usedDays: 0,
-        availableDays: employee.sickLeaveDays,
+        availableDays: sickBalance,
         carryForward: 0,
       },
       {
         employeeId,
         year: currentYear,
         leaveType: LeaveType.CASUAL,
-        totalAllocated: this.calculateProRataLeave(joiningDate, employee.casualLeaveDays),
+        totalAllocated: casualBalance,
         usedDays: 0,
-        availableDays: this.calculateProRataLeave(joiningDate, employee.casualLeaveDays),
+        availableDays: casualBalance,
         carryForward: 0,
       },
       {
         employeeId,
         year: currentYear,
         leaveType: LeaveType.EARNED,
-        totalAllocated: this.calculateProRataLeave(joiningDate, employee.annualLeaveDays),
+        totalAllocated: earnedBalance,
         usedDays: 0,
-        availableDays: this.calculateProRataLeave(joiningDate, employee.annualLeaveDays),
+        availableDays: earnedBalance,
         carryForward: 0,
       },
       // Note: COMPENSATION leave type is not included as it doesn't affect balance calculations
@@ -284,6 +354,22 @@ export class LeaveCalculationService {
   }
 
   /**
+   * Get months remaining from start of month to end of year (whole months only)
+   */
+  private getMonthsRemainingFromMonthStart(startDate: Date, endDate: Date): number {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    let months = (end.getFullYear() - start.getFullYear()) * 12;
+    months += end.getMonth() - start.getMonth();
+    
+    // Always count full months since we're starting from month beginning
+    months += 1;
+    
+    return Math.max(0, months);
+  }
+
+  /**
    * Calculate leave accrual for partial months
    */
   calculateMonthlyAccrual(
@@ -299,13 +385,14 @@ export class LeaveCalculationService {
   }
 
   private getMonthsWorkedUntil(joiningDate: Date, targetMonth: number, targetYear: number): number {
-    const start = new Date(joiningDate);
+    // Use the first day of the joining month instead of exact joining date
+    const joiningMonthStart = new Date(joiningDate.getFullYear(), joiningDate.getMonth(), 1);
     const target = new Date(targetYear, targetMonth, 0); // Last day of target month
     
-    if (start > target) return 0;
+    if (joiningMonthStart > target) return 0;
     
-    let months = (target.getFullYear() - start.getFullYear()) * 12;
-    months += target.getMonth() - start.getMonth() + 1;
+    let months = (target.getFullYear() - joiningMonthStart.getFullYear()) * 12;
+    months += target.getMonth() - joiningMonthStart.getMonth() + 1;
     
     return Math.max(0, months);
   }

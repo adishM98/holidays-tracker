@@ -1,53 +1,214 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { LeaveType } from '@/types';
-import { Calendar, Clock, FileText } from 'lucide-react';
+import { 
+  Calendar, 
+  ChevronLeft, 
+  ChevronRight, 
+  Clock, 
+  FileText, 
+  CalendarDays,
+  User,
+  Plus,
+  X
+} from 'lucide-react';
 import { leaveTypeLabels } from '@/data/mockData';
+import { employeeAPI } from '@/services/api';
+
+interface LeaveRequest {
+  id: string;
+  startDate: string;
+  endDate: string;
+  leaveType: 'sick' | 'casual' | 'earned' | 'compensation';
+  status: 'pending' | 'approved' | 'rejected';
+  reason?: string;
+}
+
+interface Holiday {
+  id: string;
+  name: string;
+  date: string;
+  description?: string;
+}
 
 const ApplyLeave: React.FC = () => {
-  const [leaveType, setLeaveType] = useState<LeaveType | ''>('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [reason, setReason] = useState('');
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [existingLeaves, setExistingLeaves] = useState<LeaveRequest[]>([]);
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [isApplyDialogOpen, setIsApplyDialogOpen] = useState(false);
+  const [isViewLeaveDialogOpen, setIsViewLeaveDialogOpen] = useState(false);
+  const [selectedLeaveRequest, setSelectedLeaveRequest] = useState<LeaveRequest | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [loading, setLoading] = useState(true);
+  
+  const [leaveForm, setLeaveForm] = useState({
+    leaveType: '' as LeaveType | '',
+    reason: '',
+  });
 
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const calculateDays = () => {
-    if (!startDate || !endDate) return 0;
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    return diffDays;
+  const currentMonth = currentDate.getMonth();
+  const currentYear = currentDate.getFullYear();
+
+  useEffect(() => {
+    fetchData();
+  }, [currentMonth, currentYear]);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      // Fetch employee's existing leave requests for the current month/year
+      const leaveResponse = await employeeAPI.getLeaveRequests(1, 100);
+      // Filter out cancelled requests - they should not appear on calendar
+      const activeLeaves = (leaveResponse.requests || []).filter(leave => leave.status !== 'cancelled');
+      setExistingLeaves(activeLeaves);
+      
+      // TODO: Fetch holidays if needed
+      setHolidays([]);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch calendar data",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    const newDate = new Date(currentDate);
+    if (direction === 'prev') {
+      newDate.setMonth(currentMonth - 1);
+    } else {
+      newDate.setMonth(currentMonth + 1);
+    }
+    setCurrentDate(newDate);
+  };
+
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+
+    const days = [];
     
-    if (!leaveType || !startDate || !endDate || !reason.trim()) {
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(null);
+    }
+    
+    // Add all days in the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(day);
+    }
+    
+    return days;
+  };
+
+  const formatDateString = (day: number) => {
+    return `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  };
+
+  const isDateDisabled = (day: number) => {
+    const dateString = formatDateString(day);
+    const date = new Date(dateString);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Disable past dates
+    if (date < today) return true;
+    
+    // Check if there's already an approved/pending leave on this date
+    const hasExistingLeave = existingLeaves.some(leave => {
+      if (leave.status === 'rejected') return false;
+      const startDate = new Date(leave.startDate);
+      const endDate = new Date(leave.endDate);
+      return date >= startDate && date <= endDate;
+    });
+    
+    return hasExistingLeave;
+  };
+
+  const isDateSelected = (day: number) => {
+    const dateString = formatDateString(day);
+    return selectedDates.includes(dateString);
+  };
+
+  const hasLeaveOnDate = (day: number) => {
+    const dateString = formatDateString(day);
+    return existingLeaves.find(leave => {
+      const startDate = new Date(leave.startDate);
+      const endDate = new Date(leave.endDate);
+      const checkDate = new Date(dateString);
+      return checkDate >= startDate && checkDate <= endDate;
+    });
+  };
+
+  const handleDateClick = (day: number) => {
+    if (isDateDisabled(day)) return;
+    
+    const dateString = formatDateString(day);
+    
+    if (selectedDates.includes(dateString)) {
+      // Remove date if already selected
+      setSelectedDates(prev => prev.filter(date => date !== dateString));
+    } else {
+      // Add date to selection
+      setSelectedDates(prev => [...prev, dateString].sort());
+    }
+  };
+
+  const handleStartSelection = () => {
+    setIsSelecting(true);
+    setSelectedDates([]);
+  };
+
+  const handleApplyLeave = () => {
+    if (selectedDates.length === 0) {
+      toast({
+        title: "No dates selected",
+        description: "Please select at least one date for your leave request.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsApplyDialogOpen(true);
+  };
+
+  const handleSubmit = async () => {
+    if (!leaveForm.leaveType || !leaveForm.reason.trim()) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all required fields.",
+        description: "Please select leave type and provide a reason.",
         variant: "destructive",
       });
       return;
     }
 
-    if (new Date(endDate) < new Date(startDate)) {
+    if (selectedDates.length === 0) {
       toast({
-        title: "Invalid Date Range",
-        description: "End date must be after start date.",
+        title: "No dates selected",
+        description: "Please select at least one date.",
         variant: "destructive",
       });
       return;
@@ -56,16 +217,36 @@ const ApplyLeave: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Sort dates to get start and end
+      const sortedDates = [...selectedDates].sort();
+      const startDate = sortedDates[0];
+      const endDate = sortedDates[sortedDates.length - 1];
+
+      await employeeAPI.createLeaveRequest({
+        leaveType: leaveForm.leaveType as string,
+        startDate,
+        endDate,
+        reason: leaveForm.reason,
+      });
 
       toast({
         title: "Leave Request Submitted",
-        description: `Your ${leaveTypeLabels[leaveType as LeaveType]} request has been submitted for approval.`,
+        description: `Your ${leaveTypeLabels[leaveForm.leaveType as LeaveType]} request has been submitted for approval.`,
       });
 
+      // Reset form and close dialog
+      setLeaveForm({ leaveType: '', reason: '' });
+      setSelectedDates([]);
+      setIsApplyDialogOpen(false);
+      setIsSelecting(false);
+      
+      // Refresh data
+      fetchData();
+      
+      // Navigate back to dashboard
       navigate('/dashboard');
     } catch (error) {
+      console.error('Error creating leave request:', error);
       toast({
         title: "Submission Failed",
         description: "Failed to submit leave request. Please try again.",
@@ -76,130 +257,500 @@ const ApplyLeave: React.FC = () => {
     }
   };
 
-  const days = calculateDays();
+  const resetSelection = () => {
+    setSelectedDates([]);
+    setIsSelecting(false);
+  };
+
+  const handleLeaveClick = (leave: LeaveRequest) => {
+    if (isSelecting) return; // Don't open dialog when in selection mode
+    setSelectedLeaveRequest(leave);
+    setIsViewLeaveDialogOpen(true);
+  };
+
+  const handleCancelLeave = async () => {
+    if (!selectedLeaveRequest) return;
+
+    // Only allow cancellation of pending requests
+    if (selectedLeaveRequest.status !== 'pending') {
+      toast({
+        title: "Cannot Cancel",
+        description: `Cannot cancel ${selectedLeaveRequest.status} leave requests.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const confirmCancel = window.confirm(
+      `Are you sure you want to cancel your ${leaveTypeLabels[selectedLeaveRequest.leaveType as LeaveType]} leave from ${new Date(selectedLeaveRequest.startDate).toLocaleDateString()} to ${new Date(selectedLeaveRequest.endDate).toLocaleDateString()}?`
+    );
+
+    if (!confirmCancel) return;
+
+    setIsCancelling(true);
+
+    try {
+      await employeeAPI.cancelLeaveRequest(selectedLeaveRequest.id);
+
+      toast({
+        title: "Leave Request Cancelled",
+        description: "Your leave request has been cancelled successfully.",
+      });
+
+      // Close dialog and refresh data
+      setIsViewLeaveDialogOpen(false);
+      setSelectedLeaveRequest(null);
+      fetchData();
+    } catch (error: any) {
+      console.error('Error cancelling leave request:', error);
+      toast({
+        title: "Cancellation Failed",
+        description: error.message || "Failed to cancel leave request. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  const getLeaveTypeColor = (type: string, status: string) => {
+    const opacity = status === 'approved' ? '' : status === 'pending' ? 'opacity-70' : 'opacity-50';
+    
+    let baseColor = '';
+    switch (type) {
+      case 'sick':
+        baseColor = 'bg-red-100 text-red-800 border-red-200';
+        break;
+      case 'casual':
+        baseColor = 'bg-green-100 text-green-800 border-green-200';
+        break;
+      case 'earned':
+        baseColor = 'bg-blue-100 text-blue-800 border-blue-200';
+        break;
+      case 'compensation':
+        baseColor = 'bg-purple-100 text-purple-800 border-purple-200';
+        break;
+      default:
+        baseColor = 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+    
+    if (status === 'pending') {
+      baseColor += ' border-dashed';
+    } else if (status === 'rejected') {
+      baseColor = 'bg-gray-100 text-gray-500 border-gray-300 line-through';
+    }
+    
+    return `${baseColor} ${opacity}`;
+  };
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const days = getDaysInMonth(currentDate);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-foreground">Apply for Leave</h1>
-        <p className="text-muted-foreground mt-2">Submit a new leave request</p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
+            <CalendarDays className="h-4 w-4 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Apply for Leave</h1>
+            <p className="text-muted-foreground">
+              {isSelecting 
+                ? `Select dates for your leave request (${selectedDates.length} selected)`
+                : 'Click "Select Dates" to start choosing your leave dates'
+              }
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-2">
+          {!isSelecting ? (
+            <Button onClick={handleStartSelection} className="bg-gradient-primary">
+              <Plus className="h-4 w-4 mr-2" />
+              Select Dates
+            </Button>
+          ) : (
+            <>
+              <Button 
+                onClick={handleApplyLeave}
+                disabled={selectedDates.length === 0}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                Apply Leave ({selectedDates.length} days)
+              </Button>
+              <Button onClick={resetSelection} variant="outline">
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
-      <Card className="shadow-professional-lg border-0 bg-gradient-card">
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <FileText className="h-6 w-6 mr-2 text-primary" />
-            Leave Request Form
-          </CardTitle>
-          <CardDescription>
-            Fill out the details below to submit your leave request
-          </CardDescription>
+      {/* Calendar */}
+      <Card className="shadow-professional-md">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigateMonth('prev')}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            
+            <CardTitle className="text-lg font-semibold">
+              {monthNames[currentMonth]} {currentYear}
+            </CardTitle>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigateMonth('next')}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="leaveType">Leave Type *</Label>
-                <Select value={leaveType} onValueChange={(value) => setLeaveType(value as LeaveType)}>
-                  <SelectTrigger className="bg-background/50">
-                    <SelectValue placeholder="Select leave type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(leaveTypeLabels).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+        
+        <CardContent className="p-0">
+          {/* Day headers */}
+          <div className="grid grid-cols-7 border-b">
+            {dayNames.map((day) => (
+              <div key={day} className="p-3 text-center text-sm font-medium text-muted-foreground bg-muted/30">
+                {day}
               </div>
-
-              <div className="space-y-2">
-                <Label>Duration</Label>
-                <div className="flex items-center space-x-2 p-3 bg-secondary/50 rounded-lg">
-                  <Clock className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium">
-                    {days > 0 ? `${days} day${days > 1 ? 's' : ''}` : 'Select dates'}
-                  </span>
+            ))}
+          </div>
+          
+          {/* Calendar days */}
+          <div className="grid grid-cols-7">
+            {days.map((day, index) => {
+              if (day === null) {
+                return <div key={index} className="h-24 border-b border-r"></div>;
+              }
+              
+              const isDisabled = isDateDisabled(day);
+              const isSelected = isDateSelected(day);
+              const leaveOnDate = hasLeaveOnDate(day);
+              
+              return (
+                <div
+                  key={day}
+                  className={`h-24 border-b border-r p-2 cursor-pointer transition-colors relative ${
+                    isDisabled 
+                      ? 'bg-gray-50 cursor-not-allowed' 
+                      : isSelected
+                      ? 'bg-blue-50 hover:bg-blue-100'
+                      : 'hover:bg-gray-50'
+                  }`}
+                  onClick={() => !isDisabled && isSelecting && handleDateClick(day)}
+                >
+                  <div className="flex flex-col h-full">
+                    <span className={`text-sm font-medium ${
+                      isDisabled ? 'text-gray-400' : 'text-foreground'
+                    }`}>
+                      {day}
+                    </span>
+                    
+                    <div className="flex-1 space-y-1 mt-1">
+                      {/* Show existing leave */}
+                      {leaveOnDate && (
+                        <Badge 
+                          variant="secondary" 
+                          className={`text-xs px-1 py-0 w-full justify-center cursor-pointer hover:opacity-80 ${getLeaveTypeColor(leaveOnDate.leaveType, leaveOnDate.status)}`}
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent date selection
+                            handleLeaveClick(leaveOnDate);
+                          }}
+                          title="Click to view details"
+                        >
+                          {leaveOnDate.leaveType}
+                        </Badge>
+                      )}
+                      
+                      {/* Show selection indicator */}
+                      {isSelected && (
+                        <div className="absolute top-1 right-1">
+                          <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Legend */}
+      <Card className="shadow-professional-sm">
+        <CardContent className="p-4">
+          <div className="flex flex-wrap gap-4 text-sm">
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-blue-600 rounded-full"></div>
+              <span>Selected for new request</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-green-100 border border-green-200 rounded"></div>
+              <span>Casual Leave</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-blue-100 border border-blue-200 rounded"></div>
+              <span>Earned Leave</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-red-100 border border-red-200 rounded"></div>
+              <span>Sick Leave</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-purple-100 border border-purple-200 rounded"></div>
+              <span>Compensation Off</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-gray-100 border border-gray-300 border-dashed rounded"></div>
+              <span>Pending Approval</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Apply Leave Dialog */}
+      <Dialog open={isApplyDialogOpen} onOpenChange={setIsApplyDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <FileText className="h-5 w-5 mr-2 text-primary" />
+              Apply for Leave
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label className="text-sm font-medium">Selected Dates</Label>
+              <div className="mt-1 text-sm text-muted-foreground">
+                {selectedDates.length === 1 
+                  ? new Date(selectedDates[0]).toLocaleDateString()
+                  : selectedDates.length > 1
+                  ? `${new Date(selectedDates[0]).toLocaleDateString()} - ${new Date(selectedDates[selectedDates.length - 1]).toLocaleDateString()} (${selectedDates.length} days)`
+                  : 'No dates selected'
+                }
               </div>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="startDate">Start Date *</Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="bg-background/50"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="endDate">End Date *</Label>
-                <Input
-                  id="endDate"
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  min={startDate || new Date().toISOString().split('T')[0]}
-                  className="bg-background/50"
-                  required
-                />
-              </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="leaveType">Leave Type *</Label>
+              <Select 
+                value={leaveForm.leaveType} 
+                onValueChange={(value) => setLeaveForm(prev => ({ ...prev, leaveType: value as LeaveType }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select leave type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(leaveTypeLabels).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-
+            
             <div className="space-y-2">
               <Label htmlFor="reason">Reason *</Label>
               <Textarea
                 id="reason"
                 placeholder="Please provide a reason for your leave request..."
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                className="bg-background/50 min-h-[100px]"
+                value={leaveForm.reason}
+                onChange={(e) => setLeaveForm(prev => ({ ...prev, reason: e.target.value }))}
+                className="min-h-[100px]"
                 required
               />
             </div>
-
-            {/* Leave Balance Info */}
-            {leaveType && user?.leaveBalance && (
-              <div className="p-4 bg-accent-light rounded-lg">
-                <p className="text-sm text-accent font-medium mb-2">Current Balance:</p>
-                <div className="flex items-center space-x-4 text-sm">
-                  <span>
-                    {leaveType === 'paid' && `Paid Leave: ${user.leaveBalance.paid} days`}
-                    {leaveType === 'sick' && `Sick Leave: ${user.leaveBalance.sick} days`}
-                    {leaveType === 'casual' && `Casual Leave: ${user.leaveBalance.casual} days`}
-                    {!['paid', 'sick', 'casual'].includes(leaveType) && 'No specific balance limit'}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            <div className="flex space-x-4 pt-4">
+            
+            <div className="flex space-x-3 pt-4">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate('/dashboard')}
+                onClick={() => setIsApplyDialogOpen(false)}
                 className="flex-1"
               >
                 Cancel
               </Button>
               <Button
-                type="submit"
+                onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="flex-1 bg-gradient-primary hover:opacity-90 transition-smooth"
+                className="flex-1 bg-gradient-primary hover:opacity-90"
               >
-                {isSubmitting ? 'Submitting...' : 'Submit Request'}
+                {isSubmitting ? (
+                  <>
+                    <Clock className="h-4 w-4 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  'Submit Request'
+                )}
               </Button>
             </div>
-          </form>
-        </CardContent>
-      </Card>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Leave Request Dialog */}
+      <Dialog open={isViewLeaveDialogOpen} onOpenChange={setIsViewLeaveDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Calendar className="h-5 w-5" />
+              <span>Leave Request Details</span>
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedLeaveRequest && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Leave Type</Label>
+                  <div className="mt-1 text-sm">
+                    {leaveTypeLabels[selectedLeaveRequest.leaveType as LeaveType] || selectedLeaveRequest.leaveType}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Status</Label>
+                  <div className="mt-1">
+                    <Badge
+                      variant={
+                        selectedLeaveRequest.status === 'approved'
+                          ? 'default'
+                          : selectedLeaveRequest.status === 'rejected'
+                          ? 'destructive'
+                          : selectedLeaveRequest.status === 'cancelled'
+                          ? 'secondary'
+                          : 'outline'
+                      }
+                      className={
+                        selectedLeaveRequest.status === 'approved'
+                          ? 'bg-green-100 text-green-800 border-green-200'
+                          : selectedLeaveRequest.status === 'pending'
+                          ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                          : ''
+                      }
+                    >
+                      {selectedLeaveRequest.status}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Start Date</Label>
+                  <div className="mt-1 text-sm">
+                    {new Date(selectedLeaveRequest.startDate).toLocaleDateString()}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">End Date</Label>
+                  <div className="mt-1 text-sm">
+                    {new Date(selectedLeaveRequest.endDate).toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium text-gray-500">Duration</Label>
+                <div className="mt-1 text-sm">
+                  {selectedLeaveRequest.daysCount} day(s)
+                </div>
+              </div>
+
+              {selectedLeaveRequest.reason && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Reason</Label>
+                  <div className="mt-1 text-sm bg-gray-50 p-3 rounded-md">
+                    {selectedLeaveRequest.reason}
+                  </div>
+                </div>
+              )}
+
+              {selectedLeaveRequest.rejectionReason && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Rejection Reason</Label>
+                  <div className="mt-1 text-sm bg-red-50 p-3 rounded-md border border-red-200">
+                    {selectedLeaveRequest.rejectionReason}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4 text-xs text-gray-500">
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Applied On</Label>
+                  <div className="mt-1">
+                    {new Date(selectedLeaveRequest.createdAt).toLocaleDateString()}
+                  </div>
+                </div>
+                {selectedLeaveRequest.approvedAt && (
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">
+                      {selectedLeaveRequest.status === 'approved' ? 'Approved On' : 
+                       selectedLeaveRequest.status === 'rejected' ? 'Rejected On' : 'Updated On'}
+                    </Label>
+                    <div className="mt-1">
+                      {new Date(selectedLeaveRequest.approvedAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex space-x-3 pt-4 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsViewLeaveDialogOpen(false)}
+                  className="flex-1"
+                >
+                  Close
+                </Button>
+                {selectedLeaveRequest.status === 'pending' && (
+                  <Button
+                    onClick={handleCancelLeave}
+                    disabled={isCancelling}
+                    variant="destructive"
+                    className="flex-1"
+                  >
+                    {isCancelling ? (
+                      <>
+                        <Clock className="h-4 w-4 mr-2 animate-spin" />
+                        Cancelling...
+                      </>
+                    ) : (
+                      'Cancel Request'
+                    )}
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

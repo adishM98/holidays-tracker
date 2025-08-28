@@ -14,6 +14,7 @@ import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { CompleteInviteDto } from './dto/complete-invite.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
@@ -70,5 +71,14 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Invalid or expired token' })
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.authService.resetPassword(resetPasswordDto);
+  }
+
+  @Post('complete-invite')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Complete user invitation and set password' })
+  @ApiResponse({ status: 200, description: 'Account activated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid or expired token' })
+  async completeInvite(@Body() completeInviteDto: CompleteInviteDto) {
+    return this.authService.completeInvite(completeInviteDto);
   }
 }

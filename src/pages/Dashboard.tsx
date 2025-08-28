@@ -89,9 +89,12 @@ const Dashboard: React.FC = () => {
 
   const getLeaveTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
-      annual: 'Annual Leave',
       sick: 'Sick Leave',
       casual: 'Casual Leave',
+      earned: 'Earned/Privilege Leave',
+      compensation: 'Compensation Off',
+      // Legacy types for backward compatibility
+      annual: 'Earned/Privilege Leave',
       maternity: 'Maternity Leave',
       paternity: 'Paternity Leave',
       unpaid: 'Unpaid Leave'
@@ -129,6 +132,34 @@ const Dashboard: React.FC = () => {
         await adminAPI.approveLeaveRequest(requestId, 'Approved by admin');
       } else {
         await adminAPI.rejectLeaveRequest(requestId, 'Rejected by admin');
+      }
+
+      toast({
+        title: `Request ${action}`,
+        description: `Leave request has been ${action} successfully.`,
+      });
+
+      // Refresh the dashboard data
+      loadDashboardData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to process the request. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingApproval(null);
+    }
+  };
+
+  const handleManagerApproval = async (requestId: string, action: 'approved' | 'rejected') => {
+    setIsProcessingApproval(requestId);
+    
+    try {
+      if (action === 'approved') {
+        await managerAPI.approveLeaveRequest(requestId, 'Approved by manager');
+      } else {
+        await managerAPI.rejectLeaveRequest(requestId, 'Rejected by manager');
       }
 
       toast({
@@ -192,12 +223,15 @@ const Dashboard: React.FC = () => {
           {dashboardData.leaveBalances.map((balance: LeaveBalance) => {
             const getBalanceColor = (type: string) => {
               switch (type) {
-                case 'annual':
+                case 'earned':
+                case 'annual': // legacy support
                   return 'text-primary';
                 case 'sick':
-                  return 'text-accent';
+                  return 'text-red-500';
                 case 'casual':
-                  return 'text-success';
+                  return 'text-green-500';
+                case 'compensation':
+                  return 'text-orange-500';
                 default:
                   return 'text-muted-foreground';
               }
@@ -236,7 +270,7 @@ const Dashboard: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center">
               <Clock className="h-5 w-5 mr-2 text-primary" />
-              Open Requests
+              {user?.role === 'admin' ? 'Pending Approvals' : 'My Leave Requests'}
               {(() => {
                 const pendingCount = user?.role === 'admin' 
                   ? adminRequests?.requests?.filter(req => req.status === 'pending').length || 0
@@ -250,42 +284,124 @@ const Dashboard: React.FC = () => {
               })()}
             </CardTitle>
             <CardDescription>
-              {user?.role === 'admin' ? 'Pending leave applications from all employees' : 'Your pending leave applications'}
+              {user?.role === 'admin' ? 'Pending leave applications from all employees' : 'Your recent leave requests and their status'}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8">
-              <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              {(() => {
-                const pendingCount = user?.role === 'admin' 
-                  ? adminRequests?.requests?.filter(req => req.status === 'pending').length || 0
-                  : dashboardData?.recentRequests?.filter(req => req.status === 'pending').length || 0;
+            {user?.role === 'employee' || user?.role === 'manager' ? (
+              // Employee/Manager view: Show their own requests
+              dashboardData?.recentRequests && dashboardData.recentRequests.length > 0 ? (
+                <div className="space-y-3">
+                  {dashboardData.recentRequests.slice(0, 3).map((request: LeaveRequest) => (
+                    <div key={request.id} className="flex items-center justify-between p-3 bg-background/50 rounded-lg border">
+                      <div className="flex-1">
+                        <p className="font-medium text-foreground">
+                          {getLeaveTypeLabel(request.leaveType)}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatDate(request.startDate)} - {formatDate(request.endDate)} ({request.daysCount} days)
+                        </p>
+                        {request.reason && (
+                          <p className="text-xs text-muted-foreground mt-1 truncate">
+                            {request.reason}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Badge className={getStatusConfig(request.status).className}>
+                          {getStatusIcon(request.status)}
+                          <span className="ml-1">{getStatusConfig(request.status).label}</span>
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                  <Link to="/leave-history" className="block">
+                    <Button variant="outline" className="w-full mt-4">
+                      View All Requests
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground mb-4">No leave requests yet</p>
+                  <Link to="/apply-leave" className="block">
+                    <Button>Apply for Leave</Button>
+                  </Link>
+                </div>
+              )
+            ) : (
+              // Admin view: Show pending requests from all employees with approval actions
+              (() => {
+                const pendingRequests = adminRequests?.requests?.filter(req => req.status === 'pending') || [];
                 
-                return pendingCount > 0 ? (
-                  <div>
-                    <p className="text-muted-foreground mb-4">
-                      {pendingCount} {pendingCount === 1 ? 'request' : 'requests'} awaiting review
-                    </p>
-                    <Link to={user?.role === 'admin' ? '/admin/calendar' : '/leave-history'} className="block">
-                      <Button variant="outline">
-                        {user?.role === 'admin' ? 'View Leave Calendar' : 'View All Requests'}
+                return pendingRequests.length > 0 ? (
+                  <div className="space-y-3">
+                    {pendingRequests.slice(0, 3).map((request: any) => (
+                      <div key={request.id} className="flex items-center justify-between p-3 bg-background/50 rounded-lg border">
+                        <div className="flex-1">
+                          <p className="font-medium text-foreground">
+                            {request.employee?.firstName} {request.employee?.lastName}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {getLeaveTypeLabel(request.leaveType)} • {formatDate(request.startDate)} - {formatDate(request.endDate)} ({request.daysCount} days)
+                          </p>
+                          {request.employee?.manager && (
+                            <p className="text-xs text-muted-foreground">
+                              Manager: {request.employee.manager.firstName} {request.employee.manager.lastName}
+                            </p>
+                          )}
+                          {request.reason && (
+                            <p className="text-xs text-muted-foreground mt-1 truncate">
+                              {request.reason}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            onClick={() => handleAdminApproval(request.id, 'approved')}
+                            disabled={isProcessingApproval === request.id}
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700 text-white h-8 px-3"
+                            title="Approve request"
+                          >
+                            {isProcessingApproval === request.id ? (
+                              <Clock className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Check className="h-3 w-3" />
+                            )}
+                          </Button>
+                          <Button
+                            onClick={() => handleAdminApproval(request.id, 'rejected')}
+                            disabled={isProcessingApproval === request.id}
+                            variant="outline"
+                            size="sm"
+                            className="text-red-600 border-red-300 hover:bg-red-50 h-8 px-3"
+                            title="Reject request"
+                          >
+                            {isProcessingApproval === request.id ? (
+                              <Clock className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <X className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                    <Link to="/admin/calendar" className="block">
+                      <Button variant="outline" className="w-full mt-4">
+                        View Leave Calendar
                       </Button>
                     </Link>
                   </div>
                 ) : (
-                  <div>
-                    <p className="text-muted-foreground mb-4">
-                      {user?.role === 'admin' ? 'No pending requests from employees' : 'No pending requests'}
-                    </p>
-                    {user?.role !== 'admin' && (
-                      <Link to="/apply-leave" className="block">
-                        <Button>Apply for Leave</Button>
-                      </Link>
-                    )}
+                  <div className="text-center py-8">
+                    <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No pending requests from employees</p>
                   </div>
                 );
-              })()}
-            </div>
+              })()
+            )}
           </CardContent>
         </Card>
 
@@ -322,12 +438,35 @@ const Dashboard: React.FC = () => {
                           </p>
                         )}
                       </div>
-                      <Badge className="text-xs px-2 py-1 bg-warning-light text-warning border-warning/20">
-                        <div className="flex items-center space-x-1">
-                          <Clock className="h-3 w-3" />
-                          <span>Pending</span>
-                        </div>
-                      </Badge>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          onClick={() => handleManagerApproval(request.id, 'approved')}
+                          disabled={isProcessingApproval === request.id}
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white h-8 px-3"
+                          title="Approve request"
+                        >
+                          {isProcessingApproval === request.id ? (
+                            <Clock className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Check className="h-3 w-3" />
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => handleManagerApproval(request.id, 'rejected')}
+                          disabled={isProcessingApproval === request.id}
+                          variant="outline"
+                          size="sm"
+                          className="text-red-600 border-red-300 hover:bg-red-50 h-8 px-3"
+                          title="Reject request"
+                        >
+                          {isProcessingApproval === request.id ? (
+                            <Clock className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <X className="h-3 w-3" />
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   ))}
                   <Link to="/pending-approvals" className="block">
