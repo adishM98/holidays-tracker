@@ -211,7 +211,7 @@ const Dashboard: React.FC = () => {
             Welcome back, {dashboardData?.employee?.fullName?.split(' ')[0] || 'Admin'}!
           </h1>
           <p className="text-muted-foreground mt-1">
-            Here's an overview of your leave management
+            Your Time Away at a Glance
           </p>
         </div>
         {(user.role === 'employee' || user.role === 'manager') && (

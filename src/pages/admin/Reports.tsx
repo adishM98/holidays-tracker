@@ -479,7 +479,7 @@ const Reports: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Reports & Analytics</h1>
-          <p className="text-muted-foreground">Comprehensive leave management insights and reports</p>
+          <p className="text-muted-foreground">Detailed Leave Analytics and Reports</p>
         </div>
       </div>
 

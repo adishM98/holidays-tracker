@@ -103,7 +103,7 @@ const Sidebar: React.FC = () => {
                 }}
               />
             </div>
-            <p className="text-sm font-bold text-muted-foreground text-center mt-2">Leave management</p>
+            <p className="text-sm font-bold text-muted-foreground text-center mt-2">Leave & Attendance Tracker</p>
           </div>
 
           <div className="p-4 border-b border-border">
@@ -181,7 +181,7 @@ const Sidebar: React.FC = () => {
             }}
           />
         </div>
-        <p className="text-sm font-bold text-muted-foreground text-center mt-2">Leave management</p>
+        <p className="text-sm font-bold text-muted-foreground text-center mt-2">Leave & Attendance Tracker</p>
       </div>
 
       <div className="p-4 border-b border-border">
