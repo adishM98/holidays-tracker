@@ -45,7 +45,7 @@ services:
 
   # Main Application (Frontend + Backend)
   app:
-    image: tooljet/tj-osv:leave
+    image: tooljet/tj-osv:leave-6
     container_name: leave_management_app
     restart: unless-stopped
     environment:

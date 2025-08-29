@@ -123,7 +123,8 @@ const Invite: React.FC = () => {
       }
 
       // Call the backend API to complete the invite
-      const response = await fetch('http://localhost:3000/api/auth/complete-invite', {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || `${window.location.origin}/api`;
+      const response = await fetch(`${API_BASE_URL}/auth/complete-invite`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
