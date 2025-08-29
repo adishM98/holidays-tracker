@@ -1,9 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
-import { Holiday } from './entities/holiday.entity';
-import { CreateHolidayDto } from './dto/create-holiday.dto';
-import { UpdateHolidayDto } from './dto/update-holiday.dto';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, Between } from "typeorm";
+import { Holiday } from "./entities/holiday.entity";
+import { CreateHolidayDto } from "./dto/create-holiday.dto";
+import { UpdateHolidayDto } from "./dto/update-holiday.dto";
 
 @Injectable()
 export class HolidaysService {
@@ -17,7 +17,7 @@ export class HolidaysService {
       ...createHolidayDto,
       date: new Date(createHolidayDto.date),
     });
-    
+
     return this.holidayRepository.save(holiday);
   }
 
@@ -25,39 +25,43 @@ export class HolidaysService {
     year?: number;
     isActive?: boolean;
   }): Promise<Holiday[]> {
-    const queryBuilder = this.holidayRepository.createQueryBuilder('holiday');
+    const queryBuilder = this.holidayRepository.createQueryBuilder("holiday");
 
     if (options?.year) {
       const startOfYear = new Date(options.year, 0, 1);
       const endOfYear = new Date(options.year, 11, 31);
-      queryBuilder.andWhere('holiday.date BETWEEN :startOfYear AND :endOfYear', {
-        startOfYear,
-        endOfYear,
-      });
+      queryBuilder.andWhere(
+        "holiday.date BETWEEN :startOfYear AND :endOfYear",
+        {
+          startOfYear,
+          endOfYear,
+        },
+      );
     }
 
     if (options?.isActive !== undefined) {
-      queryBuilder.andWhere('holiday.isActive = :isActive', { 
-        isActive: options.isActive 
+      queryBuilder.andWhere("holiday.isActive = :isActive", {
+        isActive: options.isActive,
       });
     }
 
-    return queryBuilder
-      .orderBy('holiday.date', 'ASC')
-      .getMany();
+    return queryBuilder.orderBy("holiday.date", "ASC").getMany();
   }
 
   async findOne(id: string): Promise<Holiday> {
     const holiday = await this.holidayRepository.findOne({ where: { id } });
-    
+
     if (!holiday) {
-      throw new NotFoundException('Holiday not found');
+      throw new NotFoundException("Holiday not found");
     }
 
     return holiday;
   }
 
-  async update(id: string, updateHolidayDto: UpdateHolidayDto): Promise<Holiday> {
+  async update(
+    id: string,
+    updateHolidayDto: UpdateHolidayDto,
+  ): Promise<Holiday> {
     const holiday = await this.findOne(id);
 
     if (updateHolidayDto.date) {
@@ -65,7 +69,7 @@ export class HolidaysService {
     }
 
     Object.assign(holiday, updateHolidayDto);
-    
+
     return this.holidayRepository.save(holiday);
   }
 
@@ -85,7 +89,7 @@ export class HolidaysService {
         isActive: true,
       },
       order: {
-        date: 'ASC',
+        date: "ASC",
       },
     });
   }
@@ -100,7 +104,7 @@ export class HolidaysService {
         isActive: true,
       },
       order: {
-        date: 'ASC',
+        date: "ASC",
       },
     });
   }
@@ -114,25 +118,27 @@ export class HolidaysService {
     const today = new Date();
     const endOfYear = new Date(currentYear, 11, 31);
 
-    const [totalHolidays, activeHolidays, upcomingHolidays] = await Promise.all([
-      this.holidayRepository.count({
-        where: {
-          date: Between(new Date(currentYear, 0, 1), endOfYear),
-        },
-      }),
-      this.holidayRepository.count({
-        where: {
-          date: Between(new Date(currentYear, 0, 1), endOfYear),
-          isActive: true,
-        },
-      }),
-      this.holidayRepository.count({
-        where: {
-          date: Between(today, endOfYear),
-          isActive: true,
-        },
-      }),
-    ]);
+    const [totalHolidays, activeHolidays, upcomingHolidays] = await Promise.all(
+      [
+        this.holidayRepository.count({
+          where: {
+            date: Between(new Date(currentYear, 0, 1), endOfYear),
+          },
+        }),
+        this.holidayRepository.count({
+          where: {
+            date: Between(new Date(currentYear, 0, 1), endOfYear),
+            isActive: true,
+          },
+        }),
+        this.holidayRepository.count({
+          where: {
+            date: Between(today, endOfYear),
+            isActive: true,
+          },
+        }),
+      ],
+    );
 
     return {
       totalHolidays,

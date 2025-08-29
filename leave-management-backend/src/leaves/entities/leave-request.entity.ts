@@ -5,74 +5,80 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
-} from 'typeorm';
-import { Employee } from '../../employees/entities/employee.entity';
-import { LeaveType } from '../../common/enums/leave-type.enum';
-import { LeaveStatus } from '../../common/enums/leave-status.enum';
+} from "typeorm";
+import { Employee } from "../../employees/entities/employee.entity";
+import { LeaveType } from "../../common/enums/leave-type.enum";
+import { LeaveStatus } from "../../common/enums/leave-status.enum";
 
-@Entity('leave_requests')
+@Entity("leave_requests")
 export class LeaveRequest {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column({ name: 'employee_id' })
+  @Column({ name: "employee_id" })
   employeeId: string;
 
-  @ManyToOne(() => Employee, (employee) => employee.leaveRequests, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'employee_id' })
+  @ManyToOne(() => Employee, (employee) => employee.leaveRequests, {
+    onDelete: "CASCADE",
+  })
+  @JoinColumn({ name: "employee_id" })
   employee: Employee;
 
   @Column({
-    name: 'leave_type',
-    type: 'enum',
+    name: "leave_type",
+    type: "enum",
     enum: LeaveType,
   })
   leaveType: LeaveType;
 
-  @Column({ name: 'start_date', type: 'date' })
+  @Column({ name: "start_date", type: "date" })
   startDate: Date;
 
-  @Column({ name: 'end_date', type: 'date' })
+  @Column({ name: "end_date", type: "date" })
   endDate: Date;
 
-  @Column({ 
-    name: 'days_count', 
-    type: 'decimal', 
-    precision: 5, 
+  @Column({
+    name: "days_count",
+    type: "decimal",
+    precision: 5,
     scale: 2,
     transformer: {
       to: (value: number) => value,
-      from: (value: string) => parseFloat(value)
-    }
+      from: (value: string) => parseFloat(value),
+    },
   })
   daysCount: number;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: "text", nullable: true })
   reason: string;
 
   @Column({
-    type: 'enum',
+    type: "enum",
     enum: LeaveStatus,
     default: LeaveStatus.PENDING,
   })
   status: LeaveStatus;
 
-  @Column({ name: 'applied_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({
+    name: "applied_at",
+    type: "timestamp",
+    default: () => "CURRENT_TIMESTAMP",
+  })
   appliedAt: Date;
 
-  @Column({ name: 'approved_by', nullable: true })
+  @Column({ name: "approved_by", nullable: true })
   approvedBy: string;
 
-  @ManyToOne(() => Employee, { nullable: true, onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'approved_by' })
+  @ManyToOne(() => Employee, { nullable: true, onDelete: "SET NULL" })
+  @JoinColumn({ name: "approved_by" })
   approver: Employee;
 
-  @Column({ name: 'approved_at', type: 'timestamp', nullable: true })
+  @Column({ name: "approved_at", type: "timestamp", nullable: true })
   approvedAt: Date;
 
-  @Column({ name: 'rejection_reason', type: 'text', nullable: true })
+  @Column({ name: "rejection_reason", type: "text", nullable: true })
   rejectionReason: string;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 }

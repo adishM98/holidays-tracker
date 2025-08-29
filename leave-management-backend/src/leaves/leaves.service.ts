@@ -1,18 +1,23 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
-import { LeaveRequest } from './entities/leave-request.entity';
-import { LeaveBalance } from './entities/leave-balance.entity';
-import { Employee } from '../employees/entities/employee.entity';
-import { User } from '../users/entities/user.entity';
-import { CreateLeaveRequestDto } from './dto/create-leave-request.dto';
-import { UpdateLeaveRequestDto } from './dto/update-leave-request.dto';
-import { ApproveLeaveRequestDto } from './dto/approve-leave-request.dto';
-import { RejectLeaveRequestDto } from './dto/reject-leave-request.dto';
-import { LeaveCalculationService } from './services/leave-calculation.service';
-import { MailService } from '../mail/mail.service';
-import { LeaveStatus } from '../common/enums/leave-status.enum';
-import { LeaveType } from '../common/enums/leave-type.enum';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, Between } from "typeorm";
+import { LeaveRequest } from "./entities/leave-request.entity";
+import { LeaveBalance } from "./entities/leave-balance.entity";
+import { Employee } from "../employees/entities/employee.entity";
+import { User } from "../users/entities/user.entity";
+import { CreateLeaveRequestDto } from "./dto/create-leave-request.dto";
+import { UpdateLeaveRequestDto } from "./dto/update-leave-request.dto";
+import { ApproveLeaveRequestDto } from "./dto/approve-leave-request.dto";
+import { RejectLeaveRequestDto } from "./dto/reject-leave-request.dto";
+import { LeaveCalculationService } from "./services/leave-calculation.service";
+import { MailService } from "../mail/mail.service";
+import { LeaveStatus } from "../common/enums/leave-status.enum";
+import { LeaveType } from "../common/enums/leave-type.enum";
 
 @Injectable()
 export class LeavesService {
@@ -35,11 +40,11 @@ export class LeavesService {
   ): Promise<LeaveRequest> {
     const employee = await this.employeeRepository.findOne({
       where: { id: employeeId },
-      relations: ['manager', 'user'],
+      relations: ["manager", "user"],
     });
 
     if (!employee) {
-      throw new NotFoundException('Employee not found');
+      throw new NotFoundException("Employee not found");
     }
 
     const startDate = new Date(createLeaveRequestDto.startDate);
@@ -47,24 +52,28 @@ export class LeavesService {
 
     // Validate date range
     if (startDate > endDate) {
-      throw new BadRequestException('Start date cannot be after end date');
+      throw new BadRequestException("Start date cannot be after end date");
     }
 
     if (startDate < new Date()) {
-      throw new BadRequestException('Cannot apply for leave in the past');
+      throw new BadRequestException("Cannot apply for leave in the past");
     }
 
     // Calculate working days
-    const daysCount = this.leaveCalculationService.calculateWorkingDays(startDate, endDate);
+    const daysCount = this.leaveCalculationService.calculateWorkingDays(
+      startDate,
+      endDate,
+    );
 
     // Check leave balance availability
     const year = startDate.getFullYear();
-    const availability = await this.leaveCalculationService.checkLeaveAvailability(
-      employeeId,
-      createLeaveRequestDto.leaveType,
-      daysCount,
-      year,
-    );
+    const availability =
+      await this.leaveCalculationService.checkLeaveAvailability(
+        employeeId,
+        createLeaveRequestDto.leaveType,
+        daysCount,
+        year,
+      );
 
     if (!availability.available) {
       throw new BadRequestException(
@@ -107,33 +116,44 @@ export class LeavesService {
     status?: LeaveStatus;
     employeeId?: string;
     managerId?: string;
-  }): Promise<{ requests: LeaveRequest[]; total: number; page: number; limit: number }> {
+  }): Promise<{
+    requests: LeaveRequest[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
     const page = options?.page || 1;
     const limit = options?.limit || 10;
     const offset = (page - 1) * limit;
 
     const queryBuilder = this.leaveRequestRepository
-      .createQueryBuilder('leaveRequest')
-      .leftJoinAndSelect('leaveRequest.employee', 'employee')
-      .leftJoinAndSelect('employee.user', 'user')
-      .leftJoinAndSelect('employee.department', 'department')
-      .leftJoinAndSelect('employee.manager', 'manager')
-      .leftJoinAndSelect('leaveRequest.approver', 'approver');
+      .createQueryBuilder("leaveRequest")
+      .leftJoinAndSelect("leaveRequest.employee", "employee")
+      .leftJoinAndSelect("employee.user", "user")
+      .leftJoinAndSelect("employee.department", "department")
+      .leftJoinAndSelect("employee.manager", "manager")
+      .leftJoinAndSelect("leaveRequest.approver", "approver");
 
     if (options?.status) {
-      queryBuilder.andWhere('leaveRequest.status = :status', { status: options.status });
+      queryBuilder.andWhere("leaveRequest.status = :status", {
+        status: options.status,
+      });
     }
 
     if (options?.employeeId) {
-      queryBuilder.andWhere('leaveRequest.employeeId = :employeeId', { employeeId: options.employeeId });
+      queryBuilder.andWhere("leaveRequest.employeeId = :employeeId", {
+        employeeId: options.employeeId,
+      });
     }
 
     if (options?.managerId) {
-      queryBuilder.andWhere('employee.managerId = :managerId', { managerId: options.managerId });
+      queryBuilder.andWhere("employee.managerId = :managerId", {
+        managerId: options.managerId,
+      });
     }
 
     const [requests, total] = await queryBuilder
-      .orderBy('leaveRequest.createdAt', 'DESC')
+      .orderBy("leaveRequest.createdAt", "DESC")
       .take(limit)
       .skip(offset)
       .getManyAndCount();
@@ -144,11 +164,17 @@ export class LeavesService {
   async findOne(id: string): Promise<LeaveRequest> {
     const leaveRequest = await this.leaveRequestRepository.findOne({
       where: { id },
-      relations: ['employee', 'employee.user', 'employee.department', 'employee.manager', 'approver'],
+      relations: [
+        "employee",
+        "employee.user",
+        "employee.department",
+        "employee.manager",
+        "approver",
+      ],
     });
 
     if (!leaveRequest) {
-      throw new NotFoundException('Leave request not found');
+      throw new NotFoundException("Leave request not found");
     }
 
     return leaveRequest;
@@ -162,7 +188,7 @@ export class LeavesService {
     const leaveRequest = await this.findOne(requestId);
 
     if (leaveRequest.status !== LeaveStatus.PENDING) {
-      throw new BadRequestException('Leave request is not in pending status');
+      throw new BadRequestException("Leave request is not in pending status");
     }
 
     // Update leave balance
@@ -176,12 +202,12 @@ export class LeavesService {
 
     // Update request status
     leaveRequest.status = LeaveStatus.APPROVED;
-    
+
     // Check if approver is an employee (has employee record) or admin (user only)
     const employeeApprover = await this.employeeRepository.findOne({
-      where: { id: approverId }
+      where: { id: approverId },
     });
-    
+
     if (employeeApprover) {
       // Manager/Employee approval - set the employee ID
       leaveRequest.approvedBy = approverId;
@@ -189,7 +215,7 @@ export class LeavesService {
       // Admin approval - leave approvedBy as null since admin has no employee record
       leaveRequest.approvedBy = null;
     }
-    
+
     leaveRequest.approvedAt = new Date();
 
     const updatedRequest = await this.leaveRequestRepository.save(leaveRequest);
@@ -200,7 +226,7 @@ export class LeavesService {
     if (employeeApprover) {
       approver = await this.employeeRepository.findOne({
         where: { id: approverId },
-        relations: ['user'],
+        relations: ["user"],
       });
     }
 
@@ -210,7 +236,7 @@ export class LeavesService {
       const userApprover = await this.userRepository.findOne({
         where: { id: approverId },
       });
-      approverName = userApprover?.email || 'Admin';
+      approverName = userApprover?.email || "Admin";
     }
 
     if (leaveRequest.employee.user) {
@@ -219,7 +245,7 @@ export class LeavesService {
         leaveRequest.leaveType,
         new Date(leaveRequest.startDate),
         new Date(leaveRequest.endDate),
-        'approved',
+        "approved",
         approverName,
       );
     }
@@ -234,7 +260,7 @@ export class LeavesService {
     const leaveRequest = await this.findOne(requestId);
 
     if (leaveRequest.status !== LeaveStatus.PENDING) {
-      throw new BadRequestException('Can only update pending leave requests');
+      throw new BadRequestException("Can only update pending leave requests");
     }
 
     // Update the leave request with new data
@@ -255,9 +281,11 @@ export class LeavesService {
     if (updateLeaveRequestDto.startDate || updateLeaveRequestDto.endDate) {
       const startDate = leaveRequest.startDate;
       const endDate = leaveRequest.endDate;
-      
+
       if (startDate > endDate) {
-        throw new BadRequestException('Start date must be before or equal to end date');
+        throw new BadRequestException(
+          "Start date must be before or equal to end date",
+        );
       }
 
       const timeDiff = endDate.getTime() - startDate.getTime();
@@ -266,15 +294,18 @@ export class LeavesService {
 
       // Validate leave availability with new values
       const year = startDate.getFullYear();
-      const availability = await this.leaveCalculationService.checkLeaveAvailability(
-        leaveRequest.employeeId,
-        leaveRequest.leaveType,
-        daysCount,
-        year,
-      );
+      const availability =
+        await this.leaveCalculationService.checkLeaveAvailability(
+          leaveRequest.employeeId,
+          leaveRequest.leaveType,
+          daysCount,
+          year,
+        );
 
       if (!availability.available) {
-        throw new BadRequestException(`Insufficient leave balance. Available: ${availability.balance} days, Requested: ${daysCount} days`);
+        throw new BadRequestException(
+          `Insufficient leave balance. Available: ${availability.balance} days, Requested: ${daysCount} days`,
+        );
       }
     }
 
@@ -282,16 +313,23 @@ export class LeavesService {
   }
 
   async deleteLeaveRequest(requestId: string): Promise<void> {
-    console.log('LeavesService: Starting delete for request ID:', requestId);
-    
+    console.log("LeavesService: Starting delete for request ID:", requestId);
+
     const leaveRequest = await this.findOne(requestId);
-    console.log('LeavesService: Found leave request:', leaveRequest.id, 'Status:', leaveRequest.status);
+    console.log(
+      "LeavesService: Found leave request:",
+      leaveRequest.id,
+      "Status:",
+      leaveRequest.status,
+    );
 
     if (leaveRequest.status === LeaveStatus.APPROVED) {
-      console.log('LeavesService: Restoring leave balance for approved request');
+      console.log(
+        "LeavesService: Restoring leave balance for approved request",
+      );
       // If approved, we need to restore the leave balance by adding back the days
       const year = new Date(leaveRequest.startDate).getFullYear();
-      
+
       // Find the leave balance record
       const leaveBalance = await this.leaveBalanceRepository.findOne({
         where: {
@@ -302,25 +340,29 @@ export class LeavesService {
       });
 
       if (leaveBalance) {
-        console.log('LeavesService: Updating leave balance, restoring', leaveRequest.daysCount, 'days');
+        console.log(
+          "LeavesService: Updating leave balance, restoring",
+          leaveRequest.daysCount,
+          "days",
+        );
         // Ensure all values are properly converted to numbers
         const currentUsedDays = Number(leaveBalance.usedDays) || 0;
         const daysToRestore = Number(leaveRequest.daysCount) || 0;
         const totalAllocated = Number(leaveBalance.totalAllocated) || 0;
         const carryForward = Number(leaveBalance.carryForward) || 0;
-        
+
         const newUsedDays = Math.max(0, currentUsedDays - daysToRestore);
         const newAvailableDays = totalAllocated + carryForward - newUsedDays;
-        
+
         leaveBalance.usedDays = Number(newUsedDays.toFixed(2));
         leaveBalance.availableDays = Number(newAvailableDays.toFixed(2));
         await this.leaveBalanceRepository.save(leaveBalance);
       }
     }
 
-    console.log('LeavesService: Removing leave request from database');
+    console.log("LeavesService: Removing leave request from database");
     await this.leaveRequestRepository.remove(leaveRequest);
-    console.log('LeavesService: Delete operation completed successfully');
+    console.log("LeavesService: Delete operation completed successfully");
   }
 
   async rejectLeaveRequest(
@@ -331,17 +373,17 @@ export class LeavesService {
     const leaveRequest = await this.findOne(requestId);
 
     if (leaveRequest.status !== LeaveStatus.PENDING) {
-      throw new BadRequestException('Leave request is not in pending status');
+      throw new BadRequestException("Leave request is not in pending status");
     }
 
     // Update request status
     leaveRequest.status = LeaveStatus.REJECTED;
-    
+
     // Check if approver is an employee (has employee record) or admin (user only)
     const employeeApprover = await this.employeeRepository.findOne({
-      where: { id: approverId }
+      where: { id: approverId },
     });
-    
+
     if (employeeApprover) {
       // Manager/Employee rejection - set the employee ID
       leaveRequest.approvedBy = approverId;
@@ -349,7 +391,7 @@ export class LeavesService {
       // Admin rejection - leave approvedBy as null since admin has no employee record
       leaveRequest.approvedBy = null;
     }
-    
+
     leaveRequest.approvedAt = new Date();
     leaveRequest.rejectionReason = rejectDto.rejectionReason;
 
@@ -361,7 +403,7 @@ export class LeavesService {
     if (employeeApprover) {
       approver = await this.employeeRepository.findOne({
         where: { id: approverId },
-        relations: ['user'],
+        relations: ["user"],
       });
     }
 
@@ -371,7 +413,7 @@ export class LeavesService {
       const userApprover = await this.userRepository.findOne({
         where: { id: approverId },
       });
-      approverName = userApprover?.email || 'Admin';
+      approverName = userApprover?.email || "Admin";
     }
 
     if (leaveRequest.employee.user) {
@@ -380,7 +422,7 @@ export class LeavesService {
         leaveRequest.leaveType,
         new Date(leaveRequest.startDate),
         new Date(leaveRequest.endDate),
-        'rejected',
+        "rejected",
         approverName,
         rejectDto.rejectionReason,
       );
@@ -389,15 +431,25 @@ export class LeavesService {
     return this.findOne(updatedRequest.id);
   }
 
-  async cancelLeaveRequest(requestId: string, employeeId: string): Promise<LeaveRequest> {
+  async cancelLeaveRequest(
+    requestId: string,
+    employeeId: string,
+  ): Promise<LeaveRequest> {
     const leaveRequest = await this.findOne(requestId);
 
     if (leaveRequest.employeeId !== employeeId) {
-      throw new ForbiddenException('You can only cancel your own leave requests');
+      throw new ForbiddenException(
+        "You can only cancel your own leave requests",
+      );
     }
 
-    if (leaveRequest.status !== LeaveStatus.PENDING && leaveRequest.status !== LeaveStatus.APPROVED) {
-      throw new BadRequestException('Can only cancel pending or approved leave requests');
+    if (
+      leaveRequest.status !== LeaveStatus.PENDING &&
+      leaveRequest.status !== LeaveStatus.APPROVED
+    ) {
+      throw new BadRequestException(
+        "Can only cancel pending or approved leave requests",
+      );
     }
 
     // If approved request is being cancelled, restore leave balance
@@ -415,13 +467,16 @@ export class LeavesService {
     return this.leaveRequestRepository.save(leaveRequest);
   }
 
-  async getLeaveBalance(employeeId: string, year?: number): Promise<LeaveBalance[]> {
+  async getLeaveBalance(
+    employeeId: string,
+    year?: number,
+  ): Promise<LeaveBalance[]> {
     const targetYear = year || new Date().getFullYear();
 
     return this.leaveBalanceRepository.find({
       where: { employeeId, year: targetYear },
-      relations: ['employee'],
-      order: { leaveType: 'ASC' },
+      relations: ["employee"],
+      order: { leaveType: "ASC" },
     });
   }
 
@@ -434,25 +489,27 @@ export class LeavesService {
     const endDate = new Date(year, month, 0);
 
     const queryBuilder = this.leaveRequestRepository
-      .createQueryBuilder('leaveRequest')
-      .leftJoinAndSelect('leaveRequest.employee', 'employee')
-      .leftJoinAndSelect('employee.user', 'user')
-      .leftJoinAndSelect('employee.department', 'department')
-      .leftJoinAndSelect('leaveRequest.approver', 'approver')
-      .leftJoinAndSelect('approver.user', 'approverUser')
-      .where('leaveRequest.status IN (:...statuses)', { statuses: [LeaveStatus.APPROVED, LeaveStatus.PENDING] })
+      .createQueryBuilder("leaveRequest")
+      .leftJoinAndSelect("leaveRequest.employee", "employee")
+      .leftJoinAndSelect("employee.user", "user")
+      .leftJoinAndSelect("employee.department", "department")
+      .leftJoinAndSelect("leaveRequest.approver", "approver")
+      .leftJoinAndSelect("approver.user", "approverUser")
+      .where("leaveRequest.status IN (:...statuses)", {
+        statuses: [LeaveStatus.APPROVED, LeaveStatus.PENDING],
+      })
       .andWhere(
-        '(leaveRequest.startDate BETWEEN :startDate AND :endDate OR leaveRequest.endDate BETWEEN :startDate AND :endDate)',
+        "(leaveRequest.startDate BETWEEN :startDate AND :endDate OR leaveRequest.endDate BETWEEN :startDate AND :endDate)",
         { startDate, endDate },
       );
 
     if (departmentId) {
-      queryBuilder.andWhere('employee.departmentId = :departmentId', { departmentId });
+      queryBuilder.andWhere("employee.departmentId = :departmentId", {
+        departmentId,
+      });
     }
 
-    return queryBuilder
-      .orderBy('leaveRequest.startDate', 'ASC')
-      .getMany();
+    return queryBuilder.orderBy("leaveRequest.startDate", "ASC").getMany();
   }
 
   async getLeaveStats(year?: number): Promise<{
@@ -468,52 +525,66 @@ export class LeavesService {
     const endOfYear = new Date(targetYear, 11, 31);
 
     const totalRequests = await this.leaveRequestRepository.count({
-      where: { 
-        appliedAt: Between(startOfYear, endOfYear)
+      where: {
+        appliedAt: Between(startOfYear, endOfYear),
       },
     });
 
     const pendingRequests = await this.leaveRequestRepository.count({
-      where: { 
+      where: {
         status: LeaveStatus.PENDING,
-        appliedAt: Between(startOfYear, endOfYear)
+        appliedAt: Between(startOfYear, endOfYear),
       },
     });
 
     const approvedRequests = await this.leaveRequestRepository.count({
-      where: { 
+      where: {
         status: LeaveStatus.APPROVED,
-        appliedAt: Between(startOfYear, endOfYear)
+        appliedAt: Between(startOfYear, endOfYear),
       },
     });
 
     const rejectedRequests = await this.leaveRequestRepository.count({
-      where: { 
+      where: {
         status: LeaveStatus.REJECTED,
-        appliedAt: Between(startOfYear, endOfYear)
+        appliedAt: Between(startOfYear, endOfYear),
       },
     });
 
     const byType = await this.leaveRequestRepository
-      .createQueryBuilder('leaveRequest')
-      .select('leaveRequest.leaveType', 'type')
-      .addSelect('COUNT(*)', 'count')
-      .where('EXTRACT(YEAR FROM leaveRequest.appliedAt) = :year', { year: targetYear })
-      .groupBy('leaveRequest.leaveType')
+      .createQueryBuilder("leaveRequest")
+      .select("leaveRequest.leaveType", "type")
+      .addSelect("COUNT(*)", "count")
+      .where("EXTRACT(YEAR FROM leaveRequest.appliedAt) = :year", {
+        year: targetYear,
+      })
+      .groupBy("leaveRequest.leaveType")
       .getRawMany();
 
     const byMonth = await this.leaveRequestRepository
-      .createQueryBuilder('leaveRequest')
-      .select('EXTRACT(MONTH FROM leaveRequest.appliedAt)', 'month')
-      .addSelect('COUNT(*)', 'count')
-      .where('EXTRACT(YEAR FROM leaveRequest.appliedAt) = :year', { year: targetYear })
-      .groupBy('EXTRACT(MONTH FROM leaveRequest.appliedAt)')
-      .orderBy('month', 'ASC')
+      .createQueryBuilder("leaveRequest")
+      .select("EXTRACT(MONTH FROM leaveRequest.appliedAt)", "month")
+      .addSelect("COUNT(*)", "count")
+      .where("EXTRACT(YEAR FROM leaveRequest.appliedAt) = :year", {
+        year: targetYear,
+      })
+      .groupBy("EXTRACT(MONTH FROM leaveRequest.appliedAt)")
+      .orderBy("month", "ASC")
       .getRawMany();
 
     const monthNames = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
     ];
 
     return {
@@ -521,11 +592,11 @@ export class LeavesService {
       pendingRequests,
       approvedRequests,
       rejectedRequests,
-      byType: byType.map(item => ({
+      byType: byType.map((item) => ({
         type: item.type,
         count: parseInt(item.count),
       })),
-      byMonth: byMonth.map(item => ({
+      byMonth: byMonth.map((item) => ({
         month: monthNames[parseInt(item.month) - 1],
         count: parseInt(item.count),
       })),

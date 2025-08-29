@@ -4,31 +4,31 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-} from 'typeorm';
+} from "typeorm";
 
-@Entity('holidays')
+@Entity("holidays")
 export class Holiday {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column()
   name: string;
 
-  @Column({ type: 'date' })
+  @Column({ type: "date" })
   date: Date;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: "text", nullable: true })
   description: string;
 
-  @Column({ name: 'is_recurring', default: false })
+  @Column({ name: "is_recurring", default: false })
   isRecurring: boolean;
 
-  @Column({ name: 'is_active', default: true })
+  @Column({ name: "is_active", default: true })
   isActive: boolean;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: "updated_at" })
   updatedAt: Date;
 }

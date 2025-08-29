@@ -1,9 +1,13 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not, IsNull } from 'typeorm';
-import { Department } from './entities/department.entity';
-import { CreateDepartmentDto } from './dto/create-department.dto';
-import { UpdateDepartmentDto } from './dto/update-department.dto';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, Not, IsNull } from "typeorm";
+import { Department } from "./entities/department.entity";
+import { CreateDepartmentDto } from "./dto/create-department.dto";
+import { UpdateDepartmentDto } from "./dto/update-department.dto";
 
 @Injectable()
 export class DepartmentsService {
@@ -19,7 +23,7 @@ export class DepartmentsService {
     });
 
     if (existingDepartment) {
-      throw new ConflictException('Department name already exists');
+      throw new ConflictException("Department name already exists");
     }
 
     const department = this.departmentRepository.create(createDepartmentDto);
@@ -28,19 +32,19 @@ export class DepartmentsService {
 
   async findAll(): Promise<Department[]> {
     return this.departmentRepository.find({
-      relations: ['manager', 'employees'],
-      order: { name: 'ASC' },
+      relations: ["manager", "employees"],
+      order: { name: "ASC" },
     });
   }
 
   async findOne(id: string): Promise<Department> {
     const department = await this.departmentRepository.findOne({
       where: { id },
-      relations: ['manager', 'employees'],
+      relations: ["manager", "employees"],
     });
 
     if (!department) {
-      throw new NotFoundException('Department not found');
+      throw new NotFoundException("Department not found");
     }
 
     return department;
@@ -49,18 +53,26 @@ export class DepartmentsService {
   async findByName(name: string): Promise<Department | null> {
     return this.departmentRepository.findOne({
       where: { name },
-      relations: ['manager', 'employees'],
+      relations: ["manager", "employees"],
     });
   }
 
-  async update(id: string, updateDepartmentDto: UpdateDepartmentDto): Promise<Department> {
+  async update(
+    id: string,
+    updateDepartmentDto: UpdateDepartmentDto,
+  ): Promise<Department> {
     const department = await this.findOne(id);
 
     // Check if department name is being changed and already exists
-    if (updateDepartmentDto.name && updateDepartmentDto.name !== department.name) {
-      const existingDepartment = await this.findByName(updateDepartmentDto.name);
+    if (
+      updateDepartmentDto.name &&
+      updateDepartmentDto.name !== department.name
+    ) {
+      const existingDepartment = await this.findByName(
+        updateDepartmentDto.name,
+      );
       if (existingDepartment) {
-        throw new ConflictException('Department name already exists');
+        throw new ConflictException("Department name already exists");
       }
     }
 
@@ -70,15 +82,17 @@ export class DepartmentsService {
 
   async remove(id: string): Promise<void> {
     const department = await this.findOne(id);
-    
+
     // Check if department has employees
     if (department.employees && department.employees.length > 0) {
-      throw new ConflictException('Cannot delete department with existing employees');
+      throw new ConflictException(
+        "Cannot delete department with existing employees",
+      );
     }
 
     const result = await this.departmentRepository.delete(id);
     if (result.affected === 0) {
-      throw new NotFoundException('Department not found');
+      throw new NotFoundException("Department not found");
     }
   }
 
@@ -88,24 +102,24 @@ export class DepartmentsService {
     employeeDistribution: { department: string; count: number }[];
   }> {
     const total = await this.departmentRepository.count();
-    
+
     const withManagers = await this.departmentRepository.count({
       where: { managerId: Not(IsNull()) },
     });
 
     const employeeDistribution = await this.departmentRepository
-      .createQueryBuilder('department')
-      .leftJoin('department.employees', 'employee')
-      .select('department.name', 'department')
-      .addSelect('COUNT(employee.id)', 'count')
-      .groupBy('department.id, department.name')
-      .orderBy('COUNT(employee.id)', 'DESC')
+      .createQueryBuilder("department")
+      .leftJoin("department.employees", "employee")
+      .select("department.name", "department")
+      .addSelect("COUNT(employee.id)", "count")
+      .groupBy("department.id, department.name")
+      .orderBy("COUNT(employee.id)", "DESC")
       .getRawMany();
 
     return {
       total,
       withManagers,
-      employeeDistribution: employeeDistribution.map(item => ({
+      employeeDistribution: employeeDistribution.map((item) => ({
         department: item.department,
         count: parseInt(item.count),
       })),

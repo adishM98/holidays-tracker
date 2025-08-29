@@ -1,6 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
+import { Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import * as nodemailer from "nodemailer";
 
 @Injectable()
 export class MailService {
@@ -13,10 +13,10 @@ export class MailService {
   }
 
   private initializeTransporter() {
-    const smtpHost = this.configService.get('SMTP_HOST');
-    const smtpPort = this.configService.get('SMTP_PORT');
-    const smtpUsername = this.configService.get('SMTP_USERNAME');
-    const smtpPassword = this.configService.get('SMTP_PASSWORD');
+    const smtpHost = this.configService.get("SMTP_HOST");
+    const smtpPort = this.configService.get("SMTP_PORT");
+    const smtpUsername = this.configService.get("SMTP_USERNAME");
+    const smtpPassword = this.configService.get("SMTP_PASSWORD");
 
     if (smtpHost && smtpPort && smtpUsername && smtpPassword) {
       this.transporter = nodemailer.createTransport({
@@ -29,9 +29,11 @@ export class MailService {
         },
       });
       this.smtpConfigured = true;
-      this.logger.log('SMTP configured successfully');
+      this.logger.log("SMTP configured successfully");
     } else {
-      this.logger.warn('SMTP not configured - email notifications will be disabled');
+      this.logger.warn(
+        "SMTP not configured - email notifications will be disabled",
+      );
       this.smtpConfigured = false;
     }
   }
@@ -40,20 +42,25 @@ export class MailService {
     return this.smtpConfigured && this.transporter !== null;
   }
 
-  async sendWelcomeEmail(email: string, temporaryPassword: string): Promise<void> {
+  async sendWelcomeEmail(
+    email: string,
+    temporaryPassword: string,
+  ): Promise<void> {
     if (!this.isEmailEnabled()) {
-      this.logger.warn(`SMTP not configured - skipping welcome email to ${email}`);
+      this.logger.warn(
+        `SMTP not configured - skipping welcome email to ${email}`,
+      );
       return;
     }
 
-    const fromEmail = this.configService.get('FROM_EMAIL');
-    const frontendUrl = this.configService.get('FRONTEND_URL');
+    const fromEmail = this.configService.get("FROM_EMAIL");
+    const frontendUrl = this.configService.get("FRONTEND_URL");
 
     try {
       await this.transporter!.sendMail({
         from: fromEmail,
         to: email,
-        subject: 'Welcome to Leave Management System',
+        subject: "Welcome to Leave Management System",
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #333;">Welcome to Leave Management System</h2>
@@ -78,7 +85,7 @@ export class MailService {
           </div>
         `,
       });
-      
+
       this.logger.log(`Welcome email sent to ${email}`);
     } catch (error) {
       this.logger.error(`Failed to send welcome email to ${email}`, error);
@@ -86,21 +93,26 @@ export class MailService {
     }
   }
 
-  async sendPasswordResetEmail(email: string, resetToken: string): Promise<void> {
+  async sendPasswordResetEmail(
+    email: string,
+    resetToken: string,
+  ): Promise<void> {
     if (!this.isEmailEnabled()) {
-      this.logger.warn(`SMTP not configured - skipping password reset email to ${email}`);
+      this.logger.warn(
+        `SMTP not configured - skipping password reset email to ${email}`,
+      );
       return;
     }
 
-    const fromEmail = this.configService.get('FROM_EMAIL');
-    const frontendUrl = this.configService.get('FRONTEND_URL');
+    const fromEmail = this.configService.get("FROM_EMAIL");
+    const frontendUrl = this.configService.get("FRONTEND_URL");
     const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
 
     try {
       await this.transporter!.sendMail({
         from: fromEmail,
         to: email,
-        subject: 'Password Reset Request',
+        subject: "Password Reset Request",
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #333;">Password Reset Request</h2>
@@ -125,10 +137,13 @@ export class MailService {
           </div>
         `,
       });
-      
+
       this.logger.log(`Password reset email sent to ${email}`);
     } catch (error) {
-      this.logger.error(`Failed to send password reset email to ${email}`, error);
+      this.logger.error(
+        `Failed to send password reset email to ${email}`,
+        error,
+      );
       // Don't throw error - just log and continue
     }
   }
@@ -139,15 +154,17 @@ export class MailService {
     leaveType: string,
     startDate: Date,
     endDate: Date,
-    reason?: string
+    reason?: string,
   ): Promise<void> {
     if (!this.isEmailEnabled()) {
-      this.logger.warn(`SMTP not configured - skipping leave request notification to ${managerEmail}`);
+      this.logger.warn(
+        `SMTP not configured - skipping leave request notification to ${managerEmail}`,
+      );
       return;
     }
 
-    const fromEmail = this.configService.get('FROM_EMAIL');
-    const frontendUrl = this.configService.get('FRONTEND_URL');
+    const fromEmail = this.configService.get("FROM_EMAIL");
+    const frontendUrl = this.configService.get("FRONTEND_URL");
 
     try {
       await this.transporter!.sendMail({
@@ -163,7 +180,7 @@ export class MailService {
               <strong>Leave Type:</strong> ${leaveType}<br>
               <strong>Start Date:</strong> ${startDate.toDateString()}<br>
               <strong>End Date:</strong> ${endDate.toDateString()}<br>
-              ${reason ? `<strong>Reason:</strong> ${reason}<br>` : ''}
+              ${reason ? `<strong>Reason:</strong> ${reason}<br>` : ""}
             </div>
             
             <p>
@@ -174,10 +191,13 @@ export class MailService {
           </div>
         `,
       });
-      
+
       this.logger.log(`Leave request notification sent to ${managerEmail}`);
     } catch (error) {
-      this.logger.error(`Failed to send leave request notification to ${managerEmail}`, error);
+      this.logger.error(
+        `Failed to send leave request notification to ${managerEmail}`,
+        error,
+      );
       // Don't throw error - just log and continue
     }
   }
@@ -189,18 +209,20 @@ export class MailService {
     endDate: Date,
     status: string,
     approverName?: string,
-    rejectionReason?: string
+    rejectionReason?: string,
   ): Promise<void> {
     if (!this.isEmailEnabled()) {
-      this.logger.warn(`SMTP not configured - skipping leave status notification to ${employeeEmail}`);
+      this.logger.warn(
+        `SMTP not configured - skipping leave status notification to ${employeeEmail}`,
+      );
       return;
     }
 
-    const fromEmail = this.configService.get('FROM_EMAIL');
-    const frontendUrl = this.configService.get('FRONTEND_URL');
+    const fromEmail = this.configService.get("FROM_EMAIL");
+    const frontendUrl = this.configService.get("FRONTEND_URL");
 
-    const statusColor = status === 'approved' ? '#28a745' : '#dc3545';
-    const statusText = status === 'approved' ? 'Approved' : 'Rejected';
+    const statusColor = status === "approved" ? "#28a745" : "#dc3545";
+    const statusText = status === "approved" ? "Approved" : "Rejected";
 
     try {
       await this.transporter!.sendMail({
@@ -216,8 +238,8 @@ export class MailService {
               <strong>Leave Type:</strong> ${leaveType}<br>
               <strong>Start Date:</strong> ${startDate.toDateString()}<br>
               <strong>End Date:</strong> ${endDate.toDateString()}<br>
-              ${approverName ? `<strong>Reviewed by:</strong> ${approverName}<br>` : ''}
-              ${rejectionReason ? `<strong>Reason:</strong> ${rejectionReason}<br>` : ''}
+              ${approverName ? `<strong>Reviewed by:</strong> ${approverName}<br>` : ""}
+              ${rejectionReason ? `<strong>Reason:</strong> ${rejectionReason}<br>` : ""}
             </div>
             
             <p>
@@ -228,10 +250,13 @@ export class MailService {
           </div>
         `,
       });
-      
+
       this.logger.log(`Leave status notification sent to ${employeeEmail}`);
     } catch (error) {
-      this.logger.error(`Failed to send leave status notification to ${employeeEmail}`, error);
+      this.logger.error(
+        `Failed to send leave status notification to ${employeeEmail}`,
+        error,
+      );
       // Don't throw error - just log and continue
     }
   }
@@ -243,25 +268,32 @@ export class MailService {
       successful: number;
       failed: number;
       errors: Array<{ row: number; error: string; data: any }>;
-    }
+    },
   ): Promise<void> {
     if (!this.isEmailEnabled()) {
-      this.logger.warn(`SMTP not configured - skipping bulk import report to ${adminEmail}`);
+      this.logger.warn(
+        `SMTP not configured - skipping bulk import report to ${adminEmail}`,
+      );
       return;
     }
 
-    const fromEmail = this.configService.get('FROM_EMAIL');
+    const fromEmail = this.configService.get("FROM_EMAIL");
 
-    const errorRows = result.errors.length > 0 
-      ? `
+    const errorRows =
+      result.errors.length > 0
+        ? `
         <h4>Errors:</h4>
         <ul>
-          ${result.errors.map(error => `
+          ${result.errors
+            .map(
+              (error) => `
             <li>Row ${error.row}: ${error.error}</li>
-          `).join('')}
+          `,
+            )
+            .join("")}
         </ul>
       `
-      : '';
+        : "";
 
     try {
       await this.transporter!.sendMail({
@@ -282,10 +314,13 @@ export class MailService {
           </div>
         `,
       });
-      
+
       this.logger.log(`Bulk import report sent to ${adminEmail}`);
     } catch (error) {
-      this.logger.error(`Failed to send bulk import report to ${adminEmail}`, error);
+      this.logger.error(
+        `Failed to send bulk import report to ${adminEmail}`,
+        error,
+      );
       // Don't throw error - just log and continue
     }
   }

@@ -5,49 +5,49 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToOne,
-} from 'typeorm';
-import { Exclude } from 'class-transformer';
-import { UserRole } from '../../common/enums/user-role.enum';
-import { Employee } from '../../employees/entities/employee.entity';
+} from "typeorm";
+import { Exclude } from "class-transformer";
+import { UserRole } from "../../common/enums/user-role.enum";
+import { Employee } from "../../employees/entities/employee.entity";
 
-@Entity('users')
+@Entity("users")
 export class User {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column({ unique: true })
   email: string;
 
-  @Column({ name: 'password_hash' })
+  @Column({ name: "password_hash" })
   @Exclude()
   passwordHash: string;
 
   @Column({
-    type: 'enum',
+    type: "enum",
     enum: UserRole,
     default: UserRole.EMPLOYEE,
   })
   role: UserRole;
 
-  @Column({ name: 'is_active', default: true })
+  @Column({ name: "is_active", default: true })
   isActive: boolean;
 
-  @Column({ name: 'must_change_password', default: false })
+  @Column({ name: "must_change_password", default: false })
   mustChangePassword: boolean;
 
-  @Column({ name: 'invite_status', default: 'active', nullable: true })
-  inviteStatus: 'invited' | 'invite_expired' | 'active' | null;
+  @Column({ name: "invite_status", default: "active", nullable: true })
+  inviteStatus: "invited" | "invite_expired" | "active" | null;
 
-  @Column({ name: 'invited_at', nullable: true })
+  @Column({ name: "invited_at", nullable: true })
   invitedAt: Date;
 
-  @Column({ name: 'invite_expires_at', nullable: true })
+  @Column({ name: "invite_expires_at", nullable: true })
   inviteExpiresAt: Date;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: "updated_at" })
   updatedAt: Date;
 
   @OneToOne(() => Employee, (employee) => employee.user)

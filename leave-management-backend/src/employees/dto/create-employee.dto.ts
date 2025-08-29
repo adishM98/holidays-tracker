@@ -1,19 +1,37 @@
-import { IsString, IsEmail, IsOptional, IsDateString, IsNumber, IsUUID, IsBoolean, ValidateNested } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import {
+  IsString,
+  IsEmail,
+  IsOptional,
+  IsDateString,
+  IsNumber,
+  IsUUID,
+  IsBoolean,
+  ValidateNested,
+} from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { Type } from "class-transformer";
 
 export class ManualBalancesDto {
-  @ApiPropertyOptional({ example: 15.5, description: 'Current earned/privilege leave balance' })
+  @ApiPropertyOptional({
+    example: 15.5,
+    description: "Current earned/privilege leave balance",
+  })
   @IsOptional()
   @IsNumber()
   earned?: number;
 
-  @ApiPropertyOptional({ example: 8, description: 'Current sick leave balance' })
+  @ApiPropertyOptional({
+    example: 8,
+    description: "Current sick leave balance",
+  })
   @IsOptional()
   @IsNumber()
   sick?: number;
 
-  @ApiPropertyOptional({ example: 4, description: 'Current casual leave balance' })
+  @ApiPropertyOptional({
+    example: 4,
+    description: "Current casual leave balance",
+  })
   @IsOptional()
   @IsNumber()
   casual?: number;
@@ -25,23 +43,23 @@ export class CreateEmployeeDto {
   @IsUUID()
   userId?: string;
 
-  @ApiProperty({ example: 'EMP001' })
+  @ApiProperty({ example: "EMP001" })
   @IsString()
   employeeId: string;
 
-  @ApiProperty({ example: 'john.doe@company.com' })
+  @ApiProperty({ example: "john.doe@company.com" })
   @IsEmail()
   email: string;
 
-  @ApiProperty({ example: 'John' })
+  @ApiProperty({ example: "John" })
   @IsString()
   firstName: string;
 
-  @ApiProperty({ example: 'Doe' })
+  @ApiProperty({ example: "Doe" })
   @IsString()
   lastName: string;
 
-  @ApiPropertyOptional({ example: '+1234567890' })
+  @ApiPropertyOptional({ example: "+1234567890" })
   @IsOptional()
   @IsString()
   phone?: string;
@@ -51,7 +69,7 @@ export class CreateEmployeeDto {
   @IsUUID()
   departmentId?: string;
 
-  @ApiPropertyOptional({ example: 'Software Engineer' })
+  @ApiPropertyOptional({ example: "Software Engineer" })
   @IsOptional()
   @IsString()
   position?: string;
@@ -61,11 +79,11 @@ export class CreateEmployeeDto {
   @IsUUID()
   managerId?: string;
 
-  @ApiProperty({ example: '2023-01-15' })
+  @ApiProperty({ example: "2023-01-15" })
   @IsDateString()
   joiningDate: string;
 
-  @ApiPropertyOptional({ example: '2023-04-15' })
+  @ApiPropertyOptional({ example: "2023-04-15" })
   @IsOptional()
   @IsDateString()
   probationEndDate?: string;
@@ -85,12 +103,17 @@ export class CreateEmployeeDto {
   @IsNumber()
   casualLeaveDays?: number;
 
-  @ApiPropertyOptional({ description: 'Whether to use manual balance overrides for existing employees' })
+  @ApiPropertyOptional({
+    description:
+      "Whether to use manual balance overrides for existing employees",
+  })
   @IsOptional()
   @IsBoolean()
   useManualBalances?: boolean;
 
-  @ApiPropertyOptional({ description: 'Manual balances for existing employees' })
+  @ApiPropertyOptional({
+    description: "Manual balances for existing employees",
+  })
   @IsOptional()
   @ValidateNested()
   @Type(() => ManualBalancesDto)

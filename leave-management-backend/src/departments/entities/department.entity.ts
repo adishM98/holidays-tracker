@@ -6,27 +6,27 @@ import {
   OneToMany,
   ManyToOne,
   JoinColumn,
-} from 'typeorm';
-import { Employee } from '../../employees/entities/employee.entity';
+} from "typeorm";
+import { Employee } from "../../employees/entities/employee.entity";
 
-@Entity('departments')
+@Entity("departments")
 export class Department {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column({ unique: true })
   name: string;
 
-  @Column({ name: 'manager_id', nullable: true })
+  @Column({ name: "manager_id", nullable: true })
   managerId: string;
 
   @ManyToOne(() => Employee, { nullable: true })
-  @JoinColumn({ name: 'manager_id' })
+  @JoinColumn({ name: "manager_id" })
   manager: Employee;
 
   @OneToMany(() => Employee, (employee) => employee.department)
   employees: Employee[];
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 }

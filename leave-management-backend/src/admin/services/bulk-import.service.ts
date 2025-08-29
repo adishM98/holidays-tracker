@@ -1,19 +1,19 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import * as bcrypt from 'bcrypt';
-import * as csvParser from 'csv-parser';
-import { Readable } from 'stream';
-import { User } from '../../users/entities/user.entity';
-import { Employee } from '../../employees/entities/employee.entity';
-import { Department } from '../../departments/entities/department.entity';
-import { UsersService } from '../../users/users.service';
-import { EmployeesService } from '../../employees/employees.service';
-import { DepartmentsService } from '../../departments/departments.service';
-import { AuthService } from '../../auth/auth.service';
-import { MailService } from '../../mail/mail.service';
-import { UserRole } from '../../common/enums/user-role.enum';
-import { BulkImportResultDto } from '../dto/bulk-import-result.dto';
+import { Injectable, BadRequestException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import * as bcrypt from "bcrypt";
+import * as csvParser from "csv-parser";
+import { Readable } from "stream";
+import { User } from "../../users/entities/user.entity";
+import { Employee } from "../../employees/entities/employee.entity";
+import { Department } from "../../departments/entities/department.entity";
+import { UsersService } from "../../users/users.service";
+import { EmployeesService } from "../../employees/employees.service";
+import { DepartmentsService } from "../../departments/departments.service";
+import { AuthService } from "../../auth/auth.service";
+import { MailService } from "../../mail/mail.service";
+import { UserRole } from "../../common/enums/user-role.enum";
+import { BulkImportResultDto } from "../dto/bulk-import-result.dto";
 
 interface EmployeeRow {
   employee_id: string;
@@ -47,13 +47,15 @@ export class BulkImportService {
     private mailService: MailService,
   ) {}
 
-  async importEmployees(file: Express.Multer.File): Promise<BulkImportResultDto> {
+  async importEmployees(
+    file: Express.Multer.File,
+  ): Promise<BulkImportResultDto> {
     if (!file) {
-      throw new BadRequestException('No file provided');
+      throw new BadRequestException("No file provided");
     }
 
-    if (file.mimetype !== 'text/csv') {
-      throw new BadRequestException('Only CSV files are allowed');
+    if (file.mimetype !== "text/csv") {
+      throw new BadRequestException("Only CSV files are allowed");
     }
 
     const csvData = await this.parseCsv(file.buffer);
@@ -85,11 +87,14 @@ export class BulkImportService {
     return result;
   }
 
-  private async processEmployeeRow(row: EmployeeRow, rowNumber: number): Promise<void> {
+  private async processEmployeeRow(
+    row: EmployeeRow,
+    rowNumber: number,
+  ): Promise<void> {
     // Validate required fields
     const validationErrors = await this.validateEmployeeRow(row);
     if (validationErrors.length > 0) {
-      throw new Error(validationErrors.join(', '));
+      throw new Error(validationErrors.join(", "));
     }
 
     // Get or create department
@@ -103,7 +108,9 @@ export class BulkImportService {
     // Find manager if specified
     let managerId: string | undefined;
     if (row.manager_email) {
-      const managerUser = await this.usersService.findByEmail(row.manager_email);
+      const managerUser = await this.usersService.findByEmail(
+        row.manager_email,
+      );
       if (managerUser?.employee) {
         managerId = managerUser.employee.id;
       }
@@ -143,7 +150,7 @@ export class BulkImportService {
       position: row.position,
       managerId,
       joiningDate: row.joining_date,
-      probationEndDate: probationEndDate?.toISOString().split('T')[0],
+      probationEndDate: probationEndDate?.toISOString().split("T")[0],
       annualLeaveDays: parseInt(row.annual_leave_days) || 21,
       sickLeaveDays: parseInt(row.sick_leave_days) || 10,
       casualLeaveDays: parseInt(row.casual_leave_days) || 6,
@@ -154,7 +161,10 @@ export class BulkImportService {
       await this.mailService.sendWelcomeEmail(row.email, password);
     } catch (emailError) {
       // Log email error but don't fail the import
-      console.warn(`Failed to send welcome email to ${row.email}:`, emailError.message);
+      console.warn(
+        `Failed to send welcome email to ${row.email}:`,
+        emailError.message,
+      );
     }
   }
 
@@ -162,49 +172,51 @@ export class BulkImportService {
     const errors: string[] = [];
 
     // Required field validation
-    if (!row.employee_id) errors.push('Employee ID is required');
-    if (!row.first_name) errors.push('First name is required');
-    if (!row.last_name) errors.push('Last name is required');
+    if (!row.employee_id) errors.push("Employee ID is required");
+    if (!row.first_name) errors.push("First name is required");
+    if (!row.last_name) errors.push("Last name is required");
     if (!row.email || !this.isValidEmail(row.email)) {
-      errors.push('Valid email is required');
+      errors.push("Valid email is required");
     }
-    if (!row.department) errors.push('Department is required');
+    if (!row.department) errors.push("Department is required");
     if (!row.joining_date || !this.isValidDate(row.joining_date)) {
-      errors.push('Valid joining date is required (YYYY-MM-DD)');
+      errors.push("Valid joining date is required (YYYY-MM-DD)");
     }
 
     // Check for duplicates only if basic validation passes
     if (row.employee_id) {
-      const existingEmployee = await this.employeesService.findByEmployeeId(row.employee_id);
+      const existingEmployee = await this.employeesService.findByEmployeeId(
+        row.employee_id,
+      );
       if (existingEmployee) {
-        errors.push('Employee ID already exists');
+        errors.push("Employee ID already exists");
       }
     }
 
     if (row.email && this.isValidEmail(row.email)) {
       const existingUser = await this.usersService.findByEmail(row.email);
       if (existingUser) {
-        errors.push('Email already exists');
+        errors.push("Email already exists");
       }
     }
 
     // Validate manager email if provided
     if (row.manager_email && !this.isValidEmail(row.manager_email)) {
-      errors.push('Invalid manager email format');
+      errors.push("Invalid manager email format");
     }
 
     // Validate numeric fields
     if (row.annual_leave_days && !this.isValidNumber(row.annual_leave_days)) {
-      errors.push('Annual leave days must be a valid number');
+      errors.push("Annual leave days must be a valid number");
     }
     if (row.sick_leave_days && !this.isValidNumber(row.sick_leave_days)) {
-      errors.push('Sick leave days must be a valid number');
+      errors.push("Sick leave days must be a valid number");
     }
     if (row.casual_leave_days && !this.isValidNumber(row.casual_leave_days)) {
-      errors.push('Casual leave days must be a valid number');
+      errors.push("Casual leave days must be a valid number");
     }
     if (row.probation_months && !this.isValidNumber(row.probation_months)) {
-      errors.push('Probation months must be a valid number');
+      errors.push("Probation months must be a valid number");
     }
 
     return errors;
@@ -217,9 +229,9 @@ export class BulkImportService {
 
       stream
         .pipe(csvParser())
-        .on('data', (data) => results.push(data))
-        .on('end', () => resolve(results))
-        .on('error', reject);
+        .on("data", (data) => results.push(data))
+        .on("end", () => resolve(results))
+        .on("error", reject);
     });
   }
 

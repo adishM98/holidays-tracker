@@ -1,18 +1,18 @@
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { MulterModule } from '@nestjs/platform-express';
-import { AdminController } from './admin.controller';
-import { BulkImportService } from './services/bulk-import.service';
-import { User } from '../users/entities/user.entity';
-import { Employee } from '../employees/entities/employee.entity';
-import { Department } from '../departments/entities/department.entity';
-import { UsersModule } from '../users/users.module';
-import { EmployeesModule } from '../employees/employees.module';
-import { DepartmentsModule } from '../departments/departments.module';
-import { LeavesModule } from '../leaves/leaves.module';
-import { AuthModule } from '../auth/auth.module';
-import { MailModule } from '../mail/mail.module';
-import { HolidaysModule } from '../holidays/holidays.module';
+import { Module } from "@nestjs/common";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { MulterModule } from "@nestjs/platform-express";
+import { AdminController } from "./admin.controller";
+import { BulkImportService } from "./services/bulk-import.service";
+import { User } from "../users/entities/user.entity";
+import { Employee } from "../employees/entities/employee.entity";
+import { Department } from "../departments/entities/department.entity";
+import { UsersModule } from "../users/users.module";
+import { EmployeesModule } from "../employees/employees.module";
+import { DepartmentsModule } from "../departments/departments.module";
+import { LeavesModule } from "../leaves/leaves.module";
+import { AuthModule } from "../auth/auth.module";
+import { MailModule } from "../mail/mail.module";
+import { HolidaysModule } from "../holidays/holidays.module";
 
 @Module({
   imports: [

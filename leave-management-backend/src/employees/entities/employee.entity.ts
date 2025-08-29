@@ -8,31 +8,31 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
-} from 'typeorm';
-import { User } from '../../users/entities/user.entity';
-import { Department } from '../../departments/entities/department.entity';
-import { LeaveRequest } from '../../leaves/entities/leave-request.entity';
-import { LeaveBalance } from '../../leaves/entities/leave-balance.entity';
+} from "typeorm";
+import { User } from "../../users/entities/user.entity";
+import { Department } from "../../departments/entities/department.entity";
+import { LeaveRequest } from "../../leaves/entities/leave-request.entity";
+import { LeaveBalance } from "../../leaves/entities/leave-balance.entity";
 
-@Entity('employees')
+@Entity("employees")
 export class Employee {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column({ name: 'user_id', nullable: true })
+  @Column({ name: "user_id", nullable: true })
   userId: string;
 
-  @OneToOne(() => User, (user) => user.employee, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_id' })
+  @OneToOne(() => User, (user) => user.employee, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "user_id" })
   user: User;
 
-  @Column({ name: 'employee_id', unique: true })
+  @Column({ name: "employee_id", unique: true })
   employeeId: string;
 
-  @Column({ name: 'first_name' })
+  @Column({ name: "first_name" })
   firstName: string;
 
-  @Column({ name: 'last_name' })
+  @Column({ name: "last_name" })
   lastName: string;
 
   @Column({ unique: true })
@@ -41,39 +41,41 @@ export class Employee {
   @Column({ nullable: true })
   phone: string;
 
-  @Column({ name: 'department_id', nullable: true })
+  @Column({ name: "department_id", nullable: true })
   departmentId: string;
 
   @ManyToOne(() => Department, (department) => department.employees)
-  @JoinColumn({ name: 'department_id' })
+  @JoinColumn({ name: "department_id" })
   department: Department;
 
   @Column({ nullable: true })
   position: string;
 
-  @Column({ name: 'manager_id', nullable: true })
+  @Column({ name: "manager_id", nullable: true })
   managerId: string;
 
-  @ManyToOne(() => Employee, (employee) => employee.subordinates, { nullable: true })
-  @JoinColumn({ name: 'manager_id' })
+  @ManyToOne(() => Employee, (employee) => employee.subordinates, {
+    nullable: true,
+  })
+  @JoinColumn({ name: "manager_id" })
   manager: Employee;
 
   @OneToMany(() => Employee, (employee) => employee.manager)
   subordinates: Employee[];
 
-  @Column({ name: 'joining_date', type: 'date' })
+  @Column({ name: "joining_date", type: "date" })
   joiningDate: Date;
 
-  @Column({ name: 'probation_end_date', type: 'date', nullable: true })
+  @Column({ name: "probation_end_date", type: "date", nullable: true })
   probationEndDate: Date;
 
-  @Column({ name: 'annual_leave_days', default: 21 })
+  @Column({ name: "annual_leave_days", default: 21 })
   annualLeaveDays: number;
 
-  @Column({ name: 'sick_leave_days', default: 10 })
+  @Column({ name: "sick_leave_days", default: 10 })
   sickLeaveDays: number;
 
-  @Column({ name: 'casual_leave_days', default: 6 })
+  @Column({ name: "casual_leave_days", default: 6 })
   casualLeaveDays: number;
 
   @OneToMany(() => LeaveRequest, (leaveRequest) => leaveRequest.employee)
@@ -82,10 +84,10 @@ export class Employee {
   @OneToMany(() => LeaveBalance, (leaveBalance) => leaveBalance.employee)
   leaveBalances: LeaveBalance[];
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: "updated_at" })
   updatedAt: Date;
 
   get fullName(): string {

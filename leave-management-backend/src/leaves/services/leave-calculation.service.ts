@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Employee } from '../../employees/entities/employee.entity';
-import { LeaveBalance } from '../entities/leave-balance.entity';
-import { LeaveType } from '../../common/enums/leave-type.enum';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { Employee } from "../../employees/entities/employee.entity";
+import { LeaveBalance } from "../entities/leave-balance.entity";
+import { LeaveType } from "../../common/enums/leave-type.enum";
 
 @Injectable()
 export class LeaveCalculationService {
@@ -20,38 +20,71 @@ export class LeaveCalculationService {
    */
   calculateProRataLeave(joiningDate: Date, annualEntitlement: number): number {
     const joiningMonth = joiningDate.getMonth() + 1; // 1-based month (Jan=1, Dec=12)
-    
+
     // HR-provided pro-rata table based on month of joining
     // Values represent leave days available for each leave type based on joining month
     const hrProRataTable = {
       // Privilege/Earned Leave (annual = 12 days typically)
       earned: {
-        1: 12, 2: 11, 3: 10, 4: 9, 5: 8, 6: 7, 7: 6, 8: 5, 9: 4, 10: 3, 11: 2, 12: 1
+        1: 12,
+        2: 11,
+        3: 10,
+        4: 9,
+        5: 8,
+        6: 7,
+        7: 6,
+        8: 5,
+        9: 4,
+        10: 3,
+        11: 2,
+        12: 1,
       },
-      // Casual Leave (annual = 8 days typically)  
+      // Casual Leave (annual = 8 days typically)
       casual: {
-        1: 8, 2: 7, 3: 7, 4: 6, 5: 6, 6: 5, 7: 4, 8: 4, 9: 3, 10: 2, 11: 2, 12: 1
+        1: 8,
+        2: 7,
+        3: 7,
+        4: 6,
+        5: 6,
+        6: 5,
+        7: 4,
+        8: 4,
+        9: 3,
+        10: 2,
+        11: 2,
+        12: 1,
       },
       // Sick Leave (annual = 8 days typically)
       sick: {
-        1: 8, 2: 7, 3: 7, 4: 6, 5: 6, 6: 5, 7: 4, 8: 4, 9: 3, 10: 2, 11: 2, 12: 1
-      }
+        1: 8,
+        2: 7,
+        3: 7,
+        4: 6,
+        5: 6,
+        6: 5,
+        7: 4,
+        8: 4,
+        9: 3,
+        10: 2,
+        11: 2,
+        12: 1,
+      },
     };
-    
+
     // Determine leave type based on annual entitlement
-    let leaveType: 'earned' | 'casual' | 'sick';
+    let leaveType: "earned" | "casual" | "sick";
     if (annualEntitlement === 12) {
-      leaveType = 'earned';
+      leaveType = "earned";
     } else if (annualEntitlement === 8) {
       // Need to differentiate between casual and sick - for now, assume casual
       // This will be handled differently in the calling function
-      leaveType = 'casual';
+      leaveType = "casual";
     } else {
       // Fallback to proportional calculation for non-standard entitlements
       const monthsRemaining = 13 - joiningMonth; // Months from joining month to end of year
       return Math.round((annualEntitlement / 12) * monthsRemaining * 100) / 100;
     }
-    
+
     return hrProRataTable[leaveType][joiningMonth] || 0;
   }
 
@@ -61,7 +94,18 @@ export class LeaveCalculationService {
   calculateCasualLeave(joiningDate: Date): number {
     const joiningMonth = joiningDate.getMonth() + 1;
     const casualTable = {
-      1: 8, 2: 7, 3: 7, 4: 6, 5: 6, 6: 5, 7: 4, 8: 4, 9: 3, 10: 2, 11: 2, 12: 1
+      1: 8,
+      2: 7,
+      3: 7,
+      4: 6,
+      5: 6,
+      6: 5,
+      7: 4,
+      8: 4,
+      9: 3,
+      10: 2,
+      11: 2,
+      12: 1,
     };
     return casualTable[joiningMonth] || 0;
   }
@@ -72,7 +116,18 @@ export class LeaveCalculationService {
   calculateSickLeave(joiningDate: Date): number {
     const joiningMonth = joiningDate.getMonth() + 1;
     const sickTable = {
-      1: 8, 2: 7, 3: 7, 4: 6, 5: 6, 6: 5, 7: 4, 8: 4, 9: 3, 10: 2, 11: 2, 12: 1
+      1: 8,
+      2: 7,
+      3: 7,
+      4: 6,
+      5: 6,
+      6: 5,
+      7: 4,
+      8: 4,
+      9: 3,
+      10: 2,
+      11: 2,
+      12: 1,
     };
     return sickTable[joiningMonth] || 0;
   }
@@ -83,7 +138,18 @@ export class LeaveCalculationService {
   calculateEarnedLeave(joiningDate: Date): number {
     const joiningMonth = joiningDate.getMonth() + 1;
     const earnedTable = {
-      1: 12, 2: 11, 3: 10, 4: 9, 5: 8, 6: 7, 7: 6, 8: 5, 9: 4, 10: 3, 11: 2, 12: 1
+      1: 12,
+      2: 11,
+      3: 10,
+      4: 9,
+      5: 8,
+      6: 7,
+      7: 6,
+      8: 5,
+      9: 4,
+      10: 3,
+      11: 2,
+      12: 1,
     };
     return earnedTable[joiningMonth] || 0;
   }
@@ -94,7 +160,7 @@ export class LeaveCalculationService {
   calculateWorkingDays(startDate: Date, endDate: Date): number {
     let count = 0;
     const current = new Date(startDate);
-    
+
     while (current <= endDate) {
       const dayOfWeek = current.getDay();
       // Exclude Saturday (6) and Sunday (0)
@@ -103,7 +169,7 @@ export class LeaveCalculationService {
       }
       current.setDate(current.getDate() + 1);
     }
-    
+
     return count;
   }
 
@@ -111,13 +177,13 @@ export class LeaveCalculationService {
    * Calculate half days if start/end dates are partial days
    */
   calculateDaysWithHalfDays(
-    startDate: Date, 
-    endDate: Date, 
+    startDate: Date,
+    endDate: Date,
     isStartHalfDay: boolean = false,
-    isEndHalfDay: boolean = false
+    isEndHalfDay: boolean = false,
   ): number {
     let workingDays = this.calculateWorkingDays(startDate, endDate);
-    
+
     // Adjust for half days
     if (isStartHalfDay) {
       workingDays -= 0.5;
@@ -125,7 +191,7 @@ export class LeaveCalculationService {
     if (isEndHalfDay) {
       workingDays -= 0.5;
     }
-    
+
     return Math.max(0, workingDays);
   }
 
@@ -133,31 +199,34 @@ export class LeaveCalculationService {
    * Initialize leave balances for a new employee
    */
   async initializeLeaveBalances(
-    employeeId: string, 
-    joiningDate: Date, 
-    manualBalances?: { earned?: number; sick?: number; casual?: number }
+    employeeId: string,
+    joiningDate: Date,
+    manualBalances?: { earned?: number; sick?: number; casual?: number },
   ): Promise<LeaveBalance[]> {
     const currentYear = new Date().getFullYear();
-    const employee = await this.employeeRepository.findOne({ 
-      where: { id: employeeId } 
+    const employee = await this.employeeRepository.findOne({
+      where: { id: employeeId },
     });
 
     if (!employee) {
-      throw new Error('Employee not found');
+      throw new Error("Employee not found");
     }
 
     // Calculate balances based on whether manual balances are provided or using HR table
-    const sickBalance = manualBalances?.sick !== undefined 
-      ? manualBalances.sick 
-      : this.calculateSickLeave(joiningDate);
-    
-    const casualBalance = manualBalances?.casual !== undefined
-      ? manualBalances.casual
-      : this.calculateCasualLeave(joiningDate);
-    
-    const earnedBalance = manualBalances?.earned !== undefined
-      ? manualBalances.earned
-      : this.calculateEarnedLeave(joiningDate);
+    const sickBalance =
+      manualBalances?.sick !== undefined
+        ? manualBalances.sick
+        : this.calculateSickLeave(joiningDate);
+
+    const casualBalance =
+      manualBalances?.casual !== undefined
+        ? manualBalances.casual
+        : this.calculateCasualLeave(joiningDate);
+
+    const earnedBalance =
+      manualBalances?.earned !== undefined
+        ? manualBalances.earned
+        : this.calculateEarnedLeave(joiningDate);
 
     const balances = [
       {
@@ -203,10 +272,10 @@ export class LeaveCalculationService {
    * Update leave balance after leave approval/cancellation
    */
   async updateLeaveBalance(
-    employeeId: string, 
-    year: number, 
-    leaveType: LeaveType, 
-    daysChange: number
+    employeeId: string,
+    year: number,
+    leaveType: LeaveType,
+    daysChange: number,
   ): Promise<void> {
     // Skip balance update for compensation off as it doesn't affect leave balances
     if (leaveType === LeaveType.COMPENSATION) {
@@ -214,11 +283,11 @@ export class LeaveCalculationService {
     }
 
     const balance = await this.leaveBalanceRepository.findOne({
-      where: { employeeId, year, leaveType }
+      where: { employeeId, year, leaveType },
     });
 
     if (!balance) {
-      throw new Error('Leave balance not found');
+      throw new Error("Leave balance not found");
     }
 
     // Ensure all values are properly converted to numbers
@@ -228,20 +297,29 @@ export class LeaveCalculationService {
     const daysChangeNum = Number(daysChange) || 0;
 
     // Validate that we have valid numbers
-    if (isNaN(currentUsedDays) || isNaN(totalAllocated) || isNaN(carryForward) || isNaN(daysChangeNum)) {
-      throw new Error(`Invalid numeric values: usedDays=${balance.usedDays}, totalAllocated=${balance.totalAllocated}, carryForward=${balance.carryForward}, daysChange=${daysChange}`);
+    if (
+      isNaN(currentUsedDays) ||
+      isNaN(totalAllocated) ||
+      isNaN(carryForward) ||
+      isNaN(daysChangeNum)
+    ) {
+      throw new Error(
+        `Invalid numeric values: usedDays=${balance.usedDays}, totalAllocated=${balance.totalAllocated}, carryForward=${balance.carryForward}, daysChange=${daysChange}`,
+      );
     }
 
     // Calculate new values
     const newUsedDays = Number((currentUsedDays + daysChangeNum).toFixed(2));
-    const newAvailableDays = Number((totalAllocated + carryForward - newUsedDays).toFixed(2));
+    const newAvailableDays = Number(
+      (totalAllocated + carryForward - newUsedDays).toFixed(2),
+    );
 
     balance.usedDays = newUsedDays;
     balance.availableDays = newAvailableDays;
 
     // Ensure available days don't go negative
     if (balance.availableDays < 0) {
-      throw new Error('Insufficient leave balance');
+      throw new Error("Insufficient leave balance");
     }
 
     await this.leaveBalanceRepository.save(balance);
@@ -254,7 +332,7 @@ export class LeaveCalculationService {
     employeeId: string,
     leaveType: LeaveType,
     requestedDays: number,
-    year?: number
+    year?: number,
   ): Promise<{ available: boolean; balance: number }> {
     // Compensation off is always available as it doesn't affect leave balances
     if (leaveType === LeaveType.COMPENSATION) {
@@ -262,9 +340,9 @@ export class LeaveCalculationService {
     }
 
     const currentYear = year || new Date().getFullYear();
-    
+
     const balance = await this.leaveBalanceRepository.findOne({
-      where: { employeeId, year: currentYear, leaveType }
+      where: { employeeId, year: currentYear, leaveType },
     });
 
     if (!balance) {
@@ -273,14 +351,17 @@ export class LeaveCalculationService {
 
     return {
       available: balance.availableDays >= requestedDays,
-      balance: balance.availableDays
+      balance: balance.availableDays,
     };
   }
 
   /**
    * Calculate carry forward for next year (typically for annual leave)
    */
-  calculateCarryForward(availableDays: number, maxCarryForward: number = 5): number {
+  calculateCarryForward(
+    availableDays: number,
+    maxCarryForward: number = 5,
+  ): number {
     return Math.min(availableDays, maxCarryForward);
   }
 
@@ -290,13 +371,13 @@ export class LeaveCalculationService {
   async processYearEndBalances(year: number): Promise<void> {
     const balances = await this.leaveBalanceRepository.find({
       where: { year },
-      relations: ['employee']
+      relations: ["employee"],
     });
 
     for (const balance of balances) {
       if (balance.leaveType === LeaveType.EARNED) {
         const carryForward = this.calculateCarryForward(balance.availableDays);
-        
+
         // Create next year's balance
         const nextYearBalance = this.leaveBalanceRepository.create({
           employeeId: balance.employeeId,
@@ -309,19 +390,24 @@ export class LeaveCalculationService {
         });
 
         await this.leaveBalanceRepository.save(nextYearBalance);
-      } else if (balance.leaveType === LeaveType.SICK || balance.leaveType === LeaveType.CASUAL) {
+      } else if (
+        balance.leaveType === LeaveType.SICK ||
+        balance.leaveType === LeaveType.CASUAL
+      ) {
         // Sick and casual leave don't carry forward, create fresh allocation
         const nextYearBalance = this.leaveBalanceRepository.create({
           employeeId: balance.employeeId,
           year: year + 1,
           leaveType: balance.leaveType,
-          totalAllocated: balance.leaveType === LeaveType.SICK 
-            ? balance.employee.sickLeaveDays 
-            : balance.employee.casualLeaveDays,
+          totalAllocated:
+            balance.leaveType === LeaveType.SICK
+              ? balance.employee.sickLeaveDays
+              : balance.employee.casualLeaveDays,
           usedDays: 0,
-          availableDays: balance.leaveType === LeaveType.SICK 
-            ? balance.employee.sickLeaveDays 
-            : balance.employee.casualLeaveDays,
+          availableDays:
+            balance.leaveType === LeaveType.SICK
+              ? balance.employee.sickLeaveDays
+              : balance.employee.casualLeaveDays,
           carryForward: 0,
         });
 
@@ -337,35 +423,42 @@ export class LeaveCalculationService {
   private getMonthsRemaining(startDate: Date, endDate: Date): number {
     const start = new Date(startDate);
     const end = new Date(endDate);
-    
+
     let months = (end.getFullYear() - start.getFullYear()) * 12;
     months += end.getMonth() - start.getMonth();
-    
+
     // Add partial month if start date is not the 1st
     if (start.getDate() > 1) {
-      const daysInMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate();
+      const daysInMonth = new Date(
+        start.getFullYear(),
+        start.getMonth() + 1,
+        0,
+      ).getDate();
       const remainingDays = daysInMonth - start.getDate() + 1;
       months += remainingDays / daysInMonth;
     } else {
       months += 1; // Full month if starting from 1st
     }
-    
+
     return Math.max(0, months);
   }
 
   /**
    * Get months remaining from start of month to end of year (whole months only)
    */
-  private getMonthsRemainingFromMonthStart(startDate: Date, endDate: Date): number {
+  private getMonthsRemainingFromMonthStart(
+    startDate: Date,
+    endDate: Date,
+  ): number {
     const start = new Date(startDate);
     const end = new Date(endDate);
-    
+
     let months = (end.getFullYear() - start.getFullYear()) * 12;
     months += end.getMonth() - start.getMonth();
-    
+
     // Always count full months since we're starting from month beginning
     months += 1;
-    
+
     return Math.max(0, months);
   }
 
@@ -376,24 +469,36 @@ export class LeaveCalculationService {
     annualEntitlement: number,
     joiningDate: Date,
     targetMonth: number,
-    targetYear: number
+    targetYear: number,
   ): number {
-    const monthsWorked = this.getMonthsWorkedUntil(joiningDate, targetMonth, targetYear);
+    const monthsWorked = this.getMonthsWorkedUntil(
+      joiningDate,
+      targetMonth,
+      targetYear,
+    );
     const monthlyRate = annualEntitlement / 12;
-    
+
     return Math.round(monthlyRate * monthsWorked * 100) / 100;
   }
 
-  private getMonthsWorkedUntil(joiningDate: Date, targetMonth: number, targetYear: number): number {
+  private getMonthsWorkedUntil(
+    joiningDate: Date,
+    targetMonth: number,
+    targetYear: number,
+  ): number {
     // Use the first day of the joining month instead of exact joining date
-    const joiningMonthStart = new Date(joiningDate.getFullYear(), joiningDate.getMonth(), 1);
+    const joiningMonthStart = new Date(
+      joiningDate.getFullYear(),
+      joiningDate.getMonth(),
+      1,
+    );
     const target = new Date(targetYear, targetMonth, 0); // Last day of target month
-    
+
     if (joiningMonthStart > target) return 0;
-    
+
     let months = (target.getFullYear() - joiningMonthStart.getFullYear()) * 12;
     months += target.getMonth() - joiningMonthStart.getMonth() + 1;
-    
+
     return Math.max(0, months);
   }
 }
