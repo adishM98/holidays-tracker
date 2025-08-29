@@ -23,12 +23,13 @@ async function createInitialData(app: NestExpressApplication): Promise<void> {
       console.log("🔧 Creating sample departments...");
       await dataSource.query(`
         INSERT INTO departments (id, name, created_at) VALUES
-        (gen_random_uuid(), 'Information Technology', NOW()),
-        (gen_random_uuid(), 'Human Resources', NOW()),
-        (gen_random_uuid(), 'Finance', NOW()),
-        (gen_random_uuid(), 'Marketing', NOW()),
         (gen_random_uuid(), 'Engineering', NOW()),
-        (gen_random_uuid(), 'Sales', NOW())
+        (gen_random_uuid(), 'QA', NOW()),
+        (gen_random_uuid(), 'Product', NOW()),
+        (gen_random_uuid(), 'Sales', NOW()),
+        (gen_random_uuid(), 'Devrel/ Support/ Solution', NOW()),
+        (gen_random_uuid(), 'Marketing', NOW()),
+        (gen_random_uuid(), 'HR', NOW())
         ON CONFLICT (name) DO NOTHING;
       `);
       console.log("✅ Sample departments created");

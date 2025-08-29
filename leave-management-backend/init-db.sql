@@ -14,12 +14,15 @@ VALUES (
   false
 ) ON CONFLICT (email) DO NOTHING;
 
--- Create sample departments
+-- Create departments as per HR team requirements
 INSERT INTO departments (id, name) VALUES 
-  (gen_random_uuid(), 'Information Technology'),
-  (gen_random_uuid(), 'Human Resources'),
-  (gen_random_uuid(), 'Finance'),
-  (gen_random_uuid(), 'Marketing')
+  (gen_random_uuid(), 'Engineering'),
+  (gen_random_uuid(), 'QA'),
+  (gen_random_uuid(), 'Product'),
+  (gen_random_uuid(), 'Sales'),
+  (gen_random_uuid(), 'Devrel/ Support/ Solution'),
+  (gen_random_uuid(), 'Marketing'),
+  (gen_random_uuid(), 'HR')
 ON CONFLICT (name) DO NOTHING;
 
 -- Create employee record for admin user
@@ -49,5 +52,5 @@ SELECT
   12,
   8
 FROM users u, departments d
-WHERE u.email = 'admin@company.com' AND d.name = 'Information Technology'
+WHERE u.email = 'admin@company.com' AND d.name = 'Engineering'
 ON CONFLICT (employee_id) DO NOTHING;
