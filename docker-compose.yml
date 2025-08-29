@@ -95,7 +95,7 @@ services:
       - THROTTLE_LIMIT=100
       
     ports:
-      - "3000:3000"
+      - 3000:3000
     depends_on:
       postgres:
         condition: service_healthy
@@ -114,28 +114,6 @@ services:
       start_period: 60s
 
   # Nginx Reverse Proxy (Optional - for production load balancing)
-  nginx:
-    image: nginx:alpine
-    container_name: leave_management_nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./ssl:/etc/nginx/ssl:ro
-      - nginx_logs:/var/log/nginx
-    depends_on:
-      - app
-    networks:
-      - app-network
-    profiles:
-      - production
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
 # Named volumes for data persistence
 volumes:
