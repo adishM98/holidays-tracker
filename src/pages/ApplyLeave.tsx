@@ -43,10 +43,9 @@ interface Holiday {
 
 const ApplyLeave: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const [existingLeaves, setExistingLeaves] = useState<LeaveRequest[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
-  const [isSelecting, setIsSelecting] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string>('');
   const [isApplyDialogOpen, setIsApplyDialogOpen] = useState(false);
   const [isViewLeaveDialogOpen, setIsViewLeaveDialogOpen] = useState(false);
   const [selectedLeaveRequest, setSelectedLeaveRequest] = useState<LeaveRequest | null>(null);
@@ -56,6 +55,8 @@ const ApplyLeave: React.FC = () => {
   
   const [leaveForm, setLeaveForm] = useState({
     leaveType: '' as LeaveType | '',
+    startDate: '',
+    endDate: '',
     reason: '',
   });
 
@@ -79,8 +80,14 @@ const ApplyLeave: React.FC = () => {
       const activeLeaves = (leaveResponse.requests || []).filter(leave => leave.status !== 'cancelled');
       setExistingLeaves(activeLeaves);
       
-      // TODO: Fetch holidays if needed
-      setHolidays([]);
+      // Fetch holidays for the current year
+      try {
+        const holidaysResponse = await employeeAPI.getHolidays(currentYear);
+        setHolidays(holidaysResponse.holidays || []);
+      } catch (error) {
+        console.warn('Failed to fetch holidays, proceeding without holiday data:', error);
+        setHolidays([]);
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -138,6 +145,17 @@ const ApplyLeave: React.FC = () => {
     // Disable past dates
     if (date < today) return true;
     
+    // Disable weekends (Saturday = 6, Sunday = 0)
+    const dayOfWeek = date.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) return true;
+    
+    // Disable holidays
+    const isHoliday = holidays.some(holiday => {
+      const holidayDate = new Date(holiday.date);
+      return holidayDate.toDateString() === date.toDateString();
+    });
+    if (isHoliday) return true;
+    
     // Check if there's already an approved/pending leave on this date
     const hasExistingLeave = existingLeaves.some(leave => {
       if (leave.status === 'rejected') return false;
@@ -149,10 +167,6 @@ const ApplyLeave: React.FC = () => {
     return hasExistingLeave;
   };
 
-  const isDateSelected = (day: number) => {
-    const dateString = formatDateString(day);
-    return selectedDates.includes(dateString);
-  };
 
   const hasLeaveOnDate = (day: number) => {
     const dateString = formatDateString(day);
@@ -164,51 +178,110 @@ const ApplyLeave: React.FC = () => {
     });
   };
 
-  const handleDateClick = (day: number) => {
-    if (isDateDisabled(day)) return;
-    
+  const isWeekend = (day: number) => {
+    const date = new Date(formatDateString(day));
+    const dayOfWeek = date.getDay();
+    return dayOfWeek === 0 || dayOfWeek === 6;
+  };
+
+  const isHoliday = (day: number) => {
     const dateString = formatDateString(day);
-    
-    if (selectedDates.includes(dateString)) {
-      // Remove date if already selected
-      setSelectedDates(prev => prev.filter(date => date !== dateString));
-    } else {
-      // Add date to selection
-      setSelectedDates(prev => [...prev, dateString].sort());
-    }
+    const date = new Date(dateString);
+    return holidays.some(holiday => {
+      const holidayDate = new Date(holiday.date);
+      return holidayDate.toDateString() === date.toDateString();
+    });
   };
 
-  const handleStartSelection = () => {
-    setIsSelecting(true);
-    setSelectedDates([]);
+  const getHolidayOnDate = (day: number) => {
+    const dateString = formatDateString(day);
+    const date = new Date(dateString);
+    return holidays.find(holiday => {
+      const holidayDate = new Date(holiday.date);
+      return holidayDate.toDateString() === date.toDateString();
+    });
   };
 
-  const handleApplyLeave = () => {
-    if (selectedDates.length === 0) {
+  const handleDateClick = (day: number) => {
+    // Prevent clicking on weekends or holidays
+    if (isDateDisabled(day)) {
+      const dateString = formatDateString(day);
+      const date = new Date(dateString);
+      const dayOfWeek = date.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const isHoliday = holidays.some(holiday => {
+        const holidayDate = new Date(holiday.date).toISOString().split('T')[0];
+        return holidayDate === dateString;
+      });
+      
       toast({
-        title: "No dates selected",
-        description: "Please select at least one date for your leave request.",
+        title: "Date Not Available",
+        description: `Cannot apply for leave on ${isWeekend ? 'weekends' : 'holidays'}. Please select a working day.`,
         variant: "destructive",
       });
       return;
     }
+    
+    const clickedDate = formatDateString(day);
+    setSelectedDate(clickedDate);
+    setLeaveForm({
+      ...leaveForm,
+      startDate: clickedDate,
+      endDate: clickedDate,
+    });
     setIsApplyDialogOpen(true);
   };
 
+
+  const validateLeaveDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const dayOfWeek = date.getDay();
+    
+    // Check weekend
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      return { isValid: false, reason: 'weekend' };
+    }
+    
+    // Check holiday
+    const isHoliday = holidays.some(holiday => {
+      const holidayDate = new Date(holiday.date).toISOString().split('T')[0];
+      return holidayDate === dateString;
+    });
+    
+    if (isHoliday) {
+      return { isValid: false, reason: 'holiday' };
+    }
+    
+    return { isValid: true, reason: null };
+  };
+
   const handleSubmit = async () => {
-    if (!leaveForm.leaveType || !leaveForm.reason.trim()) {
+    if (!leaveForm.leaveType || !leaveForm.reason.trim() || !leaveForm.startDate || !leaveForm.endDate) {
       toast({
         title: "Missing Information",
-        description: "Please select leave type and provide a reason.",
+        description: "Please fill in all required fields.",
         variant: "destructive",
       });
       return;
     }
-
-    if (selectedDates.length === 0) {
+    
+    // Validate start date
+    const startDateValidation = validateLeaveDate(leaveForm.startDate);
+    if (!startDateValidation.isValid) {
       toast({
-        title: "No dates selected",
-        description: "Please select at least one date.",
+        title: "Invalid Start Date",
+        description: `Cannot apply for leave on ${startDateValidation.reason}s. Please select a working day.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validate end date
+    const endDateValidation = validateLeaveDate(leaveForm.endDate);
+    if (!endDateValidation.isValid) {
+      toast({
+        title: "Invalid End Date",
+        description: `Cannot apply for leave on ${endDateValidation.reason}s. Please select a working day.`,
         variant: "destructive",
       });
       return;
@@ -217,15 +290,10 @@ const ApplyLeave: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      // Sort dates to get start and end
-      const sortedDates = [...selectedDates].sort();
-      const startDate = sortedDates[0];
-      const endDate = sortedDates[sortedDates.length - 1];
-
       await employeeAPI.createLeaveRequest({
         leaveType: leaveForm.leaveType as string,
-        startDate,
-        endDate,
+        startDate: leaveForm.startDate,
+        endDate: leaveForm.endDate,
         reason: leaveForm.reason,
       });
 
@@ -235,10 +303,8 @@ const ApplyLeave: React.FC = () => {
       });
 
       // Reset form and close dialog
-      setLeaveForm({ leaveType: '', reason: '' });
-      setSelectedDates([]);
+      resetLeaveForm();
       setIsApplyDialogOpen(false);
-      setIsSelecting(false);
       
       // Refresh data
       fetchData();
@@ -257,13 +323,12 @@ const ApplyLeave: React.FC = () => {
     }
   };
 
-  const resetSelection = () => {
-    setSelectedDates([]);
-    setIsSelecting(false);
+  const resetLeaveForm = () => {
+    setLeaveForm({ leaveType: '', startDate: '', endDate: '', reason: '' });
+    setSelectedDate('');
   };
 
   const handleLeaveClick = (leave: LeaveRequest) => {
-    if (isSelecting) return; // Don't open dialog when in selection mode
     setSelectedLeaveRequest(leave);
     setIsViewLeaveDialogOpen(true);
   };
@@ -370,34 +435,9 @@ const ApplyLeave: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold text-foreground">Apply for Leave</h1>
             <p className="text-muted-foreground">
-              {isSelecting 
-                ? `Select dates for your leave request (${selectedDates.length} selected)`
-                : 'Click "Select Dates" to start choosing your leave dates'
-              }
+              Click any working day to apply for leave
             </p>
           </div>
-        </div>
-        <div className="flex items-center space-x-2">
-          {!isSelecting ? (
-            <Button onClick={handleStartSelection} className="bg-gradient-primary">
-              <Plus className="h-4 w-4 mr-2" />
-              Select Dates
-            </Button>
-          ) : (
-            <>
-              <Button 
-                onClick={handleApplyLeave}
-                disabled={selectedDates.length === 0}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                Apply Leave ({selectedDates.length} days)
-              </Button>
-              <Button onClick={resetSelection} variant="outline">
-                <X className="h-4 w-4 mr-2" />
-                Cancel
-              </Button>
-            </>
-          )}
         </div>
       </div>
 
@@ -429,47 +469,58 @@ const ApplyLeave: React.FC = () => {
           </div>
         </CardHeader>
         
-        <CardContent className="p-0">
+        <CardContent>
           {/* Day headers */}
-          <div className="grid grid-cols-7 border-b">
+          <div className="grid grid-cols-7 gap-1 mb-4">
             {dayNames.map((day) => (
-              <div key={day} className="p-3 text-center text-sm font-medium text-muted-foreground bg-muted/30">
+              <div key={day} className="p-2 text-center text-sm font-medium text-muted-foreground">
                 {day}
               </div>
             ))}
           </div>
           
           {/* Calendar days */}
-          <div className="grid grid-cols-7">
+          <div className="grid grid-cols-7 gap-1">
             {days.map((day, index) => {
               if (day === null) {
-                return <div key={index} className="h-24 border-b border-r"></div>;
+                return <div key={index} className="h-24 p-2"></div>;
               }
               
               const isDisabled = isDateDisabled(day);
-              const isSelected = isDateSelected(day);
               const leaveOnDate = hasLeaveOnDate(day);
+              const isWeekendDate = isWeekend(day);
+              const isHolidayDate = isHoliday(day);
+              const holidayOnDate = getHolidayOnDate(day);
               
               return (
                 <div
                   key={day}
-                  className={`h-24 border-b border-r border-border p-2 cursor-pointer transition-colors relative ${
+                  className={`h-24 border border-border rounded-lg p-2 overflow-hidden transition-colors relative ${
                     isDisabled 
-                      ? 'bg-muted/30 cursor-not-allowed' 
-                      : isSelected
-                      ? 'bg-primary/10 hover:bg-primary/20'
-                      : 'hover:bg-muted/50'
+                      ? isWeekendDate
+                        ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed opacity-60'
+                        : isHolidayDate
+                        ? 'bg-orange-50 dark:bg-orange-950 cursor-not-allowed opacity-60'
+                        : 'bg-muted/30 cursor-not-allowed opacity-60'
+                      : 'cursor-pointer hover:bg-secondary/50'
                   }`}
-                  onClick={() => !isDisabled && isSelecting && handleDateClick(day)}
+                  onClick={() => !isDisabled && handleDateClick(day)}
                 >
                   <div className="flex flex-col h-full">
-                    <span className={`text-sm font-medium ${
-                      isDisabled ? 'text-muted-foreground' : 'text-foreground'
+                    <div className={`text-sm font-medium mb-1 flex items-center justify-between ${
+                      isDisabled ? 'text-muted-foreground' : 
+                      'text-foreground'
                     }`}>
-                      {day}
-                    </span>
+                      <span>{day}</span>
+                      {!isDisabled && (
+                        <Plus className="h-3 w-3 opacity-50 hover:opacity-100" />
+                      )}
+                      {isWeekendDate && !leaveOnDate && !holidayOnDate && (
+                        <span className="text-xs text-gray-500">Weekend</span>
+                      )}
+                    </div>
                     
-                    <div className="flex-1 space-y-1 mt-1">
+                    <div className="flex-1 space-y-1">
                       {/* Show existing leave */}
                       {leaveOnDate && (
                         <Badge 
@@ -485,12 +536,24 @@ const ApplyLeave: React.FC = () => {
                         </Badge>
                       )}
                       
-                      {/* Show selection indicator */}
-                      {isSelected && (
-                        <div className="absolute top-1 right-1">
-                          <div className="w-3 h-3 bg-primary rounded-full"></div>
+                      {/* Show weekend indicator */}
+                      {!leaveOnDate && isWeekendDate && (
+                        <div className="text-xs text-center text-gray-500 dark:text-gray-400 font-medium">
+                          Weekend
                         </div>
                       )}
+                      
+                      {/* Show holiday indicator */}
+                      {!leaveOnDate && holidayOnDate && (
+                        <Badge 
+                          variant="secondary" 
+                          className="text-xs px-1 py-0 w-full justify-center bg-orange-100 dark:bg-orange-950 text-orange-800 dark:text-orange-200 border-orange-200 dark:border-orange-800"
+                          title={holidayOnDate.description || holidayOnDate.name}
+                        >
+                          {holidayOnDate.name.length > 8 ? holidayOnDate.name.substring(0, 8) + '...' : holidayOnDate.name}
+                        </Badge>
+                      )}
+                      
                     </div>
                   </div>
                 </div>
@@ -504,10 +567,6 @@ const ApplyLeave: React.FC = () => {
       <Card className="shadow-professional-sm">
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-4 text-sm">
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-primary rounded-full"></div>
-              <span>Selected for new request</span>
-            </div>
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 bg-green-100 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded"></div>
               <span>Casual Leave</span>
@@ -528,6 +587,14 @@ const ApplyLeave: React.FC = () => {
               <div className="w-4 h-4 bg-muted border border-border border-dashed rounded"></div>
               <span>Pending Approval</span>
             </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded"></div>
+              <span>Weekend</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-orange-100 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded"></div>
+              <span>Holiday</span>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -543,15 +610,27 @@ const ApplyLeave: React.FC = () => {
           </DialogHeader>
           
           <div className="space-y-4">
-            <div>
-              <Label className="text-sm font-medium">Selected Dates</Label>
-              <div className="mt-1 text-sm text-muted-foreground">
-                {selectedDates.length === 1 
-                  ? new Date(selectedDates[0]).toLocaleDateString()
-                  : selectedDates.length > 1
-                  ? `${new Date(selectedDates[0]).toLocaleDateString()} - ${new Date(selectedDates[selectedDates.length - 1]).toLocaleDateString()} (${selectedDates.length} days)`
-                  : 'No dates selected'
-                }
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="startDate">Start Date *</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={leaveForm.startDate}
+                  onChange={(e) => setLeaveForm(prev => ({ ...prev, startDate: e.target.value }))}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="endDate">End Date *</Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  value={leaveForm.endDate}
+                  onChange={(e) => setLeaveForm(prev => ({ ...prev, endDate: e.target.value }))}
+                  required
+                />
               </div>
             </div>
             
@@ -590,7 +669,10 @@ const ApplyLeave: React.FC = () => {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setIsApplyDialogOpen(false)}
+                onClick={() => {
+                  resetLeaveForm();
+                  setIsApplyDialogOpen(false);
+                }}
                 className="flex-1"
               >
                 Cancel

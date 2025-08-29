@@ -119,7 +119,44 @@ const LeaveCalendar: React.FC = () => {
     }
   };
 
+  const isDateDisabled = (day: number) => {
+    const dateString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const date = new Date(dateString);
+    
+    // Disable weekends (Saturday = 6, Sunday = 0)
+    const dayOfWeek = date.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) return true;
+    
+    // Disable holidays
+    const isHoliday = holidays.some(holiday => {
+      const holidayDate = new Date(holiday.date).toISOString().split('T')[0];
+      return holidayDate === dateString;
+    });
+    if (isHoliday) return true;
+    
+    return false;
+  };
+
   const handleDateClick = (day: number) => {
+    // Prevent clicking on weekends or holidays
+    if (isDateDisabled(day)) {
+      const dateString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const date = new Date(dateString);
+      const dayOfWeek = date.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const isHoliday = holidays.some(holiday => {
+        const holidayDate = new Date(holiday.date).toISOString().split('T')[0];
+        return holidayDate === dateString;
+      });
+      
+      toast({
+        title: "Date Not Available",
+        description: `Cannot create leave on ${isWeekend ? 'weekends' : 'holidays'}. Please select a working day.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const clickedDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     setSelectedDate(clickedDate);
     setLeaveForm({
@@ -130,11 +167,55 @@ const LeaveCalendar: React.FC = () => {
     setIsAddLeaveDialogOpen(true);
   };
 
+  const validateLeaveDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const dayOfWeek = date.getDay();
+    
+    // Check weekend
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      return { isValid: false, reason: 'weekend' };
+    }
+    
+    // Check holiday
+    const isHoliday = holidays.some(holiday => {
+      const holidayDate = new Date(holiday.date).toISOString().split('T')[0];
+      return holidayDate === dateString;
+    });
+    
+    if (isHoliday) {
+      return { isValid: false, reason: 'holiday' };
+    }
+    
+    return { isValid: true, reason: null };
+  };
+
   const handleCreateLeave = async () => {
     if (!leaveForm.employeeId || !leaveForm.startDate || !leaveForm.endDate || !leaveForm.reason.trim()) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validate start date
+    const startDateValidation = validateLeaveDate(leaveForm.startDate);
+    if (!startDateValidation.isValid) {
+      toast({
+        title: "Invalid Start Date",
+        description: `Cannot create leave on ${startDateValidation.reason}s. Please select a working day.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validate end date
+    const endDateValidation = validateLeaveDate(leaveForm.endDate);
+    if (!endDateValidation.isValid) {
+      toast({
+        title: "Invalid End Date",
+        description: `Cannot create leave on ${endDateValidation.reason}s. Please select a working day.`,
         variant: "destructive",
       });
       return;
@@ -200,6 +281,28 @@ const LeaveCalendar: React.FC = () => {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validate start date
+    const startDateValidation = validateLeaveDate(leaveForm.startDate);
+    if (!startDateValidation.isValid) {
+      toast({
+        title: "Invalid Start Date",
+        description: `Cannot update leave to ${startDateValidation.reason}s. Please select a working day.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validate end date
+    const endDateValidation = validateLeaveDate(leaveForm.endDate);
+    if (!endDateValidation.isValid) {
+      toast({
+        title: "Invalid End Date",
+        description: `Cannot update leave to ${endDateValidation.reason}s. Please select a working day.`,
         variant: "destructive",
       });
       return;
@@ -452,18 +555,34 @@ const LeaveCalendar: React.FC = () => {
                             currentMonth === new Date().getMonth() && 
                             currentYear === new Date().getFullYear();
               const hasHoliday = holidaysForDay.length > 0;
+              const isDisabled = isDateDisabled(day);
+              const isWeekend = new Date(`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`).getDay() % 6 === 0;
 
               return (
                 <div
                   key={`${currentYear}-${currentMonth}-${day}`}
-                  className={`p-2 h-24 border border-border rounded-lg overflow-hidden cursor-pointer hover:bg-secondary/50 transition-colors ${
-                    isToday ? 'bg-primary/5 border-primary/20' : hasHoliday ? 'bg-red-50 border-red-200' : 'bg-background'
+                  className={`p-2 h-24 border border-border rounded-lg overflow-hidden transition-colors ${
+                    isDisabled 
+                      ? 'cursor-not-allowed bg-gray-100 dark:bg-gray-800 opacity-60'
+                      : 'cursor-pointer hover:bg-secondary/50'
+                  } ${
+                    isToday ? 'bg-primary/5 border-primary/20' : 
+                    hasHoliday ? 'bg-red-50 border-red-200' : 
+                    isWeekend ? 'bg-gray-50 dark:bg-gray-900 border-gray-300' :
+                    'bg-background'
                   }`}
                   onClick={() => handleDateClick(day)}
                 >
-                  <div className={`text-sm font-medium mb-1 flex items-center justify-between ${isToday ? 'text-primary' : 'text-foreground'}`}>
+                  <div className={`text-sm font-medium mb-1 flex items-center justify-between ${
+                    isToday ? 'text-primary' : 
+                    isDisabled ? 'text-muted-foreground' : 
+                    'text-foreground'
+                  }`}>
                     <span>{day}</span>
-                    <Plus className="h-3 w-3 opacity-50 hover:opacity-100" />
+                    {!isDisabled && <Plus className="h-3 w-3 opacity-50 hover:opacity-100" />}
+                    {isWeekend && !hasHoliday && (
+                      <span className="text-xs text-gray-500">Weekend</span>
+                    )}
                   </div>
                   <div className="space-y-1">
                     {holidaysForDay.map((holiday, idx) => (
@@ -547,6 +666,10 @@ const LeaveCalendar: React.FC = () => {
             <div className="flex items-center space-x-2">
               <div className="w-3 h-3 bg-red-100 border border-red-300 rounded"></div>
               <span className="text-sm text-muted-foreground">Holidays</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-gray-100 dark:bg-gray-800 border border-gray-300 rounded"></div>
+              <span className="text-sm text-muted-foreground">Weekends (Disabled)</span>
             </div>
           </div>
         </CardContent>

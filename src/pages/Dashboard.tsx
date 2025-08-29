@@ -56,7 +56,23 @@ const Dashboard: React.FC = () => {
 
       // Load upcoming holidays for all users
       try {
-        const holidays = await adminAPI.getUpcomingHolidays(30);
+        let holidays = [];
+        if (user?.role === 'admin') {
+          holidays = await adminAPI.getUpcomingHolidays(30);
+        } else {
+          // For employees and managers, use the employee API
+          const currentYear = new Date().getFullYear();
+          const holidaysResponse = await employeeAPI.getHolidays(currentYear);
+          // Filter to get only upcoming holidays in the next 30 days
+          const today = new Date();
+          const thirtyDaysFromNow = new Date();
+          thirtyDaysFromNow.setDate(today.getDate() + 30);
+          
+          holidays = (holidaysResponse.holidays || []).filter(holiday => {
+            const holidayDate = new Date(holiday.date);
+            return holidayDate >= today && holidayDate <= thirtyDaysFromNow;
+          });
+        }
         setUpcomingHolidays(holidays || []);
       } catch (error) {
         // Holidays are optional, don't fail the dashboard if they can't be loaded

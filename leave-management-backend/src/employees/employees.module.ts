@@ -4,10 +4,11 @@ import { EmployeesService } from "./employees.service";
 import { Employee } from "./entities/employee.entity";
 import { User } from "../users/entities/user.entity";
 import { LeaveBalance } from "../leaves/entities/leave-balance.entity";
+import { Holiday } from "../holidays/entities/holiday.entity";
 import { LeaveCalculationService } from "../leaves/services/leave-calculation.service";
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Employee, User, LeaveBalance])],
+  imports: [TypeOrmModule.forFeature([Employee, User, LeaveBalance, Holiday])],
   providers: [EmployeesService, LeaveCalculationService],
   exports: [EmployeesService],
 })

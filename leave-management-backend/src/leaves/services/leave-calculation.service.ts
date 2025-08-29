@@ -4,6 +4,7 @@ import { Repository } from "typeorm";
 import { Employee } from "../../employees/entities/employee.entity";
 import { LeaveBalance } from "../entities/leave-balance.entity";
 import { LeaveType } from "../../common/enums/leave-type.enum";
+import { Holiday } from "../../holidays/entities/holiday.entity";
 
 @Injectable()
 export class LeaveCalculationService {
@@ -12,6 +13,8 @@ export class LeaveCalculationService {
     private employeeRepository: Repository<Employee>,
     @InjectRepository(LeaveBalance)
     private leaveBalanceRepository: Repository<LeaveBalance>,
+    @InjectRepository(Holiday)
+    private holidayRepository: Repository<Holiday>,
   ) {}
 
   /**
@@ -155,16 +158,42 @@ export class LeaveCalculationService {
   }
 
   /**
-   * Calculate working days between two dates (excluding weekends)
+   * Calculate working days between two dates (excluding weekends and holidays)
    */
-  calculateWorkingDays(startDate: Date, endDate: Date): number {
+  async calculateWorkingDays(startDate: Date, endDate: Date): Promise<number> {
     let count = 0;
     const current = new Date(startDate);
+    
+    // Get active holidays for the year(s) covered by the date range
+    const startYear = startDate.getFullYear();
+    const endYear = endDate.getFullYear();
+    const years = [];
+    for (let year = startYear; year <= endYear; year++) {
+      years.push(year);
+    }
+    
+    const holidays = await this.holidayRepository.find({
+      where: {
+        isActive: true,
+      },
+    });
+    
+    // Create a set of holiday dates for faster lookup
+    const holidayDates = new Set(
+      holidays
+        .filter(h => years.includes(new Date(h.date).getFullYear()))
+        .map(h => new Date(h.date).toISOString().split('T')[0])
+    );
 
     while (current <= endDate) {
       const dayOfWeek = current.getDay();
-      // Exclude Saturday (6) and Sunday (0)
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      const dateString = current.toISOString().split('T')[0];
+      
+      // Exclude Saturday (6), Sunday (0), and holidays
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const isHoliday = holidayDates.has(dateString);
+      
+      if (!isWeekend && !isHoliday) {
         count++;
       }
       current.setDate(current.getDate() + 1);
@@ -176,13 +205,13 @@ export class LeaveCalculationService {
   /**
    * Calculate half days if start/end dates are partial days
    */
-  calculateDaysWithHalfDays(
+  async calculateDaysWithHalfDays(
     startDate: Date,
     endDate: Date,
     isStartHalfDay: boolean = false,
     isEndHalfDay: boolean = false,
-  ): number {
-    let workingDays = this.calculateWorkingDays(startDate, endDate);
+  ): Promise<number> {
+    let workingDays = await this.calculateWorkingDays(startDate, endDate);
 
     // Adjust for half days
     if (isStartHalfDay) {

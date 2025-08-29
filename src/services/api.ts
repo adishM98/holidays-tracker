@@ -179,6 +179,15 @@ export const employeeAPI = {
     const queryString = params.toString() ? `?${params}` : '';
     return apiRequest(`/employee/leave-calendar${queryString}`);
   },
+
+  getHolidays: async (year?: number) => {
+    const params = new URLSearchParams();
+    if (year) params.append('year', year.toString());
+    params.append('isActive', 'true'); // Only get active holidays
+    
+    const queryString = params.toString() ? `?${params}` : '';
+    return apiRequest(`/employee/holidays${queryString}`);
+  },
 };
 
 // Manager API

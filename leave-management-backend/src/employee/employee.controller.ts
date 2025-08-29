@@ -21,6 +21,7 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { User } from "../users/entities/user.entity";
 import { EmployeesService } from "../employees/employees.service";
 import { LeavesService } from "../leaves/leaves.service";
+import { HolidaysService } from "../holidays/holidays.service";
 import { CreateLeaveRequestDto } from "../leaves/dto/create-leave-request.dto";
 import { UpdateEmployeeDto } from "../employees/dto/update-employee.dto";
 
@@ -32,6 +33,7 @@ export class EmployeeController {
   constructor(
     private employeesService: EmployeesService,
     private leavesService: LeavesService,
+    private holidaysService: HolidaysService,
   ) {}
 
   @Get("dashboard")
@@ -357,6 +359,26 @@ export class EmployeeController {
       },
       summary,
       requests: filteredRequests,
+    };
+  }
+
+  @Get("holidays")
+  @ApiOperation({ summary: "Get active holidays for employees" })
+  async getHolidays(
+    @Query("year") year?: number,
+    @Query("isActive") isActive?: string,
+  ) {
+    const targetYear = year || new Date().getFullYear();
+    const activeOnly = isActive !== undefined ? isActive === 'true' : true;
+    
+    const holidays = await this.holidaysService.findAll({
+      year: targetYear,
+      isActive: activeOnly,
+    });
+
+    return {
+      year: targetYear,
+      holidays,
     };
   }
 }

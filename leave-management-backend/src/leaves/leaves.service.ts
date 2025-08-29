@@ -16,6 +16,7 @@ import { ApproveLeaveRequestDto } from "./dto/approve-leave-request.dto";
 import { RejectLeaveRequestDto } from "./dto/reject-leave-request.dto";
 import { LeaveCalculationService } from "./services/leave-calculation.service";
 import { MailService } from "../mail/mail.service";
+import { Holiday } from "../holidays/entities/holiday.entity";
 import { LeaveStatus } from "../common/enums/leave-status.enum";
 import { LeaveType } from "../common/enums/leave-type.enum";
 
@@ -30,6 +31,8 @@ export class LeavesService {
     private employeeRepository: Repository<Employee>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(Holiday)
+    private holidayRepository: Repository<Holiday>,
     private leaveCalculationService: LeaveCalculationService,
     private mailService: MailService,
   ) {}
@@ -67,11 +70,18 @@ export class LeavesService {
       throw new BadRequestException("Cannot apply for leave in the past");
     }
 
-    // Calculate working days
-    const daysCount = this.leaveCalculationService.calculateWorkingDays(
+    // Calculate working days (automatically excludes weekends and holidays)
+    const daysCount = await this.leaveCalculationService.calculateWorkingDays(
       startDate,
       endDate,
     );
+    
+    // Ensure there are working days in the range
+    if (daysCount === 0) {
+      throw new BadRequestException(
+        'The selected date range contains no working days. Please select dates that include at least one working day.'
+      );
+    }
 
     // Check leave balance availability
     const year = startDate.getFullYear();
@@ -610,4 +620,5 @@ export class LeavesService {
       })),
     };
   }
+
 }
