@@ -7,64 +7,61 @@ import { DatabaseCreationService } from "./database/database-creation.service";
 import { NestExpressApplication } from "@nestjs/platform-express";
 import { join } from "path";
 import { existsSync } from "fs";
-import { Repository } from "typeorm";
-import { getRepositoryToken } from "@nestjs/typeorm";
-import { User } from "./users/entities/user.entity";
 import { UserRole } from "./common/enums/user-role.enum";
-import { Department } from "./departments/entities/department.entity";
+import { DataSource } from "typeorm";
 import * as bcrypt from "bcrypt";
 
 async function createInitialData(app: NestExpressApplication): Promise<void> {
   try {
-    const userRepository = app.get<Repository<User>>(getRepositoryToken(User));
-    const departmentRepository = app.get<Repository<Department>>(getRepositoryToken(Department));
+    const dataSource = app.get(DataSource);
     
-    // Create sample departments first
-    const departmentCount = await departmentRepository.count();
-    if (departmentCount === 0) {
+    // Create sample departments using raw SQL
+    console.log("🔧 Checking departments...");
+    const departmentCount = await dataSource.query('SELECT COUNT(*) FROM departments');
+    
+    if (parseInt(departmentCount[0].count) === 0) {
       console.log("🔧 Creating sample departments...");
-      const departments = [
-        { name: "Information Technology" },
-        { name: "Human Resources" },
-        { name: "Finance" },
-        { name: "Marketing" },
-        { name: "Engineering" },
-        { name: "Sales" }
-      ];
-      
-      for (const dept of departments) {
-        const department = departmentRepository.create(dept);
-        await departmentRepository.save(department);
-      }
+      await dataSource.query(`
+        INSERT INTO departments (id, name, created_at, updated_at) VALUES
+        (gen_random_uuid(), 'Information Technology', NOW(), NOW()),
+        (gen_random_uuid(), 'Human Resources', NOW(), NOW()),
+        (gen_random_uuid(), 'Finance', NOW(), NOW()),
+        (gen_random_uuid(), 'Marketing', NOW(), NOW()),
+        (gen_random_uuid(), 'Engineering', NOW(), NOW()),
+        (gen_random_uuid(), 'Sales', NOW(), NOW())
+        ON CONFLICT (name) DO NOTHING;
+      `);
       console.log("✅ Sample departments created");
     } else {
       console.log("✅ Departments already exist");
     }
     
-    // Check if admin user already exists
-    const existingAdmin = await userRepository.findOne({
-      where: { email: "admin@company.com" }
-    });
+    // Check if admin user already exists using raw SQL
+    console.log("🔧 Checking admin user...");
+    const existingAdmin = await dataSource.query(
+      'SELECT id, email FROM users WHERE email = $1', 
+      ['admin@company.com']
+    );
     
-    if (existingAdmin) {
-      console.log("✅ Admin user already exists");
-      return;
-    }
-    
-    // Create admin user
-    console.log("🔧 Creating admin user...");
+    // Generate password hash
     const passwordHash = await bcrypt.hash("admin123", 10);
     
-    const adminUser = userRepository.create({
-      email: "admin@company.com",
-      passwordHash,
-      role: UserRole.ADMIN,
-      isActive: true,
-      mustChangePassword: false,
-    });
-    
-    await userRepository.save(adminUser);
-    console.log("✅ Admin user created successfully");
+    if (existingAdmin.length > 0) {
+      console.log("🔧 Admin user exists, updating password...");
+      await dataSource.query(`
+        UPDATE users 
+        SET password_hash = $1, updated_at = NOW()
+        WHERE email = $2
+      `, [passwordHash, 'admin@company.com']);
+      console.log("✅ Admin password updated");
+    } else {
+      console.log("🔧 Creating new admin user...");
+      await dataSource.query(`
+        INSERT INTO users (id, email, password_hash, role, is_active, must_change_password, created_at, updated_at)
+        VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, NOW(), NOW())
+      `, ['admin@company.com', passwordHash, 'admin', true, false]);
+      console.log("✅ Admin user created successfully");
+    }
     
   } catch (error) {
     console.error("❌ Failed to create initial data:", error);

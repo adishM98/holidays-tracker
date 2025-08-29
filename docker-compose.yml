@@ -1,4 +1,4 @@
-version: '3.8'
+name: Leave Management System
 
 services:
   # PostgreSQL Database
@@ -45,10 +45,7 @@ services:
 
   # Main Application (Frontend + Backend)
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: production
+    image: tooljet/tj-osv:leave
     container_name: leave_management_app
     restart: unless-stopped
     environment:
@@ -103,17 +100,14 @@ services:
         condition: service_healthy
     volumes:
       - uploads_data:/app/uploads
-      - ./leave-management-backend/.env:/app/.env:ro
     networks:
       - app-network
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-
-  # Nginx Reverse Proxy (Optional - for production load balancing)
+    # healthcheck:
+    #   test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 5
+    #   start_period: 60s
 
 # Named volumes for data persistence
 volumes:
