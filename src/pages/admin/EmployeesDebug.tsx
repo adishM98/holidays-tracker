@@ -1055,7 +1055,7 @@ const EmployeesDebug: React.FC = () => {
                   {/* Manual Current Balance Fields */}
                   <div className="bg-orange-50 dark:bg-orange-950/30 p-3 rounded-lg border dark:border-orange-800/50 mb-4">
                     <p className="text-sm text-orange-800 dark:text-orange-200 mb-2">
-                      🔄 <strong>Migration Mode:</strong> Enter the employee's current leave balances from your previous system
+                      <strong>Migration Mode:</strong> Enter the employee's current leave balances from your previous system
                     </p>
                   </div>
                   

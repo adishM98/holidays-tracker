@@ -156,7 +156,7 @@ const Sidebar: React.FC = () => {
                 setIsOpen(false);
               }}
               variant="outline"
-              className="w-full flex items-center space-x-2"
+              className="w-full flex items-center space-x-2 border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-500"
             >
               <LogOut size={16} />
               <span>Logout</span>
@@ -229,7 +229,7 @@ const Sidebar: React.FC = () => {
         <Button
           onClick={logout}
           variant="outline"
-          className="w-full flex items-center space-x-2"
+          className="w-full flex items-center space-x-2 border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-500"
         >
           <LogOut size={16} />
           <span>Logout</span>
