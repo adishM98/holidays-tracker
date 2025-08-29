@@ -87,6 +87,11 @@ export class EmployeesService {
       manualBalances,
     );
 
+    // If a manager was assigned during creation, promote them to manager role if needed
+    if (createEmployeeDto.managerId) {
+      await this.autoPromoteToManager(createEmployeeDto.managerId);
+    }
+
     return savedEmployee;
   }
 
@@ -275,6 +280,19 @@ export class EmployeesService {
     // Perform direct repository update
     await this.employeeRepository.update(id, updateData);
 
+    // Handle manager role changes
+    if (updateEmployeeDto.managerId !== undefined) {
+      // If manager was assigned, promote new manager
+      if (updateEmployeeDto.managerId !== null) {
+        await this.autoPromoteToManager(updateEmployeeDto.managerId);
+      }
+      
+      // If manager was removed, check if old manager should be demoted
+      if (employee.managerId && updateEmployeeDto.managerId !== employee.managerId) {
+        await this.autoDemoteFromManager(employee.managerId);
+      }
+    }
+
     // Fetch and return updated employee
     const savedEmployee = await this.findOne(id);
     console.log('Employee after update:', JSON.stringify({
@@ -340,6 +358,96 @@ export class EmployeesService {
 
       console.log('Cascading delete completed successfully');
     });
+  }
+
+  /**
+   * Auto-promote employee to manager role when they get their first direct report
+   */
+  private async autoPromoteToManager(managerId: string): Promise<void> {
+    try {
+      console.log(`🔄 Checking auto-promotion for manager ID: ${managerId}`);
+      
+      // Find the manager employee record
+      const manager = await this.employeeRepository.findOne({
+        where: { id: managerId },
+        relations: ['user']
+      });
+
+      if (!manager || !manager.user) {
+        console.log(`❌ Manager not found or has no user account: ${managerId}`);
+        return;
+      }
+
+      // Check if user is already a manager or admin
+      if (manager.user.role === UserRole.MANAGER || manager.user.role === UserRole.ADMIN) {
+        console.log(`✅ User ${manager.user.email} is already ${manager.user.role}`);
+        return;
+      }
+
+      // Check how many direct reports this manager will have
+      const directReports = await this.employeeRepository.count({
+        where: { managerId: managerId }
+      });
+
+      console.log(`📊 ${manager.user.email} will have ${directReports} direct reports`);
+
+      // If they have at least 1 direct report and are currently an employee, promote them
+      if (directReports >= 1 && manager.user.role === UserRole.EMPLOYEE) {
+        await this.userRepository.update(manager.user.id, { 
+          role: UserRole.MANAGER 
+        });
+        
+        console.log(`🎉 Auto-promoted ${manager.user.email} from employee to manager`);
+      }
+    } catch (error) {
+      console.error(`❌ Error in auto-promotion for manager ${managerId}:`, error);
+      // Don't throw error - this should not break the main employee update
+    }
+  }
+
+  /**
+   * Auto-demote manager to employee role when they no longer have direct reports
+   */
+  private async autoDemoteFromManager(managerId: string): Promise<void> {
+    try {
+      console.log(`🔄 Checking auto-demotion for manager ID: ${managerId}`);
+      
+      // Find the manager employee record
+      const manager = await this.employeeRepository.findOne({
+        where: { id: managerId },
+        relations: ['user']
+      });
+
+      if (!manager || !manager.user) {
+        console.log(`❌ Manager not found or has no user account: ${managerId}`);
+        return;
+      }
+
+      // Only consider demotion if user is currently a manager (not admin)
+      if (manager.user.role !== UserRole.MANAGER) {
+        console.log(`✅ User ${manager.user.email} is ${manager.user.role}, no demotion needed`);
+        return;
+      }
+
+      // Check how many direct reports this manager currently has
+      const directReports = await this.employeeRepository.count({
+        where: { managerId: managerId }
+      });
+
+      console.log(`📊 ${manager.user.email} currently has ${directReports} direct reports`);
+
+      // If they have no direct reports, demote them to employee
+      if (directReports === 0) {
+        await this.userRepository.update(manager.user.id, { 
+          role: UserRole.EMPLOYEE 
+        });
+        
+        console.log(`⬇️ Auto-demoted ${manager.user.email} from manager to employee`);
+      }
+    } catch (error) {
+      console.error(`❌ Error in auto-demotion for manager ${managerId}:`, error);
+      // Don't throw error - this should not break the main employee update
+    }
   }
 
   async getEmployeeStats(): Promise<{

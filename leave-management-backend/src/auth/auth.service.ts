@@ -103,14 +103,8 @@ export class AuthService {
       throw new NotFoundException('User not found');
     }
 
-    const isCurrentPasswordValid = await bcrypt.compare(
-      changePasswordDto.currentPassword,
-      user.passwordHash,
-    );
-
-    if (!isCurrentPasswordValid) {
-      throw new BadRequestException('Current password is incorrect');
-    }
+    // Skip current password validation entirely for all users (direct password reset)
+    // This allows users to reset their password without needing to remember the current one
 
     this.validatePasswordStrength(changePasswordDto.newPassword);
 

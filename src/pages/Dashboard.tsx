@@ -10,7 +10,7 @@ import { DashboardData, LeaveRequest, LeaveBalance } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
 const Dashboard: React.FC = () => {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, checkRoleChange } = useAuth();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [managerData, setManagerData] = useState<any>(null);
   const [upcomingHolidays, setUpcomingHolidays] = useState<any[]>([]);
@@ -21,9 +21,13 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     if (user && !authLoading) {
+      // Check for role changes immediately when dashboard loads
+      checkRoleChange().catch(error => {
+        console.warn('Failed to check role changes on dashboard load:', error);
+      });
       loadDashboardData();
     }
-  }, [user, authLoading]);
+  }, [user?.id, authLoading]); // Only depend on user.id to avoid infinite loops
 
   const loadDashboardData = async () => {
     try {
@@ -36,8 +40,11 @@ const Dashboard: React.FC = () => {
       
       if (user?.role === 'manager') {
         const managerStats = await managerAPI.getDashboardStats();
-        const teamRequests = await managerAPI.getTeamRequests(1, 5, 'pending');
-        setManagerData({ stats: managerStats, teamRequests });
+        const pendingRequests = await managerAPI.getTeamRequests(1, 5, 'pending');
+        setManagerData({ 
+          stats: managerStats, 
+          pendingRequests: pendingRequests
+        });
       }
       
       if (user?.role === 'admin') {
@@ -264,7 +271,7 @@ const Dashboard: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid gap-8 grid-cols-1 lg:grid-cols-2">
         {/* Open Requests - Left Side */}
         <Card className="shadow-professional-md border-0 bg-gradient-card">
           <CardHeader>
@@ -405,27 +412,27 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Manager Dashboard Section */}
+        {/* Manager Dashboard - Pending Approvals */}
         {user?.role === 'manager' && managerData && (
           <Card className="shadow-professional-md border-0 bg-gradient-card">
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Users className="h-5 w-5 mr-2 text-warning" />
                 Pending Approvals
-                {managerData.stats.pendingRequests > 0 && (
+                {managerData.stats?.pendingRequests > 0 && (
                   <Badge className="ml-2 bg-warning text-warning-foreground">
                     {managerData.stats.pendingRequests}
                   </Badge>
                 )}
               </CardTitle>
               <CardDescription>
-                Team leave requests awaiting your review ({managerData.stats.teamSize} team members)
+                Team leave requests awaiting your review ({managerData.stats?.teamSize || 0} team members)
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {managerData.teamRequests?.requests && managerData.teamRequests.requests.length > 0 ? (
+              {managerData.pendingRequests?.requests && managerData.pendingRequests.requests.length > 0 ? (
                 <div className="space-y-4">
-                  {managerData.teamRequests.requests.map((request: LeaveRequest) => (
+                  {managerData.pendingRequests.requests.map((request: LeaveRequest) => (
                     <div key={request.id} className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
                       <div className="flex-1">
                         <p className="font-medium text-foreground">{request.employee.fullName}</p>
@@ -471,7 +478,7 @@ const Dashboard: React.FC = () => {
                   ))}
                   <Link to="/pending-approvals" className="block">
                     <Button variant="outline" className="w-full mt-4">
-                      Review All Requests
+                      Review All Pending Requests
                     </Button>
                   </Link>
                 </div>
@@ -484,6 +491,7 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
         )}
+
 
         {/* Upcoming Holidays Section - Right Side */}
         <Card className="shadow-professional-md border-0 bg-gradient-card">

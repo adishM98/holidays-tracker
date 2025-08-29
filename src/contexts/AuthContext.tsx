@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { User, AuthContextType } from '@/types';
 import { authAPI, employeeAPI, getAuthToken, removeAuthToken } from '@/services/api';
 
@@ -7,10 +7,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const userRef = useRef<User | null>(null);
 
   useEffect(() => {
     initializeAuth();
   }, []);
+
 
   const initializeAuth = async () => {
     try {
@@ -21,13 +23,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const userData = JSON.parse(storedUser);
         setUser(userData);
         
-        // Try to refresh user data from API
+        // Try to refresh user data from API immediately on initialization
         try {
-          await refreshUser();
+          if (userData.role !== 'admin') {
+            const profileData = await employeeAPI.getProfile();
+            
+            // Check if role has changed since last login
+            const currentRole = profileData.user.role;
+            if (currentRole !== userData.role) {
+              console.log(`🔄 Role changed during initialization: ${userData.role} → ${currentRole}`);
+              
+              // Update user data with current role
+              const updatedUser = {
+                ...userData,
+                role: currentRole as any,
+                employee: profileData.employee,
+                mustChangePassword: profileData.user.mustChangePassword,
+              };
+              
+              setUser(updatedUser);
+              localStorage.setItem('user_data', JSON.stringify(updatedUser));
+            } else {
+              // No role change, just update profile data
+              const updatedUser = {
+                ...userData,
+                employee: profileData.employee,
+                mustChangePassword: profileData.user.mustChangePassword,
+              };
+              setUser(updatedUser);
+              localStorage.setItem('user_data', JSON.stringify(updatedUser));
+            }
+          } else {
+            // Admin user, just set the stored data
+            setUser(userData);
+          }
         } catch (error) {
-          console.warn('Failed to refresh user data:', error);
-          // If refresh fails, keep stored user data but remove token
-          removeAuthToken();
+          console.warn('Failed to refresh user data during initialization:', error);
+          // If refresh fails, keep stored user data but remove token if it's invalid
+          setUser(userData);
         }
       }
     } catch (error) {
@@ -91,25 +124,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const refreshUser = async () => {
+  // Update userRef whenever user changes
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  const refreshUser = useCallback(async () => {
     try {
-      if (!user) return;
+      const currentUser = userRef.current;
+      if (!currentUser) return;
       
-      // Get updated profile data
-      if (user.role !== 'admin') {
+      // Get updated profile data including current role
+      if (currentUser.role !== 'admin') {
         const profileData = await employeeAPI.getProfile();
-        const updatedUser = {
-          ...user,
-          employee: profileData.employee,
-        };
-        setUser(updatedUser);
-        localStorage.setItem('user_data', JSON.stringify(updatedUser));
+        
+        // Check if role has changed
+        const currentRole = profileData.user.role;
+        const hasRoleChanged = currentRole !== currentUser.role;
+        
+        // Only update if there are actual changes to avoid infinite loops
+        if (hasRoleChanged || 
+            JSON.stringify(profileData.employee) !== JSON.stringify(currentUser.employee) ||
+            profileData.user.mustChangePassword !== currentUser.mustChangePassword) {
+          
+          const updatedUser = {
+            ...currentUser,
+            role: currentRole as any, // Update role from backend
+            employee: profileData.employee,
+            mustChangePassword: profileData.user.mustChangePassword,
+          };
+          
+          setUser(updatedUser);
+          localStorage.setItem('user_data', JSON.stringify(updatedUser));
+          
+          // Log role change for debugging
+          if (hasRoleChanged) {
+            console.log(`🔄 Role updated: ${currentUser.role} → ${currentRole}`);
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to refresh user data:', error);
       throw error;
     }
-  };
+  }, []); // Remove user dependency
 
   const updateUser = (userData: Partial<User>) => {
     if (!user) return;
@@ -119,8 +177,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('user_data', JSON.stringify(updatedUser));
   };
 
+  const checkRoleChange = useCallback(async () => {
+    await refreshUser();
+  }, [refreshUser]);
+
+  const forceRoleSync = useCallback(async () => {
+    console.log('🔄 Force role sync triggered');
+    await refreshUser();
+  }, [refreshUser]);
+
+  // Set up periodic role checking when user is logged in
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Check for role changes every 2 seconds for immediate updates
+    const roleCheckInterval = setInterval(async () => {
+      try {
+        await refreshUser();
+      } catch (error) {
+        console.warn('Periodic role check failed:', error);
+      }
+    }, 2000); // 2 seconds
+
+    return () => clearInterval(roleCheckInterval);
+  }, [user?.id]); // Only depend on user.id to prevent infinite loops
+
+  // Set up immediate role checking on page visibility/focus events
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const handleVisibilityChange = async () => {
+      if (!document.hidden) {
+        // Page became visible - check for role changes immediately
+        try {
+          await refreshUser();
+        } catch (error) {
+          console.warn('Visibility-based role check failed:', error);
+        }
+      }
+    };
+
+    const handleFocus = async () => {
+      // Window focused - check for role changes immediately
+      try {
+        await refreshUser();
+      } catch (error) {
+        console.warn('Focus-based role check failed:', error);
+      }
+    };
+
+    // Add event listeners
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      // Cleanup event listeners
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [user?.id]);
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, refreshUser, updateUser }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, refreshUser, updateUser, checkRoleChange }}>
       {children}
     </AuthContext.Provider>
   );

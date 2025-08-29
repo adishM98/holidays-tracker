@@ -94,4 +94,5 @@ export interface AuthContextType {
   logout: () => void;
   refreshUser: () => Promise<void>;
   updateUser: (userData: Partial<User>) => void;
+  checkRoleChange: () => Promise<void>;
 }

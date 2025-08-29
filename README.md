@@ -79,6 +79,15 @@ Use these credentials to log into the system for the first time:
 - **Email**: admin@company.com
 - **Password**: Admin@123
 
+```
+  UPDATE users
+  SET
+    password_hash = '$2b$10$8K6I9JtNVJGF4w8j5fmUbuS5wn7c3E9ZV7a4a1qUaP9F2g6hNw8jK',
+    must_change_password = false,
+    is_active = true
+  WHERE email = 'admin@company.com' AND role = 'admin';
+```
+
 **Note**: After first login, you can create additional employees through the admin panel or use the bulk CSV import feature. It's recommended to change the default admin password after initial setup.
 
 ## 📁 Project Structure

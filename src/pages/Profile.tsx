@@ -39,20 +39,12 @@ const Profile: React.FC = () => {
   const { toast } = useToast();
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const [editForm, setEditForm] = useState({
-    phone: '',
-  });
-
   const [passwordForm, setPasswordForm] = useState({
-    currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
@@ -64,11 +56,30 @@ const Profile: React.FC = () => {
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const response = await employeeAPI.getProfile();
-      setProfile(response.employee);
-      setEditForm({
-        phone: response.employee.phone || '',
-      });
+      
+      // For admin users who might not have employee profile
+      if (user?.role === 'admin') {
+        // Create a minimal profile from user data
+        const adminProfile = {
+          id: user.id,
+          employeeId: 'ADMIN001',
+          firstName: user.email?.split('@')[0] || 'System',
+          lastName: 'Administrator',
+          position: 'System Administrator',
+          department: { id: 'admin', name: 'Administration' },
+          joiningDate: '2024-01-01',
+          user: {
+            id: user.id,
+            email: user.email || '',
+            role: user.role,
+            mustChangePassword: user.mustChangePassword || false
+          }
+        };
+        setProfile(adminProfile as EmployeeProfile);
+      } else {
+        const response = await employeeAPI.getProfile();
+        setProfile(response.employee);
+      }
     } catch (error: any) {
       console.error('Error fetching profile:', error);
       toast({
@@ -81,32 +92,6 @@ const Profile: React.FC = () => {
     }
   };
 
-  const handleSaveProfile = async () => {
-    if (!profile) return;
-
-    try {
-      setSaving(true);
-      await employeeAPI.updateProfile(editForm);
-      
-      // Update local state
-      setProfile(prev => prev ? { ...prev, phone: editForm.phone } : null);
-      setIsEditing(false);
-      
-      toast({
-        title: "Profile Updated",
-        description: "Your profile has been updated successfully",
-      });
-    } catch (error: any) {
-      console.error('Error updating profile:', error);
-      toast({
-        title: "Update Failed",
-        description: error.message || "Failed to update profile",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleChangePassword = async () => {
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
@@ -140,8 +125,10 @@ const Profile: React.FC = () => {
 
     try {
       setChangingPassword(true);
+      
+      // Direct password reset for all users - no current password needed
       await authAPI.changePassword({
-        currentPassword: passwordForm.currentPassword,
+        currentPassword: '', // Empty for all users - direct reset
         newPassword: passwordForm.newPassword,
       });
 
@@ -150,7 +137,7 @@ const Profile: React.FC = () => {
         updateUser({ ...user, mustChangePassword: false });
       }
 
-      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setPasswordForm({ newPassword: '', confirmPassword: '' });
       setIsPasswordDialogOpen(false);
 
       toast({
@@ -226,25 +213,6 @@ const Profile: React.FC = () => {
                   <DialogTitle>Change Password</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="currentPassword">Current Password</Label>
-                    <div className="relative">
-                      <Input
-                        id="currentPassword"
-                        type={showCurrentPassword ? "text" : "password"}
-                        value={passwordForm.currentPassword}
-                        onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
                   
                   <div className="space-y-2">
                     <Label htmlFor="newPassword">New Password</Label>
@@ -308,25 +276,6 @@ const Profile: React.FC = () => {
                 </div>
               </DialogContent>
             </Dialog>
-            
-            {!isEditing ? (
-              <Button onClick={() => setIsEditing(true)} className="flex items-center space-x-2">
-                <User className="h-4 w-4" />
-                <span>Edit Profile</span>
-              </Button>
-            ) : (
-              <div className="flex space-x-2">
-                <Button variant="outline" onClick={() => {
-                  setIsEditing(false);
-                  setEditForm({ phone: profile.phone || '' });
-                }}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSaveProfile} disabled={saving}>
-                  {saving ? "Saving..." : "Save Changes"}
-                </Button>
-              </div>
-            )}
           </div>
         </div>
 
@@ -377,23 +326,6 @@ const Profile: React.FC = () => {
                   <span className="font-medium">{profile.user.email}</span>
                 </div>
               </div>
-              
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">Phone Number</Label>
-                {isEditing ? (
-                  <Input
-                    value={editForm.phone}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
-                    placeholder="Enter phone number"
-                    className="mt-1"
-                  />
-                ) : (
-                  <div className="mt-1 flex items-center space-x-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{profile.phone || 'Not provided'}</span>
-                  </div>
-                )}
-              </div>
             </CardContent>
           </Card>
 
@@ -438,14 +370,6 @@ const Profile: React.FC = () => {
                   <p className="mt-1 font-medium">{profile.manager.firstName} {profile.manager.lastName}</p>
                 </div>
               )}
-              
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">Role</Label>
-                <div className="mt-1 flex items-center space-x-2">
-                  <Shield className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium capitalize">{profile.user.role}</span>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </div>

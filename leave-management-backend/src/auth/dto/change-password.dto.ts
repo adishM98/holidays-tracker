@@ -1,10 +1,11 @@
-import { IsString, MinLength, Matches } from 'class-validator';
+import { IsString, MinLength, Matches, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class ChangePasswordDto {
-  @ApiProperty()
+  @ApiProperty({ required: false, description: 'Current password (optional for employees)' })
   @IsString()
-  currentPassword: string;
+  @IsOptional()
+  currentPassword?: string;
 
   @ApiProperty()
   @IsString()

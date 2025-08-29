@@ -24,7 +24,6 @@ const Sidebar: React.FC = () => {
     { path: '/dashboard', icon: Home, label: 'Dashboard' },
     { path: '/apply-leave', icon: Calendar, label: 'Apply Leave' },
     { path: '/pending-approvals', icon: Clock, label: 'Pending Approvals' },
-    { path: '/team-requests', icon: Users, label: 'Team Requests' },
     { path: '/leave-history', icon: FileText, label: 'Leave History' }
   ];
 
@@ -64,8 +63,8 @@ const Sidebar: React.FC = () => {
     return displayName.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
-  const getUserDepartment = () => {
-    return user?.employee?.department?.name || 'Admin';
+  const getUserPosition = () => {
+    return user?.employee?.position || 'Staff';
   };
 
   if (isMobile) {
@@ -120,7 +119,7 @@ const Sidebar: React.FC = () => {
                 </div>
                 <div>
                   <p className="font-medium text-foreground">{getUserDisplayName()}</p>
-                  <p className="text-sm text-muted-foreground capitalize">{user?.role} • {getUserDepartment()}</p>
+                  <p className="text-sm text-muted-foreground">{getUserPosition()}</p>
                 </div>
               </Link>
               <ThemeToggle />
@@ -197,7 +196,7 @@ const Sidebar: React.FC = () => {
             </div>
             <div>
               <p className="font-medium text-foreground">{getUserDisplayName()}</p>
-              <p className="text-sm text-muted-foreground capitalize">{user?.role} • {getUserDepartment()}</p>
+              <p className="text-sm text-muted-foreground">{getUserPosition()}</p>
             </div>
           </Link>
           <ThemeToggle />
