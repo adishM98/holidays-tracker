@@ -30,12 +30,12 @@ import { DatabaseCreationService } from "./database-creation.service";
           PasswordResetToken,
           Holiday,
         ],
-        synchronize: configService.get("NODE_ENV") === "development",
+        synchronize: true, // Enable sync but we'll recreate admin user properly
         dropSchema: false,
         createDatabase: false,
-        logging: configService.get("NODE_ENV") === "development",
+        logging: false, // Disable excessive logging
         ssl:
-          configService.get("NODE_ENV") === "production"
+          configService.get("DATABASE_SSL") === "true"
             ? { rejectUnauthorized: false }
             : false,
       }),

@@ -1,0 +1,91 @@
+# Git and Version Control
+.git
+.gitignore
+.github
+
+# Node.js
+**/node_modules
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/.npm
+**/.yarn
+
+# Development files
+**/.env.local
+**/.env.development
+**/.env.test
+**/coverage
+**/.nyc_output
+
+# IDE and Editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+**/logs
+**/*.log
+
+# Runtime and build artifacts
+**/dist
+**/build
+**/.cache
+**/tmp
+**/temp
+
+# Documentation and Markdown
+README.md
+DEPLOYMENT.md
+DATABASE.md
+ADMIN_PASSWORD_RESET.md
+*.md
+
+# Docker files (not needed in the image)
+docker-compose.yml
+docker-compose.*.yml
+Dockerfile*
+.dockerignore
+
+# Scripts
+deploy.sh
+start-all.sh
+
+# SSL certificates (handled separately)
+ssl/
+
+# Backup files
+*.backup
+*.bak
+*.sql.gz
+*.tar.gz
+
+# Test files
+**/test
+**/tests
+**/__tests__
+**/*.test.*
+**/*.spec.*
+
+# Development dependencies
+bun.lockb
+
+# Frontend specific ignores
+**/storybook-static
+**/.storybook
+
+# Backend specific ignores
+leave-management-backend/uploads/
+leave-management-backend/.env*
+leave-management-backend/dist

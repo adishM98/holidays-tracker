@@ -21,3 +21,33 @@ INSERT INTO departments (id, name) VALUES
   (gen_random_uuid(), 'Finance'),
   (gen_random_uuid(), 'Marketing')
 ON CONFLICT (name) DO NOTHING;
+
+-- Create employee record for admin user
+INSERT INTO employees (
+  id,
+  user_id, 
+  employee_id, 
+  first_name, 
+  last_name, 
+  department_id, 
+  position, 
+  joining_date, 
+  annual_leave_days, 
+  sick_leave_days, 
+  casual_leave_days
+)
+SELECT 
+  gen_random_uuid(),
+  u.id,
+  'ADMIN001',
+  'System',
+  'Administrator',
+  d.id,
+  'System Administrator',
+  '2024-01-01',
+  25,
+  12,
+  8
+FROM users u, departments d
+WHERE u.email = 'admin@company.com' AND d.name = 'Information Technology'
+ON CONFLICT (employee_id) DO NOTHING;

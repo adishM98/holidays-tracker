@@ -1,0 +1,155 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: leave_management_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: leave_management
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./leave-management-backend/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Redis Cache (Optional - for session management, caching)
+  redis:
+    image: redis:7-alpine
+    container_name: leave_management_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+  # Main Application (Frontend + Backend)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: leave_management_app
+    restart: unless-stopped
+    environment:
+      # Application Configuration
+      - NODE_ENV=production
+      - PORT=3000
+      
+      # Database Configuration
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=postgres
+      - DATABASE_PASSWORD=postgres
+      - DATABASE_NAME=leave_management
+      - DATABASE_SSL=false
+      
+      # JWT Configuration (Change these in production!)
+      - JWT_SECRET=70c2be96808e7bbe6eb3a0a793102536aac160464dcf309ba37ebce2a46c06f5
+      - JWT_REFRESH_SECRET=94fd510bf3ff395fcb799a2ea370ec8751ce3dfe964d36391dd6ebd94f4daec677a8306e50e1818742841c8cb8dbc2e0809fb86f1aeb82cf7d3051e1cbc35976
+      - JWT_EXPIRES_IN=1h
+      - JWT_REFRESH_EXPIRES_IN=7d
+      
+      # API Configuration
+      - API_PREFIX=api
+      - FRONTEND_URL=http://localhost:3000
+      
+      # Email Configuration (Update with your SMTP settings)
+      - MAIL_HOST=smtp.gmail.com
+      - MAIL_PORT=587
+      - MAIL_SECURE=false
+      - MAIL_USER=your-email@gmail.com
+      - MAIL_PASS=your-app-password
+      - MAIL_FROM=noreply@company.com
+      
+      # Redis Configuration
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      
+      # File Upload Configuration
+      - MAX_FILE_SIZE=5242880
+      - UPLOAD_DEST=./uploads
+      
+      # Rate Limiting
+      - THROTTLE_TTL=60000
+      - THROTTLE_LIMIT=100
+      
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - uploads_data:/app/uploads
+      - ./leave-management-backend/.env:/app/.env:ro
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Nginx Reverse Proxy (Optional - for production load balancing)
+  nginx:
+    image: nginx:alpine
+    container_name: leave_management_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - app
+    networks:
+      - app-network
+    profiles:
+      - production
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# Named volumes for data persistence
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  uploads_data:
+    driver: local
+  nginx_logs:
+    driver: local
+
+# Networks
+networks:
+  app-network:
+    driver: bridge
+    name: leave_management_network

@@ -11,7 +11,7 @@ export class DatabaseCreationService {
   constructor(private configService: ConfigService) {}
 
   /**
-   * Creates the database if it doesn't exist
+   * Creates the database if it doesn't exist and ensures admin user exists
    */
   async ensureDatabaseExists(): Promise<void> {
     const dbName = this.configService.get("DATABASE_NAME");
@@ -82,25 +82,39 @@ export class DatabaseCreationService {
   }
 
   /**
-   * Runs the init-db.sql script to set up initial data
+   * Creates initial admin user and sample data using TypeORM-compatible queries
    */
   private async runInitScript(client: Client): Promise<void> {
-    const initScriptPath = path.join(process.cwd(), "init-db.sql");
-
-    if (!fs.existsSync(initScriptPath)) {
-      this.logger.warn("init-db.sql not found, skipping initial data setup");
-      return;
-    }
-
     try {
-      const initScript = fs.readFileSync(initScriptPath, "utf8");
-      this.logger.log("Running init-db.sql script...");
+      this.logger.log("Creating initial admin user and sample data...");
 
-      await client.query(initScript);
-      this.logger.log("✅ Initial database setup completed");
+      // Create admin user with bcrypt hash for password "admin123"
+      await client.query(`
+        INSERT INTO users (id, email, password_hash, role, is_active, must_change_password) 
+        VALUES (
+          gen_random_uuid(),
+          'admin@company.com',
+          '$2b$10$MU34VPcnxDLnPdGdpZOXOuk6zLAfT6LQYwHO/UIETUi8HtwJLUAJa',
+          'admin',
+          true,
+          false
+        ) ON CONFLICT (email) DO NOTHING;
+      `);
+
+      // Create sample departments
+      await client.query(`
+        INSERT INTO departments (id, name) VALUES 
+          (gen_random_uuid(), 'Information Technology'),
+          (gen_random_uuid(), 'Human Resources'),
+          (gen_random_uuid(), 'Finance'),
+          (gen_random_uuid(), 'Marketing')
+        ON CONFLICT (name) DO NOTHING;
+      `);
+
+      this.logger.log("✅ Initial admin user and sample data created");
     } catch (error) {
-      this.logger.error("Error running init script:", error);
-      // Don't throw error - the database exists, just the init script failed
+      this.logger.error("Error creating initial data:", error);
+      // Don't throw error - the database exists, just the init failed
     }
   }
 }
