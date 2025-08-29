@@ -603,7 +603,7 @@ const Reports: React.FC = () => {
                         description: `Generated ${selectedReportType === 'all' ? 'comprehensive' : selectedReportType} report with ${reportData.length} record(s)`,
                       });
                     }}
-                    className="flex items-center"
+                    className="flex items-center hover:!bg-blue-50 hover:!text-blue-700 dark:hover:bg-blue-950/50 dark:hover:text-blue-300"
                   >
                     <FileSpreadsheet className="w-4 h-4 mr-2" />
                     Export as CSV
@@ -639,7 +639,7 @@ const Reports: React.FC = () => {
                         description: `Generated ${selectedReportType === 'all' ? 'comprehensive' : selectedReportType} report with ${reportData.length} record(s)`,
                       });
                     }}
-                    className="flex items-center"
+                    className="flex items-center hover:!bg-blue-50 hover:!text-blue-700 dark:hover:bg-blue-950/50 dark:hover:text-blue-300"
                   >
                     <FileText className="w-4 h-4 mr-2" />
                     Export as Excel
@@ -675,7 +675,7 @@ const Reports: React.FC = () => {
                         description: `Generated ${selectedReportType === 'all' ? 'comprehensive' : selectedReportType} report with ${reportData.length} record(s)`,
                       });
                     }}
-                    className="flex items-center"
+                    className="flex items-center hover:!bg-blue-50 hover:!text-blue-700 dark:hover:bg-blue-950/50 dark:hover:text-blue-300"
                   >
                     <FileDown className="w-4 h-4 mr-2" />
                     Export as PDF

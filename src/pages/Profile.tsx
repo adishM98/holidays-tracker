@@ -259,7 +259,6 @@ const Profile: React.FC = () => {
                   
                   <div className="flex space-x-3 pt-4">
                     <Button
-                      variant="outline"
                       onClick={() => setIsPasswordDialogOpen(false)}
                       className="flex-1"
                     >

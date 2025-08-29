@@ -250,13 +250,9 @@ const Settings: React.FC = () => {
             <div className="text-center p-8">
               <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium text-muted-foreground mb-2">No holidays found</h3>
-              <p className="text-muted-foreground mb-4">
-                Get started by adding your first holiday
+              <p className="text-muted-foreground">
+                Get started by adding your first holiday using the "Add Holiday" button above
               </p>
-              <Button onClick={handleAdd} className="flex items-center space-x-2">
-                <Plus className="h-4 w-4" />
-                <span>Add Holiday</span>
-              </Button>
             </div>
           ) : (
             <Table>
@@ -304,6 +300,7 @@ const Settings: React.FC = () => {
                       <div className="flex items-center justify-end space-x-2">
                         <Button
                           variant="outline"
+                className="border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-500"
                           size="sm"
                           onClick={() => handleEdit(holiday)}
                         >
@@ -311,6 +308,7 @@ const Settings: React.FC = () => {
                         </Button>
                         <Button
                           variant="outline"
+                className="border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-500"
                           size="sm"
                           onClick={() => setDeletingHoliday(holiday)}
                         >
@@ -427,7 +425,6 @@ const Settings: React.FC = () => {
             <DialogFooter>
               <Button
                 type="button"
-                variant="outline"
                 onClick={() => {
                   setShowDialog(false);
                   setEditingHoliday(null);

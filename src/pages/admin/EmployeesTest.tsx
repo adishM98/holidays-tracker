@@ -354,7 +354,12 @@ const EmployeesTest: React.FC = () => {
             </div>
             
             <div className="flex justify-end space-x-2 pt-4">
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              <Button 
+                variant="outline"
+                className="border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-500" 
+                onClick={() => setIsDialogOpen(false)}
+                className=""
+              >
                 Cancel
               </Button>
               <Button onClick={handleAddEmployee}>

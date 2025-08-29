@@ -502,7 +502,7 @@ const LeaveCalendar: React.FC = () => {
               variant="outline"
               size="sm"
               onClick={() => navigateMonth('prev')}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-500"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -513,26 +513,11 @@ const LeaveCalendar: React.FC = () => {
               variant="outline"
               size="sm"
               onClick={() => navigateMonth('next')}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-500"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchLeaveData}
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <Clock className="h-4 w-4 mr-2 animate-spin" />
-                Loading...
-              </>
-            ) : (
-              'Refresh'
-            )}
-          </Button>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-7 gap-1 mb-4">
@@ -564,7 +549,7 @@ const LeaveCalendar: React.FC = () => {
                   className={`p-2 h-24 border border-border rounded-lg overflow-hidden transition-colors ${
                     isDisabled 
                       ? 'cursor-not-allowed bg-gray-100 dark:bg-gray-800 opacity-60'
-                      : 'cursor-pointer hover:bg-secondary/50'
+                      : 'cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-600'
                   } ${
                     isToday ? 'bg-primary/5 border-primary/20' : 
                     hasHoliday ? 'bg-red-50 border-red-200' : 
@@ -860,12 +845,12 @@ const LeaveCalendar: React.FC = () => {
 
             <div className="flex justify-end space-x-2 pt-4">
               <Button 
-                variant="outline" 
                 onClick={() => {
                   resetLeaveForm();
                   setIsAddLeaveDialogOpen(false);
                 }}
                 disabled={isSubmitting}
+                className="border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-500"
               >
                 Cancel
               </Button>
@@ -966,13 +951,13 @@ const LeaveCalendar: React.FC = () => {
 
             <div className="flex justify-end space-x-2 pt-4">
               <Button 
-                variant="outline" 
                 onClick={() => {
                   setIsEditLeaveDialogOpen(false);
                   setSelectedLeave(null);
                   resetLeaveForm();
                 }}
                 disabled={isSubmitting}
+                className="border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-500"
               >
                 Cancel
               </Button>

@@ -365,10 +365,15 @@ const EmployeesSimple: React.FC = () => {
               </div>
               
               <div className="flex justify-end space-x-2 pt-4">
-                <Button variant="outline" onClick={() => {
-                  setIsAddDialogOpen(false);
-                  resetForm();
-                }}>
+                <Button 
+                  variant="outline"
+                  className="border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-500" 
+                  onClick={() => {
+                    setIsAddDialogOpen(false);
+                    resetForm();
+                  }}
+                  className=""
+                >
                   Cancel
                 </Button>
                 <Button onClick={handleAddEmployee}>

@@ -689,7 +689,6 @@ const EmployeesDebug: React.FC = () => {
           />
           
           <Button
-            variant="outline"
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
           >
@@ -1155,40 +1154,40 @@ const EmployeesDebug: React.FC = () => {
 
               {/* Pro-rata Leave Calculation Preview - Only for new employees */}
               {!useManualBalances && formData.joiningDate && (
-                <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border dark:border-blue-800/50">
-                  <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
-                    📊 Calculated Leave Entitlements (Pro-rata based on joining date)
+                <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+                    Calculated Leave Entitlements (Pro-rata based on joining date)
                   </h4>
                   <div className="grid grid-cols-3 gap-4 text-sm">
                     <div className="text-center">
-                      <div className="font-medium text-blue-700 dark:text-blue-300">Earned/Privilege</div>
-                      <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                      <div className="font-medium text-gray-700 dark:text-gray-300">Earned/Privilege</div>
+                      <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
                         {calculateProRataLeave(formData.joiningDate, 'earned')}
                       </div>
-                      <div className="text-xs text-blue-500 dark:text-blue-400">
+                      <div className="text-xs text-gray-600 dark:text-gray-400">
                         of {formData.annualLeaveDays || 0} days allocated
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className="font-medium text-red-700 dark:text-red-300">Sick Leave</div>
-                      <div className="text-lg font-bold text-red-600 dark:text-red-400">
+                      <div className="font-medium text-gray-700 dark:text-gray-300">Sick Leave</div>
+                      <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
                         {calculateProRataLeave(formData.joiningDate, 'sick')}
                       </div>
-                      <div className="text-xs text-red-500 dark:text-red-400">
+                      <div className="text-xs text-gray-600 dark:text-gray-400">
                         of {formData.sickLeaveDays || 0} days allocated
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className="font-medium text-green-700 dark:text-green-300">Casual Leave</div>
-                      <div className="text-lg font-bold text-green-600 dark:text-green-400">
+                      <div className="font-medium text-gray-700 dark:text-gray-300">Casual Leave</div>
+                      <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
                         {calculateProRataLeave(formData.joiningDate, 'casual')}
                       </div>
-                      <div className="text-xs text-green-500 dark:text-green-400">
+                      <div className="text-xs text-gray-600 dark:text-gray-400">
                         of {formData.casualLeaveDays || 0} days allocated
                       </div>
                     </div>
                   </div>
-                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 text-center">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 text-center">
                     * Leave entitlements are calculated using HR-provided pro-rata table based on joining month
                   </p>
                 </div>
@@ -1199,7 +1198,6 @@ const EmployeesDebug: React.FC = () => {
             <div className="flex justify-end space-x-2 pt-4">
               <Button
                 type="button"
-                variant="outline"
                 onClick={() => {
                   resetForm();
                   setIsAddDialogOpen(false);
@@ -1278,6 +1276,7 @@ const EmployeesDebug: React.FC = () => {
                     setTempPassword('');
                     setResetEmployee(null);
                   }}
+                  className=""
                 >
                   Close
                 </Button>
@@ -1537,7 +1536,11 @@ const EmployeesDebug: React.FC = () => {
               )}
               
               <div className="flex justify-end pt-4">
-                <Button variant="outline" onClick={() => setIsLeaveStatusDialogOpen(false)}>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsLeaveStatusDialogOpen(false)}
+                  className=""
+                >
                   Close
                 </Button>
               </div>

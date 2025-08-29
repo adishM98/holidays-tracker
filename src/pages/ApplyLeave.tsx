@@ -502,7 +502,7 @@ const ApplyLeave: React.FC = () => {
                         : isHolidayDate
                         ? 'bg-orange-50 dark:bg-orange-950 cursor-not-allowed opacity-60'
                         : 'bg-muted/30 cursor-not-allowed opacity-60'
-                      : 'cursor-pointer hover:bg-secondary/50'
+                      : 'cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-600'
                   }`}
                   onClick={() => !isDisabled && handleDateClick(day)}
                 >
@@ -668,7 +668,6 @@ const ApplyLeave: React.FC = () => {
             <div className="flex space-x-3 pt-4">
               <Button
                 type="button"
-                variant="outline"
                 onClick={() => {
                   resetLeaveForm();
                   setIsApplyDialogOpen(false);
@@ -806,6 +805,7 @@ const ApplyLeave: React.FC = () => {
                 <Button
                   type="button"
                   variant="outline"
+                className="border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-500"
                   onClick={() => setIsViewLeaveDialogOpen(false)}
                   className="flex-1"
                 >
