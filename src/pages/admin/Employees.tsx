@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { DatePicker } from '@/components/ui/date-picker';
 import { 
   Table, 
   TableBody, 
@@ -78,7 +79,7 @@ const Employees: React.FC = () => {
     departmentId: '',
     position: '',
     managerId: '',
-    joiningDate: new Date().toISOString().split('T')[0],
+    joiningDate: new Date() as Date,
     annualLeaveDays: 25,
     sickLeaveDays: 12,
     casualLeaveDays: 8,
@@ -126,6 +127,7 @@ const Employees: React.FC = () => {
     try {
       await adminAPI.createEmployee({
         ...formData,
+        joiningDate: formData.joiningDate.toISOString().split('T')[0], // Convert Date to string
         managerId: formData.managerId || undefined,
       });
       
@@ -152,6 +154,7 @@ const Employees: React.FC = () => {
     try {
       await adminAPI.updateEmployee(selectedEmployee.id, {
         ...formData,
+        joiningDate: formData.joiningDate.toISOString().split('T')[0], // Convert Date to string
         managerId: formData.managerId || undefined,
       });
       
@@ -205,7 +208,7 @@ const Employees: React.FC = () => {
       departmentId: '',
       position: '',
       managerId: '',
-      joiningDate: new Date().toISOString().split('T')[0],
+      joiningDate: new Date(),
       annualLeaveDays: 25,
       sickLeaveDays: 12,
       casualLeaveDays: 8,
@@ -258,7 +261,7 @@ const Employees: React.FC = () => {
       departmentId: employee.department.id,
       position: employee.position,
       managerId: employee.manager?.id || '',
-      joiningDate: employee.joiningDate.split('T')[0],
+      joiningDate: new Date(employee.joiningDate),
       annualLeaveDays: 25, // These would come from the API in a real implementation
       sickLeaveDays: 12,
       casualLeaveDays: 8,
@@ -395,12 +398,11 @@ const Employees: React.FC = () => {
         </div>
         <div>
           <Label htmlFor="joiningDate">Joining Date *</Label>
-          <Input
-            id="joiningDate"
-            type="date"
-            value={formData.joiningDate}
-            onChange={(e) => setFormData({...formData, joiningDate: e.target.value})}
-            required
+          <DatePicker
+            date={formData.joiningDate}
+            onSelect={(date) => setFormData({...formData, joiningDate: date || new Date()})}
+            placeholder="Select joining date"
+            className="w-full"
           />
         </div>
       </div>

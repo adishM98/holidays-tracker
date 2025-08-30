@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DatePicker } from '@/components/ui/date-picker';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { adminAPI } from '@/services/api';
@@ -58,8 +59,8 @@ const Reports: React.FC = () => {
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [selectedReportType, setSelectedReportType] = useState<string>('all');
   const [dateRange, setDateRange] = useState({
-    startDate: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], // Start of current year
-    endDate: new Date().toISOString().split('T')[0] // Today
+    startDate: new Date(new Date().getFullYear(), 0, 1), // Start of current year
+    endDate: new Date() // Today
   });
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -251,8 +252,8 @@ const Reports: React.FC = () => {
     const filteredLeaveRequests = leaveRequests.filter(req => {
       if (!req.startDate) return false;
       const startDate = new Date(req.startDate);
-      const filterStartDate = new Date(dateRange.startDate);
-      const filterEndDate = new Date(dateRange.endDate);
+      const filterStartDate = dateRange.startDate;
+      const filterEndDate = dateRange.endDate;
       return startDate >= filterStartDate && startDate <= filterEndDate;
     });
 
@@ -511,21 +512,21 @@ const Reports: React.FC = () => {
 
             <div>
               <label className="text-sm font-medium mb-2 block">Start Date</label>
-              <input
-                type="date"
-                value={dateRange.startDate}
-                onChange={(e) => setDateRange({...dateRange, startDate: e.target.value})}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              <DatePicker
+                date={dateRange.startDate}
+                onSelect={(date) => setDateRange({...dateRange, startDate: date || new Date()})}
+                placeholder="Select start date"
+                className="w-full"
               />
             </div>
 
             <div>
               <label className="text-sm font-medium mb-2 block">End Date</label>
-              <input
-                type="date"
-                value={dateRange.endDate}
-                onChange={(e) => setDateRange({...dateRange, endDate: e.target.value})}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              <DatePicker
+                date={dateRange.endDate}
+                onSelect={(date) => setDateRange({...dateRange, endDate: date || new Date()})}
+                placeholder="Select end date"
+                className="w-full"
               />
             </div>
 
@@ -576,24 +577,26 @@ const Reports: React.FC = () => {
                   <DropdownMenuItem 
                     onClick={() => {
                       let reportData, headers, filename;
+                      const startDateStr = dateRange.startDate.toISOString().split('T')[0];
+                      const endDateStr = dateRange.endDate.toISOString().split('T')[0];
                       
                       if (selectedReportType === 'pending') {
                         ({ reportData, headers } = generatePendingRequestsReport());
-                        filename = `pending_requests_${dateRange.startDate}_to_${dateRange.endDate}`;
+                        filename = `pending_requests_${startDateStr}_to_${endDateStr}`;
                       } else if (selectedReportType === 'attendance') {
                         ({ reportData, headers } = generateAttendanceReport());
-                        filename = `attendance_report_${dateRange.startDate}_to_${dateRange.endDate}`;
+                        filename = `attendance_report_${startDateStr}_to_${endDateStr}`;
                       } else if (selectedReportType === 'opening') {
                         ({ reportData, headers } = generateLeaveBalanceReport('opening'));
-                        filename = `opening_balance_${dateRange.startDate}_to_${dateRange.endDate}`;
+                        filename = `opening_balance_${startDateStr}_to_${endDateStr}`;
                       } else if (selectedReportType === 'closing') {
                         ({ reportData, headers } = generateLeaveBalanceReport('closing'));
-                        filename = `closing_balance_${dateRange.startDate}_to_${dateRange.endDate}`;
+                        filename = `closing_balance_${startDateStr}_to_${endDateStr}`;
                       } else {
                         ({ reportData, headers } = generateComprehensiveReport());
                         filename = selectedEmployee !== 'all' 
-                          ? `employee_detailed_report_${dateRange.startDate}_to_${dateRange.endDate}`
-                          : `employees_comprehensive_report_${dateRange.startDate}_to_${dateRange.endDate}`;
+                          ? `employee_detailed_report_${startDateStr}_to_${endDateStr}`
+                          : `employees_comprehensive_report_${startDateStr}_to_${endDateStr}`;
                       }
                       
                       exportToCSV(reportData, filename, headers);
@@ -612,24 +615,26 @@ const Reports: React.FC = () => {
                   <DropdownMenuItem 
                     onClick={() => {
                       let reportData, headers, filename;
+                      const startDateStr = dateRange.startDate.toISOString().split('T')[0];
+                      const endDateStr = dateRange.endDate.toISOString().split('T')[0];
                       
                       if (selectedReportType === 'pending') {
                         ({ reportData, headers } = generatePendingRequestsReport());
-                        filename = `pending_requests_${dateRange.startDate}_to_${dateRange.endDate}`;
+                        filename = `pending_requests_${startDateStr}_to_${endDateStr}`;
                       } else if (selectedReportType === 'attendance') {
                         ({ reportData, headers } = generateAttendanceReport());
-                        filename = `attendance_report_${dateRange.startDate}_to_${dateRange.endDate}`;
+                        filename = `attendance_report_${startDateStr}_to_${endDateStr}`;
                       } else if (selectedReportType === 'opening') {
                         ({ reportData, headers } = generateLeaveBalanceReport('opening'));
-                        filename = `opening_balance_${dateRange.startDate}_to_${dateRange.endDate}`;
+                        filename = `opening_balance_${startDateStr}_to_${endDateStr}`;
                       } else if (selectedReportType === 'closing') {
                         ({ reportData, headers } = generateLeaveBalanceReport('closing'));
-                        filename = `closing_balance_${dateRange.startDate}_to_${dateRange.endDate}`;
+                        filename = `closing_balance_${startDateStr}_to_${endDateStr}`;
                       } else {
                         ({ reportData, headers } = generateComprehensiveReport());
                         filename = selectedEmployee !== 'all' 
-                          ? `employee_detailed_report_${dateRange.startDate}_to_${dateRange.endDate}`
-                          : `employees_comprehensive_report_${dateRange.startDate}_to_${dateRange.endDate}`;
+                          ? `employee_detailed_report_${startDateStr}_to_${endDateStr}`
+                          : `employees_comprehensive_report_${startDateStr}_to_${endDateStr}`;
                       }
                       
                       exportToExcel(reportData, filename, headers);
@@ -648,24 +653,26 @@ const Reports: React.FC = () => {
                   <DropdownMenuItem 
                     onClick={() => {
                       let reportData, headers, filename;
+                      const startDateStr = dateRange.startDate.toISOString().split('T')[0];
+                      const endDateStr = dateRange.endDate.toISOString().split('T')[0];
                       
                       if (selectedReportType === 'pending') {
                         ({ reportData, headers } = generatePendingRequestsReport());
-                        filename = `pending_requests_${dateRange.startDate}_to_${dateRange.endDate}`;
+                        filename = `pending_requests_${startDateStr}_to_${endDateStr}`;
                       } else if (selectedReportType === 'attendance') {
                         ({ reportData, headers } = generateAttendanceReport());
-                        filename = `attendance_report_${dateRange.startDate}_to_${dateRange.endDate}`;
+                        filename = `attendance_report_${startDateStr}_to_${endDateStr}`;
                       } else if (selectedReportType === 'opening') {
                         ({ reportData, headers } = generateLeaveBalanceReport('opening'));
-                        filename = `opening_balance_${dateRange.startDate}_to_${dateRange.endDate}`;
+                        filename = `opening_balance_${startDateStr}_to_${endDateStr}`;
                       } else if (selectedReportType === 'closing') {
                         ({ reportData, headers } = generateLeaveBalanceReport('closing'));
-                        filename = `closing_balance_${dateRange.startDate}_to_${dateRange.endDate}`;
+                        filename = `closing_balance_${startDateStr}_to_${endDateStr}`;
                       } else {
                         ({ reportData, headers } = generateComprehensiveReport());
                         filename = selectedEmployee !== 'all' 
-                          ? `employee_detailed_report_${dateRange.startDate}_to_${dateRange.endDate}`
-                          : `employees_comprehensive_report_${dateRange.startDate}_to_${dateRange.endDate}`;
+                          ? `employee_detailed_report_${startDateStr}_to_${endDateStr}`
+                          : `employees_comprehensive_report_${startDateStr}_to_${endDateStr}`;
                       }
                       
                       exportToPDF(reportData, filename, headers);

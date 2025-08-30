@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DateOfBirthPicker } from '@/components/ui/date-of-birth-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -80,7 +81,7 @@ const EmployeesDebug: React.FC = () => {
     departmentId: '',
     position: '',
     managerId: '',
-    joiningDate: new Date().toISOString().split('T')[0],
+    joiningDate: new Date(),
     annualLeaveDays: 12,
     sickLeaveDays: 8,
     casualLeaveDays: 8,
@@ -99,7 +100,7 @@ const EmployeesDebug: React.FC = () => {
       departmentId: '',
       position: '',
       managerId: '',
-      joiningDate: new Date().toISOString().split('T')[0],
+      joiningDate: new Date(),
       annualLeaveDays: 12,
       sickLeaveDays: 8,
       casualLeaveDays: 8,
@@ -166,7 +167,7 @@ const EmployeesDebug: React.FC = () => {
         departmentId: employee.department.id,
         position: employee.position,
         managerId: employee.manager?.id || 'none',
-        joiningDate: employee.joiningDate.split('T')[0],
+        joiningDate: new Date(employee.joiningDate),
         annualLeaveDays: employee.annualLeaveDays,
         sickLeaveDays: employee.sickLeaveDays,
         casualLeaveDays: employee.casualLeaveDays,
@@ -189,7 +190,7 @@ const EmployeesDebug: React.FC = () => {
         departmentId: employee.department.id,
         position: employee.position,
         managerId: employee.manager?.id || 'none',
-        joiningDate: employee.joiningDate.split('T')[0],
+        joiningDate: new Date(employee.joiningDate),
         annualLeaveDays: employee.annualLeaveDays,
         sickLeaveDays: employee.sickLeaveDays,
         casualLeaveDays: employee.casualLeaveDays,
@@ -260,7 +261,7 @@ const EmployeesDebug: React.FC = () => {
           position: formData.position,
           departmentId: formData.departmentId,
           managerId: formData.managerId && formData.managerId !== 'none' ? formData.managerId : undefined,
-          joiningDate: formData.joiningDate,
+          joiningDate: formData.joiningDate instanceof Date ? formData.joiningDate.toISOString().split('T')[0] : formData.joiningDate,
           annualLeaveDays: formData.annualLeaveDays,
           sickLeaveDays: formData.sickLeaveDays,
           casualLeaveDays: formData.casualLeaveDays,
@@ -306,7 +307,7 @@ const EmployeesDebug: React.FC = () => {
           position: formData.position,
           departmentId: formData.departmentId,
           managerId: formData.managerId && formData.managerId !== 'none' ? formData.managerId : undefined,
-          joiningDate: formData.joiningDate,
+          joiningDate: formData.joiningDate instanceof Date ? formData.joiningDate.toISOString().split('T')[0] : formData.joiningDate,
           annualLeaveDays: formData.annualLeaveDays,
           sickLeaveDays: formData.sickLeaveDays,
           casualLeaveDays: formData.casualLeaveDays,
@@ -349,7 +350,7 @@ const EmployeesDebug: React.FC = () => {
     }
   };
 
-  const handleInputChange = (field: string, value: string | number) => {
+  const handleInputChange = (field: string, value: string | number | Date) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -981,12 +982,11 @@ const EmployeesDebug: React.FC = () => {
             {/* Joining Date */}
             <div>
               <Label htmlFor="joiningDate">Joining Date</Label>
-              <Input
-                id="joiningDate"
-                type="date"
-                value={formData.joiningDate}
-                onChange={(e) => handleInputChange('joiningDate', e.target.value)}
-                required
+              <DateOfBirthPicker
+                date={formData.joiningDate}
+                onSelect={(date) => handleInputChange('joiningDate', date)}
+                placeholder="Select joining date"
+                className="w-full"
               />
             </div>
 
@@ -1197,12 +1197,14 @@ const EmployeesDebug: React.FC = () => {
             {/* Form Actions */}
             <div className="flex justify-end space-x-2 pt-4">
               <Button
+                variant="outline"
                 type="button"
                 onClick={() => {
                   resetForm();
                   setIsAddDialogOpen(false);
                 }}
                 disabled={isLoading}
+                className="border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white"
               >
                 Cancel
               </Button>
@@ -1346,7 +1348,7 @@ const EmployeesDebug: React.FC = () => {
                     setIsOffboardDialogOpen(false);
                     setOffboardEmployee(null);
                   }}
-                  className="flex-1"
+                  className="flex-1 border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white"
                   disabled={isOffboarding}
                 >
                   Cancel
@@ -1429,7 +1431,7 @@ const EmployeesDebug: React.FC = () => {
                     setIsDeleteDialogOpen(false);
                     setDeleteEmployee(null);
                   }}
-                  className="flex-1"
+                  className="flex-1 border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white"
                   disabled={isDeleting}
                 >
                   Cancel

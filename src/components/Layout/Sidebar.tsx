@@ -136,10 +136,10 @@ const Sidebar: React.FC = () => {
                   key={item.path}
                   to={item.path}
                   onClick={() => setIsOpen(false)}
-                  className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-smooth hover:bg-secondary ${
+                  className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-smooth ${
                     isActive 
                       ? 'bg-primary text-primary-foreground shadow-professional-sm' 
-                      : 'text-foreground hover:text-primary'
+                      : 'text-foreground hover:text-primary hover:bg-secondary'
                   }`}
                 >
                   <Icon size={20} />
@@ -212,10 +212,10 @@ const Sidebar: React.FC = () => {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-smooth hover:bg-secondary ${
+              className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-smooth ${
                 isActive 
                   ? 'bg-primary text-primary-foreground shadow-professional-sm' 
-                  : 'text-foreground hover:text-primary'
+                  : 'text-foreground hover:text-primary hover:bg-secondary'
               }`}
             >
               <Icon size={20} />

@@ -220,7 +220,7 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">
@@ -310,7 +310,7 @@ const Dashboard: React.FC = () => {
               {user?.role === 'admin' ? 'Pending leave applications from all employees' : 'Your recent leave requests and their status'}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-8 pt-0">
             {user?.role === 'employee' || user?.role === 'manager' ? (
               // Employee/Manager view: Show their own requests
               dashboardData?.recentRequests && dashboardData.recentRequests.length > 0 ? (
@@ -345,7 +345,7 @@ const Dashboard: React.FC = () => {
                   </Link>
                 </div>
               ) : (
-                <div className="text-center py-8">
+                <div className="text-center py-12">
                   <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground mb-4">No leave requests yet</p>
                   <Link to="/apply-leave" className="block">
@@ -418,7 +418,7 @@ const Dashboard: React.FC = () => {
                     </Link>
                   </div>
                 ) : (
-                  <div className="text-center py-8">
+                  <div className="text-center py-12">
                     <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                     <p className="text-muted-foreground">No pending requests from employees</p>
                   </div>
@@ -445,7 +445,7 @@ const Dashboard: React.FC = () => {
                 Team leave requests awaiting your review ({managerData.stats?.teamSize || 0} team members)
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-8 pt-0">
               {managerData.pendingRequests?.requests && managerData.pendingRequests.requests.length > 0 ? (
                 <div className="space-y-4">
                   {managerData.pendingRequests.requests.map((request: LeaveRequest) => (
@@ -520,7 +520,7 @@ const Dashboard: React.FC = () => {
               Company holidays in the next 30 days
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-8 pt-0">
             {upcomingHolidays && upcomingHolidays.length > 0 ? (
               <div className="space-y-4">
                 {upcomingHolidays.slice(0, 5).map((holiday) => (
@@ -554,7 +554,7 @@ const Dashboard: React.FC = () => {
                 )}
               </div>
             ) : (
-              <div className="text-center py-8">
+              <div className="text-center py-12">
                 <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">No upcoming holidays</p>
                 {user?.role === 'admin' && (

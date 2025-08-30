@@ -78,7 +78,7 @@ const Login: React.FC = () => {
           <CardHeader className="space-y-1">
             {/* <CardTitle className="text-2xl font-bold text-center">Welcome Back</CardTitle> */}
             <CardDescription className="text-center">
-              Sign in to manage your leave requests
+              Log in to track and approve leaves
             </CardDescription>
           </CardHeader>
           <CardContent>

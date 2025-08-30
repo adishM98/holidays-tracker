@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { DatePicker } from '@/components/ui/date-picker';
 import { useToast } from '@/hooks/use-toast';
 import { LeaveType } from '@/types';
 import { 
@@ -55,8 +56,8 @@ const ApplyLeave: React.FC = () => {
   
   const [leaveForm, setLeaveForm] = useState({
     leaveType: '' as LeaveType | '',
-    startDate: '',
-    endDate: '',
+    startDate: undefined as Date | undefined,
+    endDate: undefined as Date | undefined,
     reason: '',
   });
 
@@ -223,11 +224,12 @@ const ApplyLeave: React.FC = () => {
     }
     
     const clickedDate = formatDateString(day);
+    const clickedDateObject = new Date(currentYear, currentMonth, day);
     setSelectedDate(clickedDate);
     setLeaveForm({
       ...leaveForm,
-      startDate: clickedDate,
-      endDate: clickedDate,
+      startDate: clickedDateObject,
+      endDate: clickedDateObject,
     });
     setIsApplyDialogOpen(true);
   };
@@ -265,8 +267,12 @@ const ApplyLeave: React.FC = () => {
       return;
     }
     
+    // Convert dates to strings for validation and API
+    const startDateString = leaveForm.startDate ? leaveForm.startDate.toISOString().split('T')[0] : '';
+    const endDateString = leaveForm.endDate ? leaveForm.endDate.toISOString().split('T')[0] : '';
+    
     // Validate start date
-    const startDateValidation = validateLeaveDate(leaveForm.startDate);
+    const startDateValidation = validateLeaveDate(startDateString);
     if (!startDateValidation.isValid) {
       toast({
         title: "Invalid Start Date",
@@ -277,7 +283,7 @@ const ApplyLeave: React.FC = () => {
     }
     
     // Validate end date
-    const endDateValidation = validateLeaveDate(leaveForm.endDate);
+    const endDateValidation = validateLeaveDate(endDateString);
     if (!endDateValidation.isValid) {
       toast({
         title: "Invalid End Date",
@@ -292,8 +298,8 @@ const ApplyLeave: React.FC = () => {
     try {
       await employeeAPI.createLeaveRequest({
         leaveType: leaveForm.leaveType as string,
-        startDate: leaveForm.startDate,
-        endDate: leaveForm.endDate,
+        startDate: startDateString,
+        endDate: endDateString,
         reason: leaveForm.reason,
       });
 
@@ -324,7 +330,7 @@ const ApplyLeave: React.FC = () => {
   };
 
   const resetLeaveForm = () => {
-    setLeaveForm({ leaveType: '', startDate: '', endDate: '', reason: '' });
+    setLeaveForm({ leaveType: '', startDate: undefined, endDate: undefined, reason: '' });
     setSelectedDate('');
   };
 
@@ -515,9 +521,6 @@ const ApplyLeave: React.FC = () => {
                       {!isDisabled && (
                         <Plus className="h-3 w-3 opacity-50 hover:opacity-100" />
                       )}
-                      {isWeekendDate && !leaveOnDate && !holidayOnDate && (
-                        <span className="text-xs text-gray-500">Weekend</span>
-                      )}
                     </div>
                     
                     <div className="flex-1 space-y-1">
@@ -614,22 +617,20 @@ const ApplyLeave: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="startDate">Start Date *</Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={leaveForm.startDate}
-                  onChange={(e) => setLeaveForm(prev => ({ ...prev, startDate: e.target.value }))}
-                  required
+                <DatePicker
+                  date={leaveForm.startDate}
+                  onSelect={(date) => setLeaveForm(prev => ({ ...prev, startDate: date }))}
+                  placeholder="Select start date"
+                  className="w-full"
                 />
               </div>
               <div>
                 <Label htmlFor="endDate">End Date *</Label>
-                <Input
-                  id="endDate"
-                  type="date"
-                  value={leaveForm.endDate}
-                  onChange={(e) => setLeaveForm(prev => ({ ...prev, endDate: e.target.value }))}
-                  required
+                <DatePicker
+                  date={leaveForm.endDate}
+                  onSelect={(date) => setLeaveForm(prev => ({ ...prev, endDate: date }))}
+                  placeholder="Select end date"
+                  className="w-full"
                 />
               </div>
             </div>
@@ -667,12 +668,13 @@ const ApplyLeave: React.FC = () => {
             
             <div className="flex space-x-3 pt-4">
               <Button
+                variant="outline"
                 type="button"
                 onClick={() => {
                   resetLeaveForm();
                   setIsApplyDialogOpen(false);
                 }}
-                className="flex-1"
+                className="flex-1 border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white"
               >
                 Cancel
               </Button>
@@ -805,9 +807,8 @@ const ApplyLeave: React.FC = () => {
                 <Button
                   type="button"
                   variant="outline"
-                className="border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-500"
+                  className="flex-1 border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-500"
                   onClick={() => setIsViewLeaveDialogOpen(false)}
-                  className="flex-1"
                 >
                   Close
                 </Button>

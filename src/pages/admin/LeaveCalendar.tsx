@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { DatePicker } from '@/components/ui/date-picker';
 import { useToast } from '@/hooks/use-toast';
 import { adminAPI } from '@/services/api';
 
@@ -71,8 +72,8 @@ const LeaveCalendar: React.FC = () => {
   const [leaveForm, setLeaveForm] = useState({
     employeeId: '',
     leaveType: 'sick' as 'sick' | 'casual' | 'earned' | 'compensation',
-    startDate: '',
-    endDate: '',
+    startDate: undefined as Date | undefined,
+    endDate: undefined as Date | undefined,
     reason: '',
   });
 
@@ -158,11 +159,12 @@ const LeaveCalendar: React.FC = () => {
     }
     
     const clickedDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const clickedDateObject = new Date(currentYear, currentMonth, day);
     setSelectedDate(clickedDate);
     setLeaveForm({
       ...leaveForm,
-      startDate: clickedDate,
-      endDate: clickedDate,
+      startDate: clickedDateObject,
+      endDate: clickedDateObject,
     });
     setIsAddLeaveDialogOpen(true);
   };
@@ -199,8 +201,12 @@ const LeaveCalendar: React.FC = () => {
       return;
     }
     
+    // Convert dates to strings for validation and API
+    const startDateString = leaveForm.startDate ? leaveForm.startDate.toISOString().split('T')[0] : '';
+    const endDateString = leaveForm.endDate ? leaveForm.endDate.toISOString().split('T')[0] : '';
+    
     // Validate start date
-    const startDateValidation = validateLeaveDate(leaveForm.startDate);
+    const startDateValidation = validateLeaveDate(startDateString);
     if (!startDateValidation.isValid) {
       toast({
         title: "Invalid Start Date",
@@ -211,7 +217,7 @@ const LeaveCalendar: React.FC = () => {
     }
     
     // Validate end date
-    const endDateValidation = validateLeaveDate(leaveForm.endDate);
+    const endDateValidation = validateLeaveDate(endDateString);
     if (!endDateValidation.isValid) {
       toast({
         title: "Invalid End Date",
@@ -226,8 +232,8 @@ const LeaveCalendar: React.FC = () => {
       await adminAPI.createLeaveForEmployee({
         employeeId: leaveForm.employeeId,
         leaveType: leaveForm.leaveType,
-        startDate: leaveForm.startDate,
-        endDate: leaveForm.endDate,
+        startDate: startDateString,
+        endDate: endDateString,
         reason: leaveForm.reason,
       });
 
@@ -257,8 +263,8 @@ const LeaveCalendar: React.FC = () => {
     setLeaveForm({
       employeeId: '',
       leaveType: 'sick',
-      startDate: '',
-      endDate: '',
+      startDate: undefined,
+      endDate: undefined,
       reason: '',
     });
     setSelectedDate('');
@@ -269,8 +275,8 @@ const LeaveCalendar: React.FC = () => {
     setLeaveForm({
       employeeId: leave.employee.id,
       leaveType: leave.leaveType,
-      startDate: leave.startDate,
-      endDate: leave.endDate,
+      startDate: new Date(leave.startDate),
+      endDate: new Date(leave.endDate),
       reason: leave.reason || '',
     });
     setIsEditLeaveDialogOpen(true);
@@ -286,8 +292,12 @@ const LeaveCalendar: React.FC = () => {
       return;
     }
     
+    // Convert dates to strings for validation and API
+    const startDateString = leaveForm.startDate ? leaveForm.startDate.toISOString().split('T')[0] : '';
+    const endDateString = leaveForm.endDate ? leaveForm.endDate.toISOString().split('T')[0] : '';
+    
     // Validate start date
-    const startDateValidation = validateLeaveDate(leaveForm.startDate);
+    const startDateValidation = validateLeaveDate(startDateString);
     if (!startDateValidation.isValid) {
       toast({
         title: "Invalid Start Date",
@@ -298,7 +308,7 @@ const LeaveCalendar: React.FC = () => {
     }
     
     // Validate end date
-    const endDateValidation = validateLeaveDate(leaveForm.endDate);
+    const endDateValidation = validateLeaveDate(endDateString);
     if (!endDateValidation.isValid) {
       toast({
         title: "Invalid End Date",
@@ -312,8 +322,8 @@ const LeaveCalendar: React.FC = () => {
       setIsSubmitting(true);
       await adminAPI.updateLeaveRequest(selectedLeave.id, {
         leaveType: leaveForm.leaveType,
-        startDate: leaveForm.startDate,
-        endDate: leaveForm.endDate,
+        startDate: startDateString,
+        endDate: endDateString,
         reason: leaveForm.reason,
       });
 
@@ -814,20 +824,20 @@ const LeaveCalendar: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="startDate">Start Date *</Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={leaveForm.startDate}
-                  onChange={(e) => setLeaveForm({...leaveForm, startDate: e.target.value})}
+                <DatePicker
+                  date={leaveForm.startDate}
+                  onSelect={(date) => setLeaveForm({...leaveForm, startDate: date})}
+                  placeholder="Select start date"
+                  className="w-full"
                 />
               </div>
               <div>
                 <Label htmlFor="endDate">End Date *</Label>
-                <Input
-                  id="endDate"
-                  type="date"
-                  value={leaveForm.endDate}
-                  onChange={(e) => setLeaveForm({...leaveForm, endDate: e.target.value})}
+                <DatePicker
+                  date={leaveForm.endDate}
+                  onSelect={(date) => setLeaveForm({...leaveForm, endDate: date})}
+                  placeholder="Select end date"
+                  className="w-full"
                 />
               </div>
             </div>
@@ -845,12 +855,13 @@ const LeaveCalendar: React.FC = () => {
 
             <div className="flex justify-end space-x-2 pt-4">
               <Button 
+                variant="outline"
                 onClick={() => {
                   resetLeaveForm();
                   setIsAddLeaveDialogOpen(false);
                 }}
                 disabled={isSubmitting}
-                className="border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-500"
+                className="border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white"
               >
                 Cancel
               </Button>
@@ -920,20 +931,20 @@ const LeaveCalendar: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="editStartDate">Start Date *</Label>
-                <Input
-                  id="editStartDate"
-                  type="date"
-                  value={leaveForm.startDate}
-                  onChange={(e) => setLeaveForm({...leaveForm, startDate: e.target.value})}
+                <DatePicker
+                  date={leaveForm.startDate}
+                  onSelect={(date) => setLeaveForm({...leaveForm, startDate: date})}
+                  placeholder="Select start date"
+                  className="w-full"
                 />
               </div>
               <div>
                 <Label htmlFor="editEndDate">End Date *</Label>
-                <Input
-                  id="editEndDate"
-                  type="date"
-                  value={leaveForm.endDate}
-                  onChange={(e) => setLeaveForm({...leaveForm, endDate: e.target.value})}
+                <DatePicker
+                  date={leaveForm.endDate}
+                  onSelect={(date) => setLeaveForm({...leaveForm, endDate: date})}
+                  placeholder="Select end date"
+                  className="w-full"
                 />
               </div>
             </div>
@@ -957,7 +968,7 @@ const LeaveCalendar: React.FC = () => {
                   resetLeaveForm();
                 }}
                 disabled={isSubmitting}
-                className="border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-500"
+                className="border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white"
               >
                 Cancel
               </Button>

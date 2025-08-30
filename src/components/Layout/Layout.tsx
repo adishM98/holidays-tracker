@@ -13,7 +13,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     <div className="flex h-screen bg-gradient-to-br from-background via-secondary/30 to-accent-light">
       <Sidebar />
       <main className={`flex-1 overflow-auto ${isMobile ? '' : ''}`}>
-        <div className={`${isMobile ? 'p-4 pt-20' : 'p-8'}`}>
+        <div className={`${isMobile ? 'p-6 pt-20' : 'p-8'} min-h-full`}>
           {children}
         </div>
       </main>

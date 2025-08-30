@@ -259,8 +259,9 @@ const Profile: React.FC = () => {
                   
                   <div className="flex space-x-3 pt-4">
                     <Button
+                      variant="outline"
                       onClick={() => setIsPasswordDialogOpen(false)}
-                      className="flex-1"
+                      className="flex-1 border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white"
                     >
                       Cancel
                     </Button>

@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { DatePicker } from '@/components/ui/date-picker';
 import {
   Dialog,
   DialogContent,
@@ -54,7 +55,7 @@ interface Holiday {
 
 interface HolidayFormData {
   name: string;
-  date: string;
+  date: Date | undefined;
   description: string;
   isRecurring: boolean;
   isActive: boolean;
@@ -68,7 +69,7 @@ const Settings: React.FC = () => {
   const [deletingHoliday, setDeletingHoliday] = useState<Holiday | null>(null);
   const [formData, setFormData] = useState<HolidayFormData>({
     name: '',
-    date: '',
+    date: undefined,
     description: '',
     isRecurring: false,
     isActive: true,
@@ -129,14 +130,20 @@ const Settings: React.FC = () => {
     }
 
     try {
+      // Convert Date object to string for API
+      const holidayData = {
+        ...formData,
+        date: formData.date ? formData.date.toISOString().split('T')[0] : ''
+      };
+
       if (editingHoliday) {
-        await adminAPI.updateHoliday(editingHoliday.id, formData);
+        await adminAPI.updateHoliday(editingHoliday.id, holidayData);
         toast({
           title: 'Success',
           description: 'Holiday updated successfully',
         });
       } else {
-        await adminAPI.createHoliday(formData);
+        await adminAPI.createHoliday(holidayData);
         toast({
           title: 'Success',
           description: 'Holiday created successfully',
@@ -181,7 +188,7 @@ const Settings: React.FC = () => {
   const resetForm = () => {
     setFormData({
       name: '',
-      date: '',
+      date: undefined,
       description: '',
       isRecurring: false,
       isActive: true,
@@ -193,7 +200,7 @@ const Settings: React.FC = () => {
     setEditingHoliday(holiday);
     setFormData({
       name: holiday.name,
-      date: holiday.date.split('T')[0], // Convert to YYYY-MM-DD format
+      date: new Date(holiday.date), // Convert to Date object
       description: holiday.description || '',
       isRecurring: holiday.isRecurring,
       isActive: holiday.isActive,
@@ -363,12 +370,11 @@ const Settings: React.FC = () => {
                   Date
                 </Label>
                 <div className="col-span-3">
-                  <Input
-                    id="date"
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className={formErrors.date ? 'border-red-500' : ''}
+                  <DatePicker
+                    date={formData.date}
+                    onSelect={(date) => setFormData({ ...formData, date: date })}
+                    placeholder="Select holiday date"
+                    className={`w-full ${formErrors.date ? 'border-red-500' : ''}`}
                   />
                   {formErrors.date && (
                     <p className="text-sm text-red-500 mt-1">{formErrors.date}</p>
@@ -424,12 +430,14 @@ const Settings: React.FC = () => {
 
             <DialogFooter>
               <Button
+                variant="outline"
                 type="button"
                 onClick={() => {
                   setShowDialog(false);
                   setEditingHoliday(null);
                   resetForm();
                 }}
+                className="border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white"
               >
                 Cancel
               </Button>
