@@ -25,6 +25,15 @@
 
   <body>
     <div id="root"></div>
+    <script>
+      try {
+        if (localStorage.getItem('vite-ui-theme') === 'dark' || (!('vite-ui-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark')
+        } else {
+          document.documentElement.classList.remove('dark')
+        }
+      } catch (_) {}
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

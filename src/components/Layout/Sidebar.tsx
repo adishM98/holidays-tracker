@@ -138,8 +138,8 @@ const Sidebar: React.FC = () => {
                   onClick={() => setIsOpen(false)}
                   className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-smooth ${
                     isActive 
-                      ? 'bg-primary text-primary-foreground shadow-professional-sm' 
-                      : 'text-foreground hover:text-primary hover:bg-secondary'
+                      ? 'bg-blue-600 text-white shadow-professional-sm border border-blue-500' 
+                      : 'text-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                   }`}
                 >
                   <Icon size={20} />
@@ -214,8 +214,8 @@ const Sidebar: React.FC = () => {
               to={item.path}
               className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-smooth ${
                 isActive 
-                  ? 'bg-primary text-primary-foreground shadow-professional-sm' 
-                  : 'text-foreground hover:text-primary hover:bg-secondary'
+                  ? 'bg-blue-600 text-white shadow-professional-sm border border-blue-500' 
+                  : 'text-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
               }`}
             >
               <Icon size={20} />

@@ -64,6 +64,14 @@ const ApplyLeave: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Helper function to format date for input fields without timezone issues
+  const formatDateForInput = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
 
@@ -210,7 +218,7 @@ const ApplyLeave: React.FC = () => {
       const dayOfWeek = date.getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
       const isHoliday = holidays.some(holiday => {
-        const holidayDate = new Date(holiday.date).toISOString().split('T')[0];
+        const holidayDate = formatDateForInput(new Date(holiday.date));
         return holidayDate === dateString;
       });
       
@@ -245,7 +253,7 @@ const ApplyLeave: React.FC = () => {
     
     // Check holiday
     const isHoliday = holidays.some(holiday => {
-      const holidayDate = new Date(holiday.date).toISOString().split('T')[0];
+      const holidayDate = formatDateForInput(new Date(holiday.date));
       return holidayDate === dateString;
     });
     
@@ -267,8 +275,8 @@ const ApplyLeave: React.FC = () => {
     }
     
     // Convert dates to strings for validation and API
-    const startDateString = leaveForm.startDate ? leaveForm.startDate.toISOString().split('T')[0] : '';
-    const endDateString = leaveForm.endDate ? leaveForm.endDate.toISOString().split('T')[0] : '';
+    const startDateString = leaveForm.startDate ? formatDateForInput(leaveForm.startDate) : '';
+    const endDateString = leaveForm.endDate ? formatDateForInput(leaveForm.endDate) : '';
     
     // Validate start date
     const startDateValidation = validateLeaveDate(startDateString);
@@ -523,8 +531,19 @@ const ApplyLeave: React.FC = () => {
                     </div>
                     
                     <div className="flex-1 space-y-1">
-                      {/* Show existing leave */}
-                      {leaveOnDate && (
+                      {/* Show holiday indicator first (highest priority) */}
+                      {holidayOnDate && (
+                        <Badge 
+                          variant="secondary" 
+                          className="text-xs px-1 py-0 w-full justify-center bg-orange-100 dark:bg-orange-950 text-orange-800 dark:text-orange-200 border-orange-200 dark:border-orange-800"
+                          title={holidayOnDate.description || holidayOnDate.name}
+                        >
+                          {holidayOnDate.name.length > 8 ? holidayOnDate.name.substring(0, 8) + '...' : holidayOnDate.name}
+                        </Badge>
+                      )}
+                      
+                      {/* Show existing leave only if no holiday */}
+                      {leaveOnDate && !holidayOnDate && (
                         <Badge 
                           variant="secondary" 
                           className={`text-xs px-1 py-0 w-full justify-center cursor-pointer hover:opacity-80 ${getLeaveTypeColor(leaveOnDate.leaveType, leaveOnDate.status)}`}
@@ -538,22 +557,11 @@ const ApplyLeave: React.FC = () => {
                         </Badge>
                       )}
                       
-                      {/* Show weekend indicator */}
-                      {!leaveOnDate && isWeekendDate && (
+                      {/* Show weekend indicator only if no leave and no holiday */}
+                      {!leaveOnDate && !holidayOnDate && isWeekendDate && (
                         <div className="text-xs text-center text-gray-500 dark:text-gray-400 font-medium">
                           Weekend
                         </div>
-                      )}
-                      
-                      {/* Show holiday indicator */}
-                      {!leaveOnDate && holidayOnDate && (
-                        <Badge 
-                          variant="secondary" 
-                          className="text-xs px-1 py-0 w-full justify-center bg-orange-100 dark:bg-orange-950 text-orange-800 dark:text-orange-200 border-orange-200 dark:border-orange-800"
-                          title={holidayOnDate.description || holidayOnDate.name}
-                        >
-                          {holidayOnDate.name.length > 8 ? holidayOnDate.name.substring(0, 8) + '...' : holidayOnDate.name}
-                        </Badge>
                       )}
                       
                     </div>
@@ -619,7 +627,7 @@ const ApplyLeave: React.FC = () => {
                 <Input
                   type="date"
                   id="startDate"
-                  value={leaveForm.startDate ? leaveForm.startDate.toISOString().split('T')[0] : ''}
+                  value={leaveForm.startDate ? formatDateForInput(leaveForm.startDate) : ''}
                   onChange={(e) => setLeaveForm(prev => ({ ...prev, startDate: e.target.value ? new Date(e.target.value) : undefined }))}
                   className="w-full"
                 />
@@ -629,7 +637,7 @@ const ApplyLeave: React.FC = () => {
                 <Input
                   type="date"
                   id="endDate"
-                  value={leaveForm.endDate ? leaveForm.endDate.toISOString().split('T')[0] : ''}
+                  value={leaveForm.endDate ? formatDateForInput(leaveForm.endDate) : ''}
                   onChange={(e) => setLeaveForm(prev => ({ ...prev, endDate: e.target.value ? new Date(e.target.value) : undefined }))}
                   className="w-full"
                 />

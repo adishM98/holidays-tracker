@@ -68,6 +68,14 @@ const LeaveCalendar: React.FC = () => {
   const [isProcessingApproval, setIsProcessingApproval] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // Helper function to format date for input fields without timezone issues
+  const formatDateForInput = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const [leaveForm, setLeaveForm] = useState({
     employeeId: '',
     leaveType: 'sick' as 'sick' | 'casual' | 'earned' | 'compensation',
@@ -129,7 +137,7 @@ const LeaveCalendar: React.FC = () => {
     
     // Disable holidays
     const isHoliday = holidays.some(holiday => {
-      const holidayDate = new Date(holiday.date).toISOString().split('T')[0];
+      const holidayDate = formatDateForInput(new Date(holiday.date));
       return holidayDate === dateString;
     });
     if (isHoliday) return true;
@@ -145,7 +153,7 @@ const LeaveCalendar: React.FC = () => {
       const dayOfWeek = date.getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
       const isHoliday = holidays.some(holiday => {
-        const holidayDate = new Date(holiday.date).toISOString().split('T')[0];
+        const holidayDate = formatDateForInput(new Date(holiday.date));
         return holidayDate === dateString;
       });
       
@@ -158,6 +166,7 @@ const LeaveCalendar: React.FC = () => {
     }
     
     const clickedDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    // Create date object using the local timezone to avoid timezone conversion issues
     const clickedDateObject = new Date(currentYear, currentMonth, day);
     setSelectedDate(clickedDate);
     setLeaveForm({
@@ -179,7 +188,7 @@ const LeaveCalendar: React.FC = () => {
     
     // Check holiday
     const isHoliday = holidays.some(holiday => {
-      const holidayDate = new Date(holiday.date).toISOString().split('T')[0];
+      const holidayDate = formatDateForInput(new Date(holiday.date));
       return holidayDate === dateString;
     });
     
@@ -201,8 +210,8 @@ const LeaveCalendar: React.FC = () => {
     }
     
     // Convert dates to strings for validation and API
-    const startDateString = leaveForm.startDate ? leaveForm.startDate.toISOString().split('T')[0] : '';
-    const endDateString = leaveForm.endDate ? leaveForm.endDate.toISOString().split('T')[0] : '';
+    const startDateString = leaveForm.startDate ? formatDateForInput(leaveForm.startDate) : '';
+    const endDateString = leaveForm.endDate ? formatDateForInput(leaveForm.endDate) : '';
     
     // Validate start date
     const startDateValidation = validateLeaveDate(startDateString);
@@ -292,8 +301,8 @@ const LeaveCalendar: React.FC = () => {
     }
     
     // Convert dates to strings for validation and API
-    const startDateString = leaveForm.startDate ? leaveForm.startDate.toISOString().split('T')[0] : '';
-    const endDateString = leaveForm.endDate ? leaveForm.endDate.toISOString().split('T')[0] : '';
+    const startDateString = leaveForm.startDate ? formatDateForInput(leaveForm.startDate) : '';
+    const endDateString = leaveForm.endDate ? formatDateForInput(leaveForm.endDate) : '';
     
     // Validate start date
     const startDateValidation = validateLeaveDate(startDateString);
@@ -444,7 +453,7 @@ const LeaveCalendar: React.FC = () => {
   const getHolidaysForDate = (day: number) => {
     const dateString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     return holidays.filter(holiday => {
-      const holidayDate = new Date(holiday.date).toISOString().split('T')[0];
+      const holidayDate = formatDateForInput(new Date(holiday.date));
       return holidayDate === dateString;
     });
   };
@@ -591,7 +600,7 @@ const LeaveCalendar: React.FC = () => {
                         </div>
                       </div>
                     ))}
-                    {leavesForDay.slice(0, hasHoliday ? 1 : 2).map((leave, idx) => (
+                    {!hasHoliday && leavesForDay.slice(0, 2).map((leave, idx) => (
                       <div
                         key={`${leave.id}-${idx}`}
                         className={`text-xs p-1 rounded border ${getLeaveTypeColor(leave.leaveType, leave.status)} truncate cursor-pointer group hover:shadow-sm transition-shadow`}
@@ -629,9 +638,9 @@ const LeaveCalendar: React.FC = () => {
                         </div>
                       </div>
                     ))}
-                    {((hasHoliday && leavesForDay.length > 1) || (!hasHoliday && leavesForDay.length > 2)) && (
+                    {!hasHoliday && leavesForDay.length > 2 && (
                       <div className="text-xs text-muted-foreground text-center">
-                        +{hasHoliday ? leavesForDay.length - 1 : leavesForDay.length - 2} more
+                        +{leavesForDay.length - 2} more
                       </div>
                     )}
                   </div>
@@ -826,7 +835,7 @@ const LeaveCalendar: React.FC = () => {
                 <Input
                   type="date"
                   id="startDate"
-                  value={leaveForm.startDate ? leaveForm.startDate.toISOString().split('T')[0] : ''}
+                  value={leaveForm.startDate ? formatDateForInput(leaveForm.startDate) : ''}
                   onChange={(e) => setLeaveForm({...leaveForm, startDate: e.target.value ? new Date(e.target.value) : undefined})}
                   className="w-full"
                 />
@@ -836,7 +845,7 @@ const LeaveCalendar: React.FC = () => {
                 <Input
                   type="date"
                   id="endDate"
-                  value={leaveForm.endDate ? leaveForm.endDate.toISOString().split('T')[0] : ''}
+                  value={leaveForm.endDate ? formatDateForInput(leaveForm.endDate) : ''}
                   onChange={(e) => setLeaveForm({...leaveForm, endDate: e.target.value ? new Date(e.target.value) : undefined})}
                   className="w-full"
                 />
@@ -935,7 +944,7 @@ const LeaveCalendar: React.FC = () => {
                 <Input
                   type="date"
                   id="editStartDate"
-                  value={leaveForm.startDate ? leaveForm.startDate.toISOString().split('T')[0] : ''}
+                  value={leaveForm.startDate ? formatDateForInput(leaveForm.startDate) : ''}
                   onChange={(e) => setLeaveForm({...leaveForm, startDate: e.target.value ? new Date(e.target.value) : undefined})}
                   className="w-full"
                 />
@@ -945,7 +954,7 @@ const LeaveCalendar: React.FC = () => {
                 <Input
                   type="date"
                   id="editEndDate"
-                  value={leaveForm.endDate ? leaveForm.endDate.toISOString().split('T')[0] : ''}
+                  value={leaveForm.endDate ? formatDateForInput(leaveForm.endDate) : ''}
                   onChange={(e) => setLeaveForm({...leaveForm, endDate: e.target.value ? new Date(e.target.value) : undefined})}
                   className="w-full"
                 />

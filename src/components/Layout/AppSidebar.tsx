@@ -107,7 +107,7 @@ export function AppSidebar() {
                 
                 return (
                   <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton asChild isActive={isActive}>
+                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? "bg-blue-600 text-white hover:bg-blue-700 data-[active=true]:bg-blue-600 data-[active=true]:text-white" : ""}>
                       <Link to={item.path}>
                         <Icon size={20} />
                         <span>{item.label}</span>
