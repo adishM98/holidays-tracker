@@ -59,7 +59,9 @@ export function DateOfBirthPicker({
   const handleDateSelect = (newDate: Date | undefined) => {
     setSelectedDate(newDate)
     onSelect?.(newDate)
-    setOpen(false) // Close the popover after selecting a date
+    if (newDate) {
+      setOpen(false)
+    }
   }
 
   const handleYearChange = (year: string) => {

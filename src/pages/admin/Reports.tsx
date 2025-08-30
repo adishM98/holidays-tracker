@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DatePicker } from '@/components/ui/date-picker';
+import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { adminAPI } from '@/services/api';
@@ -512,20 +512,20 @@ const Reports: React.FC = () => {
 
             <div>
               <label className="text-sm font-medium mb-2 block">Start Date</label>
-              <DatePicker
-                date={dateRange.startDate}
-                onSelect={(date) => setDateRange({...dateRange, startDate: date || new Date()})}
-                placeholder="Select start date"
+              <Input
+                type="date"
+                value={dateRange.startDate.toISOString().split('T')[0]}
+                onChange={(e) => setDateRange({...dateRange, startDate: new Date(e.target.value)})}
                 className="w-full"
               />
             </div>
 
             <div>
               <label className="text-sm font-medium mb-2 block">End Date</label>
-              <DatePicker
-                date={dateRange.endDate}
-                onSelect={(date) => setDateRange({...dateRange, endDate: date || new Date()})}
-                placeholder="Select end date"
+              <Input
+                type="date"
+                value={dateRange.endDate.toISOString().split('T')[0]}
+                onChange={(e) => setDateRange({...dateRange, endDate: new Date(e.target.value)})}
                 className="w-full"
               />
             </div>

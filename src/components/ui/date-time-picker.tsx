@@ -69,9 +69,11 @@ export function DateTimePicker({
       updatedDate.setHours(hourAdjusted, parseInt(minutes), 0, 0)
       setSelectedDate(updatedDate)
       onSelect?.(updatedDate)
+      // Don't close immediately - let user set time first
     } else {
       setSelectedDate(undefined)
       onSelect?.(undefined)
+      setIsOpen(false)
     }
   }
 
@@ -162,6 +164,15 @@ export function DateTimePicker({
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="flex justify-end mt-3">
+              <Button 
+                size="sm" 
+                onClick={() => setIsOpen(false)}
+                disabled={!selectedDate}
+              >
+                Done
+              </Button>
             </div>
           </div>
         </div>

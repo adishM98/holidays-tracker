@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { DateOfBirthPicker } from '@/components/ui/date-of-birth-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -1005,10 +1004,11 @@ const EmployeesDebug: React.FC = () => {
             {/* Joining Date */}
             <div>
               <Label htmlFor="joiningDate">Joining Date</Label>
-              <DateOfBirthPicker
-                date={formData.joiningDate}
-                onSelect={(date) => handleInputChange('joiningDate', date)}
-                placeholder="Select joining date"
+              <Input
+                type="date"
+                id="joiningDate"
+                value={formData.joiningDate ? formData.joiningDate.toISOString().split('T')[0] : ''}
+                onChange={(e) => handleInputChange('joiningDate', e.target.value ? new Date(e.target.value) : undefined)}
                 className="w-full"
               />
             </div>

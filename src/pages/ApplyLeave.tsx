@@ -9,7 +9,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { DatePicker } from '@/components/ui/date-picker';
 import { useToast } from '@/hooks/use-toast';
 import { LeaveType } from '@/types';
 import { 
@@ -617,19 +616,21 @@ const ApplyLeave: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="startDate">Start Date *</Label>
-                <DatePicker
-                  date={leaveForm.startDate}
-                  onSelect={(date) => setLeaveForm(prev => ({ ...prev, startDate: date }))}
-                  placeholder="Select start date"
+                <Input
+                  type="date"
+                  id="startDate"
+                  value={leaveForm.startDate ? leaveForm.startDate.toISOString().split('T')[0] : ''}
+                  onChange={(e) => setLeaveForm(prev => ({ ...prev, startDate: e.target.value ? new Date(e.target.value) : undefined }))}
                   className="w-full"
                 />
               </div>
               <div>
                 <Label htmlFor="endDate">End Date *</Label>
-                <DatePicker
-                  date={leaveForm.endDate}
-                  onSelect={(date) => setLeaveForm(prev => ({ ...prev, endDate: date }))}
-                  placeholder="Select end date"
+                <Input
+                  type="date"
+                  id="endDate"
+                  value={leaveForm.endDate ? leaveForm.endDate.toISOString().split('T')[0] : ''}
+                  onChange={(e) => setLeaveForm(prev => ({ ...prev, endDate: e.target.value ? new Date(e.target.value) : undefined }))}
                   className="w-full"
                 />
               </div>

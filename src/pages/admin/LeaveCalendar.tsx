@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { DatePicker } from '@/components/ui/date-picker';
 import { useToast } from '@/hooks/use-toast';
 import { adminAPI } from '@/services/api';
 
@@ -824,19 +823,21 @@ const LeaveCalendar: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="startDate">Start Date *</Label>
-                <DatePicker
-                  date={leaveForm.startDate}
-                  onSelect={(date) => setLeaveForm({...leaveForm, startDate: date})}
-                  placeholder="Select start date"
+                <Input
+                  type="date"
+                  id="startDate"
+                  value={leaveForm.startDate ? leaveForm.startDate.toISOString().split('T')[0] : ''}
+                  onChange={(e) => setLeaveForm({...leaveForm, startDate: e.target.value ? new Date(e.target.value) : undefined})}
                   className="w-full"
                 />
               </div>
               <div>
                 <Label htmlFor="endDate">End Date *</Label>
-                <DatePicker
-                  date={leaveForm.endDate}
-                  onSelect={(date) => setLeaveForm({...leaveForm, endDate: date})}
-                  placeholder="Select end date"
+                <Input
+                  type="date"
+                  id="endDate"
+                  value={leaveForm.endDate ? leaveForm.endDate.toISOString().split('T')[0] : ''}
+                  onChange={(e) => setLeaveForm({...leaveForm, endDate: e.target.value ? new Date(e.target.value) : undefined})}
                   className="w-full"
                 />
               </div>
@@ -931,19 +932,21 @@ const LeaveCalendar: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="editStartDate">Start Date *</Label>
-                <DatePicker
-                  date={leaveForm.startDate}
-                  onSelect={(date) => setLeaveForm({...leaveForm, startDate: date})}
-                  placeholder="Select start date"
+                <Input
+                  type="date"
+                  id="editStartDate"
+                  value={leaveForm.startDate ? leaveForm.startDate.toISOString().split('T')[0] : ''}
+                  onChange={(e) => setLeaveForm({...leaveForm, startDate: e.target.value ? new Date(e.target.value) : undefined})}
                   className="w-full"
                 />
               </div>
               <div>
                 <Label htmlFor="editEndDate">End Date *</Label>
-                <DatePicker
-                  date={leaveForm.endDate}
-                  onSelect={(date) => setLeaveForm({...leaveForm, endDate: date})}
-                  placeholder="Select end date"
+                <Input
+                  type="date"
+                  id="editEndDate"
+                  value={leaveForm.endDate ? leaveForm.endDate.toISOString().split('T')[0] : ''}
+                  onChange={(e) => setLeaveForm({...leaveForm, endDate: e.target.value ? new Date(e.target.value) : undefined})}
                   className="w-full"
                 />
               </div>

@@ -17,7 +17,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { DatePicker } from '@/components/ui/date-picker';
 import {
   Dialog,
   DialogContent,
@@ -370,10 +369,10 @@ const Settings: React.FC = () => {
                   Date
                 </Label>
                 <div className="col-span-3">
-                  <DatePicker
-                    date={formData.date}
-                    onSelect={(date) => setFormData({ ...formData, date: date })}
-                    placeholder="Select holiday date"
+                  <Input
+                    type="date"
+                    value={formData.date ? formData.date.toISOString().split('T')[0] : ''}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value ? new Date(e.target.value) : undefined })}
                     className={`w-full ${formErrors.date ? 'border-red-500' : ''}`}
                   />
                   {formErrors.date && (
