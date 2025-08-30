@@ -10,6 +10,7 @@ import { DateOfBirthPicker } from '@/components/ui/date-of-birth-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { adminAPI } from '@/services/api';
 
@@ -67,6 +68,7 @@ const EmployeesDebug: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteEmployee, setDeleteEmployee] = useState<Employee | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -796,20 +798,29 @@ const EmployeesDebug: React.FC = () => {
                       </Button>
                       
                       {/* More actions dropdown */}
-                      <DropdownMenu>
+                      <DropdownMenu 
+                        open={openDropdownId === employee.id}
+                        onOpenChange={(open) => setOpenDropdownId(open ? employee.id : null)}
+                      >
                         <DropdownMenuTrigger asChild>
                           <Button variant="outline" size="sm" title="More actions">
                             <MoreHorizontal className="w-4 h-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEditEmployee(employee)}>
+                          <DropdownMenuItem onClick={() => {
+                            handleEditEmployee(employee);
+                            setOpenDropdownId(null);
+                          }}>
                             <Pencil className="w-4 h-4 mr-2" />
                             Edit Employee
                           </DropdownMenuItem>
                           
                           {employee.user?.inviteStatus === 'active' && (
-                            <DropdownMenuItem onClick={() => handleResetPassword(employee)}>
+                            <DropdownMenuItem onClick={() => {
+                              handleResetPassword(employee);
+                              setOpenDropdownId(null);
+                            }}>
                               <Key className="w-4 h-4 mr-2" />
                               Reset Password
                             </DropdownMenuItem>
@@ -817,7 +828,10 @@ const EmployeesDebug: React.FC = () => {
                           
                           {employee.user?.inviteStatus === 'invite_expired' && (
                             <DropdownMenuItem 
-                              onClick={() => handleRegenerateInvite(employee)}
+                              onClick={() => {
+                                handleRegenerateInvite(employee);
+                                setOpenDropdownId(null);
+                              }}
                               className="text-blue-600 hover:text-blue-700"
                             >
                               <RefreshCw className="w-4 h-4 mr-2" />
@@ -827,7 +841,10 @@ const EmployeesDebug: React.FC = () => {
                           
                           {employee.user?.inviteStatus === 'active' && employee.user?.isActive ? (
                             <DropdownMenuItem 
-                              onClick={() => handleOffboardEmployee(employee)}
+                              onClick={() => {
+                                handleOffboardEmployee(employee);
+                                setOpenDropdownId(null);
+                              }}
                               className="text-orange-600 hover:text-orange-700"
                             >
                               <UserX className="w-4 h-4 mr-2" />
@@ -840,7 +857,10 @@ const EmployeesDebug: React.FC = () => {
                             </DropdownMenuItem>
                           ) : !employee.user?.isActive ? (
                             <DropdownMenuItem 
-                              onClick={() => handleActivateEmployee(employee)}
+                              onClick={() => {
+                                handleActivateEmployee(employee);
+                                setOpenDropdownId(null);
+                              }}
                               className="text-green-600 hover:text-green-700"
                             >
                               <UserCheck className="w-4 h-4 mr-2" />
@@ -849,7 +869,10 @@ const EmployeesDebug: React.FC = () => {
                           ) : null}
                           
                           <DropdownMenuItem 
-                            onClick={() => handleDeleteEmployee(employee)}
+                            onClick={() => {
+                              handleDeleteEmployee(employee);
+                              setOpenDropdownId(null);
+                            }}
                             className="text-red-600 hover:text-red-700"
                           >
                             <Trash2 className="w-4 h-4 mr-2" />
@@ -1307,39 +1330,38 @@ const EmployeesDebug: React.FC = () => {
           </DialogHeader>
           {offboardEmployee && (
             <div className="space-y-4">
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0">
-                    <UserX className="h-6 w-6 text-red-600" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-red-900 mb-2">
-                      Are you sure you want to off-board this employee?
-                    </h3>
-                    <div className="text-sm text-red-800 mb-3">
-                      <p className="font-medium">
-                        {offboardEmployee.firstName} {offboardEmployee.lastName}
-                      </p>
-                      <p>{offboardEmployee.position} • {offboardEmployee.department.name}</p>
-                      <p>{offboardEmployee.email}</p>
+              <Alert variant="destructive">
+                <UserX className="h-4 w-4" />
+                <AlertTitle>Are you sure you want to off-board this employee?</AlertTitle>
+                <AlertDescription>
+                  <div className="mt-2 space-y-2">
+                    <div className="font-medium">
+                      {offboardEmployee.firstName} {offboardEmployee.lastName}
                     </div>
-                    <div className="text-sm text-red-700 space-y-1">
-                      <p>⚠️ <strong>This action will:</strong></p>
-                      <ul className="ml-4 space-y-1">
-                        <li>• Prevent the employee from logging into the system</li>
-                        <li>• Block access to all leave management features</li>
-                        <li>• Preserve all historical data and records</li>
-                      </ul>
+                    <div className="text-sm">
+                      {offboardEmployee.position} • {offboardEmployee.department.name}
+                    </div>
+                    <div className="text-sm">
+                      {offboardEmployee.email}
                     </div>
                   </div>
-                </div>
-              </div>
+                  <div className="mt-3 space-y-1">
+                    <p className="font-semibold">This action will:</p>
+                    <ul className="text-sm space-y-1 ml-4">
+                      <li>• Prevent the employee from logging into the system</li>
+                      <li>• Block access to all leave management features</li>
+                      <li>• Preserve all historical data and records</li>
+                    </ul>
+                  </div>
+                </AlertDescription>
+              </Alert>
               
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <p className="text-sm text-amber-800">
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
                   <strong>Note:</strong> The employee can be reactivated later if needed. All data will be preserved.
-                </p>
-              </div>
+                </AlertDescription>
+              </Alert>
               
               <div className="flex space-x-3 pt-4">
                 <Button
@@ -1388,41 +1410,39 @@ const EmployeesDebug: React.FC = () => {
           </DialogHeader>
           {deleteEmployee && (
             <div className="space-y-4">
-              <div className="p-4 bg-red-100 border border-red-300 rounded-lg">
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0">
-                    <Trash2 className="h-6 w-6 text-red-700" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-red-900 mb-2">
-                      Are you sure you want to permanently delete this employee?
-                    </h3>
-                    <div className="text-sm text-red-800 mb-3">
-                      <p className="font-medium">
-                        {deleteEmployee.firstName} {deleteEmployee.lastName}
-                      </p>
-                      <p>{deleteEmployee.position} • {deleteEmployee.department.name}</p>
-                      <p>{deleteEmployee.email}</p>
+              <Alert variant="destructive">
+                <Trash2 className="h-4 w-4" />
+                <AlertTitle>Are you sure you want to permanently delete this employee?</AlertTitle>
+                <AlertDescription>
+                  <div className="mt-2 space-y-2">
+                    <div className="font-medium">
+                      {deleteEmployee.firstName} {deleteEmployee.lastName}
                     </div>
-                    <div className="text-sm text-red-800 space-y-1">
-                      <p>🚨 <strong>This action will PERMANENTLY:</strong></p>
-                      <ul className="ml-4 space-y-1">
-                        <li>• Delete all employee information</li>
-                        <li>• Remove all leave history and records</li>
-                        <li>• Delete user account and login access</li>
-                        <li>• Remove from all department assignments</li>
-                        <li>• Clear manager relationships</li>
-                      </ul>
+                    <div className="text-sm">
+                      {deleteEmployee.position} • {deleteEmployee.department.name}
+                    </div>
+                    <div className="text-sm">
+                      {deleteEmployee.email}
                     </div>
                   </div>
-                </div>
-              </div>
+                  <div className="mt-3 space-y-1">
+                    <p className="font-semibold">This action will PERMANENTLY:</p>
+                    <ul className="text-sm space-y-1 ml-4">
+                      <li>• Delete all employee information</li>
+                      <li>• Remove all leave history and records</li>
+                      <li>• Delete user account and login access</li>
+                      <li>• Remove from all department assignments</li>
+                      <li>• Clear manager relationships</li>
+                    </ul>
+                  </div>
+                </AlertDescription>
+              </Alert>
               
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-sm text-red-800">
+              <Alert variant="destructive">
+                <AlertDescription>
                   <strong>⚠️ WARNING:</strong> This action cannot be undone! Consider using "Off-board Employee" instead to preserve data while removing access.
-                </p>
-              </div>
+                </AlertDescription>
+              </Alert>
               
               <div className="flex space-x-3 pt-4">
                 <Button
