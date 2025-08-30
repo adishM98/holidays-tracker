@@ -66,6 +66,8 @@ const LeaveCalendar: React.FC = () => {
   const [isEditLeaveDialogOpen, setIsEditLeaveDialogOpen] = useState(false);
   const [selectedLeave, setSelectedLeave] = useState<LeaveRequest | null>(null);
   const [isProcessingApproval, setIsProcessingApproval] = useState<string | null>(null);
+  const [isHolidayDialogOpen, setIsHolidayDialogOpen] = useState(false);
+  const [selectedHoliday, setSelectedHoliday] = useState<Holiday | null>(null);
   const { toast } = useToast();
 
   // Helper function to format date for input fields without timezone issues
@@ -146,16 +148,26 @@ const LeaveCalendar: React.FC = () => {
   };
 
   const handleDateClick = (day: number) => {
-    // Prevent clicking on weekends or holidays
+    const dateString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    
+    // Check if there's a holiday on this date first
+    const holidayOnDate = holidays.find(holiday => {
+      const holidayDate = formatDateForInput(new Date(holiday.date));
+      return holidayDate === dateString;
+    });
+    
+    if (holidayOnDate) {
+      // Show holiday details popup
+      setSelectedHoliday(holidayOnDate);
+      setIsHolidayDialogOpen(true);
+      return;
+    }
+    
+    // Prevent clicking on weekends
     if (isDateDisabled(day)) {
-      const dateString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const date = new Date(dateString);
       const dayOfWeek = date.getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-      const isHoliday = holidays.some(holiday => {
-        const holidayDate = formatDateForInput(new Date(holiday.date));
-        return holidayDate === dateString;
-      });
       
       toast({
         title: "Date Not Available",
@@ -165,10 +177,9 @@ const LeaveCalendar: React.FC = () => {
       return;
     }
     
-    const clickedDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     // Create date object using the local timezone to avoid timezone conversion issues
     const clickedDateObject = new Date(currentYear, currentMonth, day);
-    setSelectedDate(clickedDate);
+    setSelectedDate(dateString);
     setLeaveForm({
       ...leaveForm,
       startDate: clickedDateObject,
@@ -566,7 +577,9 @@ const LeaveCalendar: React.FC = () => {
                   key={`${currentYear}-${currentMonth}-${day}`}
                   className={`p-2 h-24 border border-border rounded-lg overflow-hidden transition-colors ${
                     isDisabled 
-                      ? 'cursor-not-allowed bg-gray-100 dark:bg-gray-800 opacity-60'
+                      ? hasHoliday 
+                        ? 'cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/20 hover:border-red-300 dark:hover:border-red-600 bg-red-50 border-red-200'
+                        : 'cursor-not-allowed bg-gray-100 dark:bg-gray-800 opacity-60'
                       : 'cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-600'
                   } ${
                     isToday ? 'bg-primary/5 border-primary/20' : 
@@ -999,6 +1012,68 @@ const LeaveCalendar: React.FC = () => {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Holiday Details Dialog */}
+      <Dialog open={isHolidayDialogOpen} onOpenChange={setIsHolidayDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Calendar className="h-5 w-5 text-orange-600" />
+              <span>Holiday Details</span>
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedHoliday && (
+            <div className="space-y-4 py-4">
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Holiday Name</Label>
+                <div className="mt-1 text-lg font-medium text-foreground">
+                  {selectedHoliday.name}
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Date</Label>
+                <div className="mt-1 text-sm text-foreground">
+                  {new Date(selectedHoliday.date).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </div>
+              </div>
+
+              {selectedHoliday.description && (
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Description</Label>
+                  <div className="mt-1 text-sm text-foreground bg-orange-50 dark:bg-orange-950/50 p-3 rounded-md border border-orange-200 dark:border-orange-800">
+                    {selectedHoliday.description}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Type</Label>
+                <div className="mt-1">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 dark:bg-orange-950 text-orange-800 dark:text-orange-200">
+                    {selectedHoliday.isRecurring ? 'Recurring Holiday' : 'One-time Holiday'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-4 border-t">
+                <Button
+                  onClick={() => setIsHolidayDialogOpen(false)}
+                  className="bg-orange-600 hover:bg-orange-700 text-white"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
