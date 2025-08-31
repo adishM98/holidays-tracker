@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Pencil, Trash2, Upload, Info, Clipboard, MoreHorizontal, Key, CheckCircle, UserX, UserCheck, RefreshCw, Clock } from 'lucide-react';
+import { Plus, Pencil, Trash2, Upload, Info, Clipboard, MoreHorizontal, Key, CheckCircle, UserX, UserCheck, RefreshCw, Clock, Users, Search } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { adminAPI } from '@/services/api';
+import { TimeManagementBackground } from '@/components/ui/time-management-background';
 
 interface Employee {
   id: string;
@@ -68,6 +69,8 @@ const EmployeesDebug: React.FC = () => {
   const [deleteEmployee, setDeleteEmployee] = useState<Employee | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -414,6 +417,20 @@ const EmployeesDebug: React.FC = () => {
     }
   };
 
+  // Filter employees based on search and department
+  const filteredEmployees = employees.filter(employee => {
+    const matchesSearch = searchTerm === '' || 
+      employee.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      `${employee.firstName} ${employee.lastName}`.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesDepartment = selectedDepartment === '' || selectedDepartment === 'all' || 
+      employee.department.id === selectedDepartment;
+    
+    return matchesSearch && matchesDepartment;
+  });
+
   const generateInviteURL = (employee: Employee) => {
     // Generate a secure invite token (in a real implementation, this would be generated on the backend)
     // Use | as delimiter since it's unlikely to appear in IDs or emails
@@ -678,46 +695,92 @@ const EmployeesDebug: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Employees</h1>
-        <div className="flex items-center space-x-3">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv,.xlsx,.xls"
-            onChange={handleBulkUpload}
-            className="hidden"
-          />
+    <div className="relative min-h-screen">
+      <TimeManagementBackground />
+      <div className="relative z-10 space-y-6">
+        {/* Hero Section */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+              <Users className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Employees</h1>
+              <p className="text-muted-foreground mt-1 text-sm">Manage all your people and their roles in one place</p>
+            </div>
+          </div>
           
-          <Button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-          >
-            <Upload className="w-4 h-4 mr-2" />
-            {isUploading ? 'Uploading...' : 'Bulk Import'}
-          </Button>
-          
-          <Button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              console.log('Add Employee button clicked!');
-              handleOpenAddDialog();
-            }}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Employee
-          </Button>
+          <div className="flex items-center space-x-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,.xlsx,.xls"
+              onChange={handleBulkUpload}
+              className="hidden"
+            />
+            
+            <Button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              variant="outline" 
+              className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 transition-all duration-200 hover:scale-105 hover:shadow-md"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              {isUploading ? 'Uploading...' : 'Bulk Import'}
+            </Button>
+            
+            <Button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Add Employee button clicked!');
+                handleOpenAddDialog();
+              }}
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Employee
+            </Button>
+          </div>
         </div>
-      </div>
 
-      {/* Employee Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Employee List</CardTitle>
-        </CardHeader>
-        <CardContent>
+        {/* Employee List */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Users className="w-5 h-5 mr-2" />
+              Employee List
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <Input
+                    placeholder="Search employees..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div className="w-full sm:w-48">
+                <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Departments" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Departments</SelectItem>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           <Table>
             <TableHeader>
               <TableRow>
@@ -733,7 +796,7 @@ const EmployeesDebug: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {employees.map((employee, index) => (
+              {filteredEmployees.map((employee, index) => (
                 <TableRow key={employee.id}>
                   <TableCell>{index + 1}</TableCell>
                   <TableCell>{employee.employeeId || 'N/A'}</TableCell>
@@ -883,10 +946,31 @@ const EmployeesDebug: React.FC = () => {
                   </TableCell>
                 </TableRow>
               ))}
-              {employees.length === 0 && (
+              {filteredEmployees.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-gray-500">
-                    No employees found
+                  <TableCell colSpan={8} className="text-center py-16">
+                    <div className="flex flex-col items-center space-y-4">
+                      <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center">
+                        <Users className="h-8 w-8 text-green-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-foreground mb-1">
+                          {employees.length === 0 ? 'No employees added yet' : 'No employees found'}
+                        </h3>
+                        <p className="text-muted-foreground text-sm">
+                          {employees.length === 0 ? 'Start by adding your first team member' : 'Try adjusting your search or filter criteria'}
+                        </p>
+                      </div>
+                      <div className="flex justify-center">
+                        <Button 
+                          onClick={() => handleOpenAddDialog()}
+                          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Employee
+                        </Button>
+                      </div>
+                    </div>
                   </TableCell>
                 </TableRow>
               )}
@@ -1570,6 +1654,7 @@ const EmployeesDebug: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 };
