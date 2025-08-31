@@ -826,7 +826,7 @@ const ApplyLeave: React.FC = () => {
 
       {/* Apply Leave Dialog */}
       <Dialog open={isApplyDialogOpen} onOpenChange={setIsApplyDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent \n          className="sm:max-w-md"\n          style={{ \n            borderRadius: '24px',\n            border: 'none',\n            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'\n          }}\n        >
           <DialogHeader>
             <DialogTitle className="flex items-center text-lg">
               <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center mr-3">
@@ -931,7 +931,14 @@ const ApplyLeave: React.FC = () => {
 
       {/* View Leave Request Dialog */}
       <Dialog open={isViewLeaveDialogOpen} onOpenChange={setIsViewLeaveDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent 
+          className="sm:max-w-[500px]"
+          style={{ 
+            borderRadius: '24px',
+            border: 'none',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <Calendar className="h-5 w-5" />
@@ -1049,7 +1056,7 @@ const ApplyLeave: React.FC = () => {
                     onClick={handleCancelLeaveClick}
                     disabled={isCancelling}
                     variant="destructive"
-                    className="flex-1"
+                    className="flex-1 rounded-full"
                   >
                     Cancel Request
                   </Button>
@@ -1062,7 +1069,14 @@ const ApplyLeave: React.FC = () => {
 
       {/* Holiday Details Dialog */}
       <Dialog open={isHolidayDialogOpen} onOpenChange={setIsHolidayDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent 
+          className="max-w-md"
+          style={{ 
+            borderRadius: '24px',
+            border: 'none',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <Calendar className="h-5 w-5 text-orange-600" />
@@ -1115,7 +1129,14 @@ const ApplyLeave: React.FC = () => {
 
       {/* Cancel Confirmation Dialog */}
       <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent 
+          className="sm:max-w-md"
+          style={{ 
+            borderRadius: '24px',
+            border: 'none',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2 text-destructive">
               <X className="h-5 w-5" />
@@ -1150,7 +1171,7 @@ const ApplyLeave: React.FC = () => {
                 <Button
                   variant="outline"
                   onClick={() => setIsCancelDialogOpen(false)}
-                  className="flex-1"
+                  className="flex-1 rounded-full"
                   disabled={isCancelling}
                 >
                   Keep Request
@@ -1159,7 +1180,7 @@ const ApplyLeave: React.FC = () => {
                   onClick={handleCancelLeave}
                   disabled={isCancelling}
                   variant="destructive"
-                  className="flex-1"
+                  className="flex-1 rounded-full"
                 >
                   {isCancelling ? (
                     <>

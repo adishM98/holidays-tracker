@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { User, Lock, Phone, Mail, Calendar, MapPin, Briefcase, Shield, Eye, EyeOff } from 'lucide-react';
+import { User, Lock, Phone, Mail, Calendar, MapPin, Briefcase, Shield, Eye, EyeOff, CheckCircle, Clock, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { employeeAPI, authAPI } from '@/services/api';
@@ -183,31 +186,54 @@ const Profile: React.FC = () => {
     );
   }
 
+  const getEmployeeStatus = () => {
+    if (user?.mustChangePassword) return { label: 'Password Change Required', variant: 'destructive' as const, icon: Shield };
+    if (profile?.user.role === 'admin') return { label: 'Administrator', variant: 'default' as const, icon: UserCheck };
+    return { label: 'Active', variant: 'secondary' as const, icon: CheckCircle };
+  };
+
+  const status = getEmployeeStatus();
+  const StatusIcon = status.icon;
+
   return (
     <div className="container mx-auto p-6">
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center text-white font-bold text-xl">
-              {profile.firstName[0]}{profile.lastName[0]}
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">
-                {profile.firstName} {profile.lastName}
-              </h1>
-              <p className="text-lg text-muted-foreground">{profile.position}</p>
-            </div>
-          </div>
-          
-          <div className="flex space-x-3">
-            <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="flex items-center space-x-2">
-                  <Lock className="h-4 w-4" />
-                  <span>Change Password</span>
-                </Button>
-              </DialogTrigger>
+        {/* Enhanced Profile Overview Header */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+              <div className="flex items-center space-x-4">
+                <Avatar className="h-20 w-20">
+                  <AvatarFallback className="bg-gradient-primary text-white text-2xl font-bold">
+                    {profile.firstName[0]}{profile.lastName[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="space-y-2">
+                  <h1 className="text-3xl font-bold text-foreground">
+                    {profile.firstName} {profile.lastName}
+                  </h1>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <p className="text-lg text-muted-foreground">{profile.position}</p>
+                    <Badge variant={status.variant} className="flex items-center gap-1">
+                      <StatusIcon className="h-3 w-3" />
+                      {status.label}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                    <Mail className="h-4 w-4" />
+                    <span>{profile.user.email}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="ml-auto">
+                <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="secondary" className="flex items-center space-x-2">
+                      <Lock className="h-4 w-4" />
+                      <span>Change Password</span>
+                    </Button>
+                  </DialogTrigger>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle>Change Password</DialogTitle>
@@ -276,14 +302,16 @@ const Profile: React.FC = () => {
                 </div>
               </DialogContent>
             </Dialog>
-          </div>
-        </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {user?.mustChangePassword && (
           <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
             <div className="flex items-center space-x-3">
               <Shield className="h-5 w-5 text-destructive" />
-              <div>
+              <div className="flex-1">
                 <h3 className="font-semibold text-destructive">Password Change Required</h3>
                 <p className="text-sm text-destructive/80">You must change your password before continuing to use the system.</p>
               </div>
@@ -298,81 +326,135 @@ const Profile: React.FC = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Personal Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <User className="h-5 w-5" />
-                <span>Personal Information</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">First Name</Label>
-                  <p className="mt-1 font-medium">{profile.firstName}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Last Name</Label>
-                  <p className="mt-1 font-medium">{profile.lastName}</p>
-                </div>
-              </div>
-              
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">Email Address</Label>
-                <div className="mt-1 flex items-center space-x-2">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">{profile.user.email}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Tabbed Layout */}
+        <Tabs defaultValue="personal" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="personal" className="flex items-center space-x-2">
+              <User className="h-4 w-4" />
+              <span>Personal Information</span>
+            </TabsTrigger>
+            <TabsTrigger value="employment" className="flex items-center space-x-2">
+              <Briefcase className="h-4 w-4" />
+              <span>Employment Details</span>
+            </TabsTrigger>
+          </TabsList>
 
-          {/* Employment Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Briefcase className="h-5 w-5" />
-                <span>Employment Details</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">Employee ID</Label>
-                <p className="mt-1 font-medium">{profile.employeeId}</p>
-              </div>
-              
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">Position</Label>
-                <p className="mt-1 font-medium">{profile.position}</p>
-              </div>
-              
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">Department</Label>
-                <div className="mt-1 flex items-center space-x-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">{profile.department.name}</span>
+          <TabsContent value="personal" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <User className="h-5 w-5" />
+                  <span>Personal Information</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">First Name</Label>
+                    <div className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{profile.firstName}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Last Name</Label>
+                    <div className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{profile.lastName}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">Joining Date</Label>
-                <div className="mt-1 flex items-center space-x-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">{new Date(profile.joiningDate).toLocaleDateString()}</span>
+                
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground">Email Address</Label>
+                  <div className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">{profile.user.email}</span>
+                  </div>
                 </div>
-              </div>
-              
-              {profile.manager && (
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Manager</Label>
-                  <p className="mt-1 font-medium">{profile.manager.firstName} {profile.manager.lastName}</p>
+
+                {profile.phone && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Phone Number</Label>
+                    <div className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{profile.phone}</span>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="employment" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Briefcase className="h-5 w-5" />
+                  <span>Employment Details</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Employee ID</Label>
+                    <div className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg">
+                      <Briefcase className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{profile.employeeId}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Position</Label>
+                    <div className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg">
+                      <Briefcase className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{profile.position}</span>
+                    </div>
+                  </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Department</Label>
+                    <div className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{profile.department.name}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Joining Date</Label>
+                    <div className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{new Date(profile.joiningDate).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {profile.manager && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Manager</Label>
+                    <div className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{profile.manager.firstName} {profile.manager.lastName}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground">Account Status</Label>
+                  <div className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg">
+                    <StatusIcon className="h-4 w-4 text-muted-foreground" />
+                    <Badge variant={status.variant} className="flex items-center gap-1">
+                      <StatusIcon className="h-3 w-3" />
+                      {status.label}
+                    </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

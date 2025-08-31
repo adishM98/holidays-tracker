@@ -3,7 +3,7 @@ import { Calendar, ChevronLeft, ChevronRight, Clock, User, CalendarDays, Plus, E
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -757,9 +757,10 @@ const LeaveCalendar: React.FC = () => {
                     'text-foreground'
                   }`}>
                     <span>{day}</span>
-                    {!isDisabled && <Plus className="h-3 w-3 opacity-50 hover:opacity-100" />}
-                    {isWeekend && !hasHoliday && (
-                      <span className="text-xs text-gray-500">Weekend</span>
+                    {!isDisabled && !hasHoliday && !isWeekend && (
+                      <div className="w-6 h-6 bg-blue-50 dark:bg-blue-900/30 rounded-full flex items-center justify-center hover:bg-blue-100 dark:hover:bg-blue-800/40 transition-colors duration-200 group">
+                        <Plus className="h-3 w-3 text-blue-600 dark:text-blue-400 opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all duration-200" />
+                      </div>
                     )}
                   </div>
                   <div className="space-y-1">
@@ -775,7 +776,17 @@ const LeaveCalendar: React.FC = () => {
                         </div>
                       </div>
                     ))}
-                    {!hasHoliday && getFilteredLeaves(leavesForDay).slice(0, 2).map((leave, idx) => {
+                    {/* Show weekend badge if it's weekend and no holiday */}
+                    {!hasHoliday && isWeekend && (
+                      <div className="flex items-center justify-center">
+                        <Badge className="text-xs px-2 py-1 bg-gradient-to-br from-gray-100 to-gray-200 text-gray-700 border border-gray-300 rounded-full font-medium">
+                          <span className="mr-1">🛏️</span>
+                          Weekend
+                        </Badge>
+                      </div>
+                    )}
+                    
+                    {!hasHoliday && !isWeekend && getFilteredLeaves(leavesForDay).slice(0, 2).map((leave, idx) => {
                       const leaveTypeIcons = {
                         'sick': Heart,
                         'casual': Sun, 
@@ -1056,9 +1067,24 @@ const LeaveCalendar: React.FC = () => {
 
       {/* Add Leave Dialog */}
       <Dialog open={isAddLeaveDialogOpen} onOpenChange={setIsAddLeaveDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent 
+          className="max-w-md"
+          style={{ 
+            borderRadius: '24px',
+            border: 'none',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          }}
+        >
           <DialogHeader>
-            <DialogTitle>Add Leave for {selectedDate}</DialogTitle>
+            <DialogTitle className="flex items-center text-lg">
+              <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center mr-3">
+                <CalendarDays className="h-4 w-4 text-white" />
+              </div>
+              Add Leave for {selectedDate}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground mt-2">
+              Fill out the details below to create a leave request for the selected employee.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -1140,21 +1166,25 @@ const LeaveCalendar: React.FC = () => {
                   setIsAddLeaveDialogOpen(false);
                 }}
                 disabled={isSubmitting}
-                className="border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white"
+                className="flex-1 border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white rounded-full"
               >
                 Cancel
               </Button>
               <Button 
                 onClick={handleCreateLeave}
                 disabled={isSubmitting}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-full"
               >
                 {isSubmitting ? (
                   <>
-                    <Clock className="w-4 h-4 mr-2 animate-spin" />
+                    <CalendarDays className="h-4 w-4 mr-2" />
                     Creating...
                   </>
                 ) : (
-                  'Create Leave'
+                  <>
+                    <CalendarDays className="h-4 w-4 mr-2" />
+                    Create Leave
+                  </>
                 )}
               </Button>
             </div>
@@ -1164,7 +1194,14 @@ const LeaveCalendar: React.FC = () => {
 
       {/* Edit Leave Dialog */}
       <Dialog open={isEditLeaveDialogOpen} onOpenChange={setIsEditLeaveDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent 
+          className="max-w-md"
+          style={{ 
+            borderRadius: '24px',
+            border: 'none',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          }}
+        >
           <DialogHeader>
             <DialogTitle>Edit Leave Request</DialogTitle>
           </DialogHeader>
@@ -1250,13 +1287,14 @@ const LeaveCalendar: React.FC = () => {
                   resetLeaveForm();
                 }}
                 disabled={isSubmitting}
-                className="border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white"
+                className="border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white rounded-full"
               >
                 Cancel
               </Button>
               <Button 
                 onClick={handleUpdateLeave}
                 disabled={isSubmitting}
+                className="rounded-full"
               >
                 {isSubmitting ? (
                   <>
@@ -1274,7 +1312,14 @@ const LeaveCalendar: React.FC = () => {
 
       {/* Holiday Details Dialog */}
       <Dialog open={isHolidayDialogOpen} onOpenChange={setIsHolidayDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent 
+          className="max-w-md"
+          style={{ 
+            borderRadius: '24px',
+            border: 'none',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <Calendar className="h-5 w-5 text-orange-600" />
@@ -1336,7 +1381,14 @@ const LeaveCalendar: React.FC = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent 
+          className="sm:max-w-md"
+          style={{ 
+            borderRadius: '24px',
+            border: 'none',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2 text-destructive">
               <Trash2 className="h-5 w-5" />
@@ -1386,7 +1438,7 @@ const LeaveCalendar: React.FC = () => {
                 <Button
                   variant="outline"
                   onClick={() => setIsDeleteDialogOpen(false)}
-                  className="flex-1"
+                  className="flex-1 rounded-full"
                   disabled={isDeletingLeave}
                 >
                   Cancel
@@ -1395,7 +1447,7 @@ const LeaveCalendar: React.FC = () => {
                   onClick={handleDeleteLeave}
                   disabled={isDeletingLeave}
                   variant="destructive"
-                  className="flex-1"
+                  className="flex-1 rounded-full"
                 >
                   {isDeletingLeave ? (
                     <>
