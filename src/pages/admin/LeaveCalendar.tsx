@@ -855,8 +855,8 @@ const LeaveCalendar: React.FC = () => {
               onClick={() => toggleFilter('sick')}
               className={`flex items-center space-x-2 px-3 py-1.5 rounded-full border transition-all duration-200 hover:shadow-md ${
                 activeFilters.includes('sick') 
-                  ? 'bg-red-100 border-red-300 text-red-800 shadow-sm' 
-                  : 'bg-white border-red-200 text-red-600 hover:bg-red-50'
+                  ? 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700 text-red-800 dark:text-red-300 shadow-sm' 
+                  : 'bg-white dark:bg-gray-800 border-red-200 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
               }`}
             >
               <Heart className="h-3 w-3" />
@@ -867,8 +867,8 @@ const LeaveCalendar: React.FC = () => {
               onClick={() => toggleFilter('casual')}
               className={`flex items-center space-x-2 px-3 py-1.5 rounded-full border transition-all duration-200 hover:shadow-md ${
                 activeFilters.includes('casual') 
-                  ? 'bg-green-100 border-green-300 text-green-800 shadow-sm' 
-                  : 'bg-white border-green-200 text-green-600 hover:bg-green-50'
+                  ? 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700 text-green-800 dark:text-green-300 shadow-sm' 
+                  : 'bg-white dark:bg-gray-800 border-green-200 dark:border-green-700 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20'
               }`}
             >
               <Sun className="h-3 w-3" />
@@ -879,8 +879,8 @@ const LeaveCalendar: React.FC = () => {
               onClick={() => toggleFilter('earned')}
               className={`flex items-center space-x-2 px-3 py-1.5 rounded-full border transition-all duration-200 hover:shadow-md ${
                 activeFilters.includes('earned') 
-                  ? 'bg-blue-100 border-blue-300 text-blue-800 shadow-sm' 
-                  : 'bg-white border-blue-200 text-blue-600 hover:bg-blue-50'
+                  ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-300 shadow-sm' 
+                  : 'bg-white dark:bg-gray-800 border-blue-200 dark:border-blue-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
               }`}
             >
               <Gift className="h-3 w-3" />
@@ -891,8 +891,8 @@ const LeaveCalendar: React.FC = () => {
               onClick={() => toggleFilter('compensation')}
               className={`flex items-center space-x-2 px-3 py-1.5 rounded-full border transition-all duration-200 hover:shadow-md ${
                 activeFilters.includes('compensation') 
-                  ? 'bg-purple-100 border-purple-300 text-purple-800 shadow-sm' 
-                  : 'bg-white border-purple-200 text-purple-600 hover:bg-purple-50'
+                  ? 'bg-purple-100 dark:bg-purple-900/30 border-purple-300 dark:border-purple-700 text-purple-800 dark:text-purple-300 shadow-sm' 
+                  : 'bg-white dark:bg-gray-800 border-purple-200 dark:border-purple-700 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20'
               }`}
             >
               <Calendar className="h-3 w-3" />
@@ -902,7 +902,7 @@ const LeaveCalendar: React.FC = () => {
             {activeFilters.length > 0 && (
               <button
                 onClick={() => setActiveFilters([])}
-                className="flex items-center space-x-1 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm transition-colors duration-200"
+                className="flex items-center space-x-1 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 text-sm transition-colors duration-200"
               >
                 <X className="h-3 w-3" />
                 <span>Clear Filters</span>
