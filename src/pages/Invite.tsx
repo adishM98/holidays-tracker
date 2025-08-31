@@ -7,8 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { adminAPI } from '@/services/api';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const Invite: React.FC = () => {
+  const { actualTheme } = useTheme();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -215,17 +217,15 @@ const Invite: React.FC = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center mb-4">
-            <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center shadow-lg p-3">
-              <img 
-                src="/tooljet-light.svg"
-                alt="ToolJet Logo" 
-                className="h-full w-full object-contain"
-                onError={(e) => {
-                  // Fallback to existing logo if new ones fail
-                  e.currentTarget.src = "/light/tooljet-light.svg";
-                }}
-              />
-            </div>
+            <img 
+              src={actualTheme === 'dark' ? "/tooljet-dark.svg" : "/tooljet-light.svg"}
+              alt="ToolJet Logo" 
+              className="h-8 w-auto object-contain"
+              onError={(e) => {
+                // Fallback to light logo if dark logo fails
+                e.currentTarget.src = "/tooljet-light.svg";
+              }}
+            />
           </div>
           <p className="text-muted-foreground">Complete your account setup</p>
         </CardHeader>

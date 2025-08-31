@@ -94,12 +94,12 @@ const Sidebar: React.FC = () => {
           <div className="p-6 border-b border-border mt-16">
             <div className="flex items-center justify-center">
               <img 
-                src={actualTheme === 'dark' ? "/light/light.png" : "/light/tooljet-light.svg"}
+                src={actualTheme === 'dark' ? "/tooljet-dark.svg" : "/tooljet-light.svg"}
                 alt="ToolJet Logo" 
-                className={`h-8 w-auto ${actualTheme === 'dark' ? 'brightness-0 invert' : ''}`}
+                className="h-8 w-auto"
                 onError={(e) => {
-                  // Fallback to PNG if SVG fails to load
-                  e.currentTarget.src = "/light/light.png";
+                  // Fallback to light SVG if dark SVG fails to load
+                  e.currentTarget.src = "/tooljet-light.svg";
                 }}
               />
             </div>
@@ -172,12 +172,12 @@ const Sidebar: React.FC = () => {
       <div className="p-6 border-b border-border">
         <div className="flex items-center justify-center">
           <img 
-            src={actualTheme === 'dark' ? "/light/light.png" : "/light/tooljet-light.svg"}
+            src={actualTheme === 'dark' ? "/tooljet-dark.svg" : "/tooljet-light.svg"}
             alt="ToolJet Logo" 
-            className={`h-8 w-auto ${actualTheme === 'dark' ? 'brightness-0 invert' : ''}`}
+            className="h-8 w-auto"
             onError={(e) => {
-              // Fallback to PNG if SVG fails to load
-              e.currentTarget.src = "/light/light.png";
+              // Fallback to light SVG if dark SVG fails to load
+              e.currentTarget.src = "/tooljet-light.svg";
             }}
           />
         </div>

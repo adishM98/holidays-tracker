@@ -82,11 +82,11 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center justify-between p-4">
           <img 
-            src={actualTheme === 'dark' ? "/light/light.png" : "/light/tooljet-light.svg"}
+            src={actualTheme === 'dark' ? "/tooljet-dark.svg" : "/tooljet-light.svg"}
             alt="ToolJet Logo" 
-            className={`h-6 w-auto ${actualTheme === 'dark' ? 'brightness-0 invert' : ''}`}
+            className="h-6 w-auto"
             onError={(e) => {
-              e.currentTarget.src = "/light/light.png";
+              e.currentTarget.src = "/tooljet-light.svg";
             }}
           />
           {/* <div className="flex flex-col">

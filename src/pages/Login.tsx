@@ -8,10 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const { actualTheme } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
@@ -60,17 +62,15 @@ const Login: React.FC = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center shadow-professional-md p-3">
-              <img 
-                src="/tooljet-light.svg"
-                alt="ToolJet Logo" 
-                className="h-full w-full object-contain"
-                onError={(e) => {
-                  // Fallback to existing logo if new ones fail
-                  e.currentTarget.src = "/light/tooljet-light.svg";
-                }}
-              />
-            </div>
+            <img 
+              src={actualTheme === 'dark' ? "/tooljet-dark.svg" : "/tooljet-light.svg"}
+              alt="ToolJet Logo" 
+              className="h-8 w-auto object-contain"
+              onError={(e) => {
+                // Fallback to light logo if dark logo fails
+                e.currentTarget.src = "/tooljet-light.svg";
+              }}
+            />
           </div>
         </div>
 
