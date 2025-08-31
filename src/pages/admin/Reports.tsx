@@ -69,6 +69,12 @@ const Reports: React.FC = () => {
     fetchInitialData();
   }, []);
 
+  useEffect(() => {
+    if (employees.length > 0) {
+      fetchLeaveBalances();
+    }
+  }, [employees]);
+
   const fetchInitialData = async () => {
     try {
       const [employeesResponse, departmentsResponse, leaveRequestsResponse] = await Promise.all([
@@ -202,37 +208,54 @@ const Reports: React.FC = () => {
     return path.split('.').reduce((current, key) => current?.[key], obj) || '';
   };
 
-  const calculateLeaveBalance = (employee: Employee, leaveType: string) => {
-    const employeeRequests = leaveRequests.filter(req => req.employee?.id === employee.id);
-    const approvedRequests = employeeRequests.filter(req => req.status === 'approved' && req.leaveType === leaveType);
-    
-    const usedDays = approvedRequests.reduce((total, req) => {
-      const startDate = new Date(req.startDate);
-      const endDate = new Date(req.endDate);
-      const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-      return total + diffDays;
-    }, 0);
+  // Add state for leave balances
+  const [leaveBalances, setLeaveBalances] = useState<Record<string, any>>({});
 
-    let totalAllocated = 0;
-    switch (leaveType) {
-      case 'earned':
-        totalAllocated = employee.annualLeaveDays;
-        break;
-      case 'sick':
-        totalAllocated = employee.sickLeaveDays;
-        break;
-      case 'casual':
-        totalAllocated = employee.casualLeaveDays;
-        break;
-      default:
-        totalAllocated = 0;
+  // Function to fetch leave balances for all employees
+  const fetchLeaveBalances = async () => {
+    try {
+      const balances: Record<string, any> = {};
+      
+      for (const employee of employees) {
+        try {
+          const balance = await adminAPI.getEmployeeLeaveBalance(employee.id);
+          balances[employee.id] = balance;
+        } catch (error) {
+          console.warn(`Failed to fetch balance for employee ${employee.id}:`, error);
+          // Fallback to zero balances if API fails
+          balances[employee.id] = {
+            earnedLeave: { total: 0, used: 0, remaining: 0 },
+            sickLeave: { total: 0, used: 0, remaining: 0 },
+            casualLeave: { total: 0, used: 0, remaining: 0 }
+          };
+        }
+      }
+      
+      setLeaveBalances(balances);
+    } catch (error) {
+      console.error('Failed to fetch leave balances:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch employee leave balances",
+        variant: "destructive",
+      });
     }
+  };
+
+  // Helper function to get leave balance for an employee
+  const getLeaveBalance = (employeeId: string, leaveType: string) => {
+    const balanceData = leaveBalances[employeeId];
+    if (!balanceData || !balanceData.balances) return { total: 0, used: 0, remaining: 0 };
+
+    const balances = balanceData.balances || [];
+    const balance = balances.find(b => b.leaveType === leaveType);
+    
+    if (!balance) return { total: 0, used: 0, remaining: 0 };
 
     return {
-      total: totalAllocated,
-      used: usedDays,
-      remaining: totalAllocated - usedDays
+      total: balance.totalDays || 0,
+      used: balance.usedDays || 0,
+      remaining: balance.availableDays || 0
     };
   };
 
@@ -258,10 +281,10 @@ const Reports: React.FC = () => {
     });
 
     const reportData = filteredEmployees.map(emp => {
-      const earnedBalance = calculateLeaveBalance(emp, 'earned');
-      const sickBalance = calculateLeaveBalance(emp, 'sick');
-      const casualBalance = calculateLeaveBalance(emp, 'casual');
-      const compensationBalance = calculateLeaveBalance(emp, 'compensation');
+      const earnedBalance = getLeaveBalance(emp.id, 'earned');
+      const sickBalance = getLeaveBalance(emp.id, 'sick');
+      const casualBalance = getLeaveBalance(emp.id, 'casual');
+      const compensationBalance = getLeaveBalance(emp.id, 'casual'); // Use casual as fallback for compensation
       
       // Count pending requests in date range
       const pendingRequests = filteredLeaveRequests.filter(req => 
@@ -440,36 +463,34 @@ const Reports: React.FC = () => {
 
   const generateLeaveBalanceReport = (type: 'opening' | 'closing') => {
     const reportData = employees.map(emp => {
-      const earnedBalance = calculateLeaveBalance(emp, 'earned');
-      const sickBalance = calculateLeaveBalance(emp, 'sick');
-      const casualBalance = calculateLeaveBalance(emp, 'casual');
+      const earnedBalance = getLeaveBalance(emp.id, 'earned');
+      const sickBalance = getLeaveBalance(emp.id, 'sick');
+      const casualBalance = getLeaveBalance(emp.id, 'casual');
       
       return {
         'Employee ID': emp.employeeId || 'N/A',
         'Employee Name': `${emp.firstName} ${emp.lastName}`,
         'Department': emp.department?.name || 'N/A',
         'Joining Date': emp.joiningDate ? new Date(emp.joiningDate).toLocaleDateString() : 'N/A',
-        'Earned Leave - Opening': type === 'opening' ? earnedBalance.total : earnedBalance.remaining,
-        'Sick Leave - Opening': type === 'opening' ? sickBalance.total : sickBalance.remaining,
-        'Casual Leave - Opening': type === 'opening' ? casualBalance.total : casualBalance.remaining,
+        'Earned Leave - Available': earnedBalance.remaining,
+        'Sick Leave - Available': sickBalance.remaining,
+        'Casual Leave - Available': casualBalance.remaining,
         'Earned Leave - Used': earnedBalance.used,
         'Sick Leave - Used': sickBalance.used,
         'Casual Leave - Used': casualBalance.used,
         'Earned Leave - Balance': earnedBalance.remaining,
         'Sick Leave - Balance': sickBalance.remaining,
         'Casual Leave - Balance': casualBalance.remaining,
-        'Total Opening Balance': type === 'opening' 
-          ? earnedBalance.total + sickBalance.total + casualBalance.total
-          : earnedBalance.remaining + sickBalance.remaining + casualBalance.remaining
+        'Total Available Balance': earnedBalance.remaining + sickBalance.remaining + casualBalance.remaining
       };
     });
     
     const headers = [
       'Employee ID', 'Employee Name', 'Department', 'Joining Date',
-      'Earned Leave - Opening', 'Sick Leave - Opening', 'Casual Leave - Opening',
+      'Earned Leave - Available', 'Sick Leave - Available', 'Casual Leave - Available',
       'Earned Leave - Used', 'Sick Leave - Used', 'Casual Leave - Used',
       'Earned Leave - Balance', 'Sick Leave - Balance', 'Casual Leave - Balance',
-      'Total Opening Balance'
+      'Total Available Balance'
     ];
     
     return { reportData, headers };
@@ -831,13 +852,13 @@ const Reports: React.FC = () => {
                                     <td className="border border-border p-2">{row['Employee Name']}</td>
                                     <td className="border border-border p-2">{row['Department']}</td>
                                     <td className="border border-border p-2">
-                                      <Badge variant="default">{row['Earned Leave - Opening']}</Badge>
+                                      <Badge variant="default">{row['Earned Leave - Available']}</Badge>
                                     </td>
                                     <td className="border border-border p-2">
-                                      <Badge variant="secondary">{row['Sick Leave - Opening']}</Badge>
+                                      <Badge variant="secondary">{row['Sick Leave - Available']}</Badge>
                                     </td>
                                     <td className="border border-border p-2">
-                                      <Badge variant="outline">{row['Casual Leave - Opening']}</Badge>
+                                      <Badge variant="outline">{row['Casual Leave - Available']}</Badge>
                                     </td>
                                   </tr>
                                 ))}
