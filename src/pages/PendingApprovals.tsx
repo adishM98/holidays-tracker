@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Clock, Check, X, Calendar, User, MessageSquare, Loader2 } from 'lucide-react';
+import { Clock, Check, X, Calendar, User, MessageSquare, Loader2, Clipboard, CheckSquare, BarChart3 } from 'lucide-react';
 import { leaveTypeLabels } from '@/data/mockData';
 import { managerAPI } from '@/services/api';
+import { TimeManagementBackground } from '@/components/ui/time-management-background';
 
 const PendingApprovals: React.FC = () => {
   const [requests, setRequests] = useState<any[]>([]);
@@ -94,13 +95,23 @@ const PendingApprovals: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Pending Approvals</h1>
-        <p className="text-muted-foreground mt-2">
-          Review and approve team leave requests
-        </p>
-      </div>
+    <div className="relative min-h-screen">
+      <TimeManagementBackground />
+      <div className="relative z-10 space-y-8">
+        {/* Hero Section */}
+        <div className="mb-8">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+              <CheckSquare className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Pending Approvals</h1>
+              <p className="text-muted-foreground mt-1 text-sm">
+                Review, approve, or reject leave requests from your team
+              </p>
+            </div>
+          </div>
+        </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-8">
@@ -110,63 +121,71 @@ const PendingApprovals: React.FC = () => {
       ) : pendingRequests.length > 0 ? (
         <div className="grid gap-6">
           {pendingRequests.map((request) => (
-            <Card key={request.id} className="shadow-professional-md border-0 bg-gradient-card hover:shadow-professional-lg transition-smooth">
+            <Card key={request.id} className="shadow-lg border-0 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-900 dark:to-blue-950/20 backdrop-blur-sm hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
               <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-3">
-                      <div className="w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Left Column - Employee Info */}
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold shadow-md">
                         {request.employee ? `${request.employee.firstName[0]}${request.employee.lastName[0]}` : 'U'}
                       </div>
                       <div>
-                        <p className="font-semibold text-foreground">
+                        <p className="font-bold text-foreground text-lg">
                           {request.employee ? `${request.employee.firstName} ${request.employee.lastName}` : 'Unknown Employee'}
                         </p>
-                        <p className="text-sm text-muted-foreground">
-                          Applied {formatDateTime(request.createdAt)}
+                        <p className="text-sm text-blue-600 font-medium">
+                          {request.employee?.position || 'Employee'}
                         </p>
                       </div>
-                      <Badge className="bg-warning-light text-warning border-warning/20">
-                        <div className="flex items-center space-x-1">
-                          <Clock className="h-3 w-3" />
-                          <span>Pending</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Applied {formatDateTime(request.createdAt)}
+                    </p>
+                  </div>
+
+                  {/* Right Column - Request Details */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                          <Calendar className="h-4 w-4 text-green-600" />
                         </div>
+                        <Badge className="bg-green-100 text-green-700 border-green-200 px-3 py-1 rounded-full">
+                          {leaveTypeLabels[request.leaveType] || request.leaveType}
+                        </Badge>
+                      </div>
+                      <Badge className="bg-amber-100 text-amber-700 border-amber-200 px-3 py-1 rounded-full flex items-center space-x-1">
+                        <Clock className="h-3 w-3" />
+                        <span>Pending</span>
                       </Badge>
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                      <div className="flex items-center space-x-2">
-                        <Calendar className="h-4 w-4 text-primary" />
-                        <div>
-                          <p className="text-sm text-muted-foreground">Leave Type</p>
-                          <p className="font-medium">{leaveTypeLabels[request.leaveType] || request.leaveType}</p>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <p className="text-sm text-muted-foreground">Duration</p>
-                        <p className="font-medium">
-                          {formatDate(request.startDate)} - {formatDate(request.endDate)}
-                        </p>
-                        <p className="text-sm text-muted-foreground">{request.daysCount || request.days || 0} days</p>
-                      </div>
-                      
-                      <div>
-                        <p className="text-sm text-muted-foreground">Reason</p>
-                        <p className="font-medium line-clamp-2">{request.reason || 'No reason provided'}</p>
-                      </div>
+                    
+                    <div className="bg-blue-50/50 dark:bg-blue-950/20 rounded-lg p-3">
+                      <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-1">Duration</p>
+                      <p className="font-bold text-foreground">
+                        {formatDate(request.startDate)} - {formatDate(request.endDate)}
+                      </p>
+                      <p className="text-sm text-blue-600 dark:text-blue-400">({request.daysCount || request.days || 0} days)</p>
+                    </div>
+                    
+                    <div className="bg-gray-50/50 dark:bg-gray-800/20 rounded-lg p-3">
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Reason</p>
+                      <p className="text-sm italic text-gray-600 dark:text-gray-400 leading-relaxed">
+                        "{request.reason || 'No reason provided'}"
+                      </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-3 pt-4 border-t border-border">
+                <div className="flex items-center justify-end space-x-3 pt-6 mt-4 border-t border-border/50">
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setSelectedRequest(request)}
-                        className="flex items-center space-x-2"
+                        className="rounded-full border-blue-200 text-blue-600 hover:bg-blue-50 flex items-center space-x-2 px-4"
                       >
                         <MessageSquare className="h-4 w-4" />
                         <span>Review</span>
@@ -225,7 +244,7 @@ const PendingApprovals: React.FC = () => {
                     onClick={() => handleApproval(request.id, 'approved')}
                     disabled={isProcessing}
                     size="sm"
-                    className="bg-gradient-success hover:opacity-90"
+                    className="rounded-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 px-4"
                   >
                     <Check className="h-4 w-4 mr-2" />
                     Quick Approve
@@ -236,7 +255,7 @@ const PendingApprovals: React.FC = () => {
                     disabled={isProcessing}
                     variant="outline"
                     size="sm"
-                    className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    className="rounded-full text-red-600 border-red-200 hover:bg-red-50 px-4"
                   >
                     <X className="h-4 w-4 mr-2" />
                     Reject
@@ -247,16 +266,20 @@ const PendingApprovals: React.FC = () => {
           ))}
         </div>
       ) : (
-        <Card className="shadow-professional-md border-0 bg-gradient-card">
-          <CardContent className="py-12">
+        <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-green-50/30 dark:from-gray-900 dark:to-green-950/20 backdrop-blur-sm">
+          <CardContent className="py-16">
             <div className="text-center">
-              <Check className="h-12 w-12 text-success mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">All Caught Up!</h3>
-              <p className="text-muted-foreground">No pending leave requests to review.</p>
+              <div className="w-20 h-20 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Clipboard className="h-10 w-10 text-green-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-foreground mb-3">No pending requests</h3>
+              <p className="text-muted-foreground text-lg">You're all caught up! 🎉</p>
+              <p className="text-muted-foreground text-sm mt-2">When your team submits leave requests, they'll appear here for review.</p>
             </div>
           </CardContent>
         </Card>
       )}
+      </div>
     </div>
   );
 };
