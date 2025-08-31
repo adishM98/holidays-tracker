@@ -575,17 +575,18 @@ const LeaveCalendar: React.FC = () => {
               return (
                 <div
                   key={`${currentYear}-${currentMonth}-${day}`}
-                  className={`p-2 h-24 border border-border rounded-lg overflow-hidden transition-colors ${
-                    isDisabled 
-                      ? hasHoliday 
-                        ? 'cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/20 hover:border-red-300 dark:hover:border-red-600 bg-red-50 border-red-200'
-                        : 'cursor-not-allowed bg-gray-100 dark:bg-gray-800 opacity-60'
-                      : 'cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-600'
+                  className={`p-2 h-24 border rounded-lg overflow-hidden transition-colors ${
+                    isToday 
+                      ? 'bg-primary/5 border-primary/20 ring-1 ring-primary/20'
+                      : isDisabled 
+                        ? hasHoliday 
+                          ? 'cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/20 hover:border-red-300 dark:hover:border-red-600 bg-red-50 border-red-200'
+                          : 'cursor-not-allowed bg-gray-100 dark:bg-gray-800 opacity-60 border-border'
+                        : 'cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-600 border-border'
                   } ${
-                    isToday ? 'bg-primary/5 border-primary/20' : 
-                    hasHoliday ? 'bg-red-50 border-red-200' : 
-                    isWeekend ? 'bg-gray-50 dark:bg-gray-900 border-gray-300' :
-                    'bg-background'
+                    !isToday && hasHoliday ? 'bg-red-50 border-red-200' : 
+                    !isToday && isWeekend ? 'bg-gray-50 dark:bg-gray-900 border-gray-300' :
+                    !isToday ? 'bg-background border-border' : ''
                   }`}
                   onClick={() => handleDateClick(day)}
                 >

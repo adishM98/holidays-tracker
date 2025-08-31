@@ -512,23 +512,29 @@ const ApplyLeave: React.FC = () => {
               const isWeekendDate = isWeekend(day);
               const isHolidayDate = isHoliday(day);
               const holidayOnDate = getHolidayOnDate(day);
+              const isToday = day === new Date().getDate() && 
+                            currentMonth === new Date().getMonth() && 
+                            currentYear === new Date().getFullYear();
               
               return (
                 <div
                   key={day}
-                  className={`h-24 border border-border rounded-lg p-2 overflow-hidden transition-colors relative ${
-                    isDisabled 
-                      ? isWeekendDate
-                        ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed opacity-60'
-                        : isHolidayDate
-                        ? 'bg-orange-50 dark:bg-orange-950 cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-900/20 hover:border-orange-300 dark:hover:border-orange-600'
-                        : 'bg-muted/30 cursor-not-allowed opacity-60'
-                      : 'cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-600'
+                  className={`h-24 border rounded-lg p-2 overflow-hidden transition-colors relative ${
+                    isToday 
+                      ? 'bg-primary/5 border-primary/20 ring-1 ring-primary/20' 
+                      : isDisabled 
+                        ? isWeekendDate
+                          ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed opacity-60 border-border'
+                          : isHolidayDate
+                          ? 'bg-orange-50 dark:bg-orange-950 cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-900/20 hover:border-orange-300 dark:hover:border-orange-600 border-border'
+                          : 'bg-muted/30 cursor-not-allowed opacity-60 border-border'
+                        : 'cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-600 border-border'
                   }`}
                   onClick={() => handleDateClick(day)}
                 >
                   <div className="flex flex-col h-full">
                     <div className={`text-sm font-medium mb-1 flex items-center justify-between ${
+                      isToday ? 'text-primary' : 
                       isDisabled ? 'text-muted-foreground' : 
                       'text-foreground'
                     }`}>
