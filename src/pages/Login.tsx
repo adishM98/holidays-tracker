@@ -53,93 +53,189 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-accent-light flex items-center justify-center p-4 relative">
+    <div className="min-h-screen bg-background relative overflow-hidden">
       {/* Theme Toggle */}
-      <div className="absolute top-4 right-4">
+      <div className="absolute top-6 right-6 z-20">
         <ThemeToggle />
       </div>
+
+      {/* Professional Time Management Illustration */}
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        {/* Background Gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 via-transparent to-indigo-50/30 dark:from-blue-900/10 dark:via-transparent dark:to-indigo-900/10"></div>
+
+        {/* Right Side - Time Management Illustration */}
+        <div className="absolute right-8 top-1/2 -translate-y-1/2 opacity-40 dark:opacity-30 hidden lg:block">
+          {/* Calendar Grid */}
+          <div className="relative w-80 h-64">
+            {/* Calendar Background */}
+            <div className="absolute inset-0 bg-white/80 dark:bg-gray-800/80 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm">
+              {/* Calendar Header */}
+              <div className="px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50">
+                <div className="flex items-center justify-between">
+                  <div className="w-16 h-4 bg-gray-300/60 dark:bg-gray-600/60 rounded"></div>
+                  <div className="flex space-x-2">
+                    <div className="w-6 h-6 border border-gray-300/60 dark:border-gray-600/60 rounded"></div>
+                    <div className="w-6 h-6 border border-gray-300/60 dark:border-gray-600/60 rounded"></div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Calendar Grid */}
+              <div className="p-4">
+                <div className="grid grid-cols-7 gap-2">
+                  {/* Day Headers */}
+                  {Array.from({length: 7}).map((_, i) => (
+                    <div key={i} className="w-8 h-6 bg-gray-200/40 dark:bg-gray-700/40 rounded-sm"></div>
+                  ))}
+                  
+                  {/* Calendar Days */}
+                  {Array.from({length: 21}).map((_, i) => (
+                    <div key={i} className={`w-8 h-6 rounded-sm ${
+                      i === 10 || i === 15 ? 'bg-blue-500/60' : 
+                      i === 5 || i === 18 ? 'bg-green-500/40' : 
+                      'bg-gray-100/60 dark:bg-gray-700/40'
+                    }`}></div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Floating Time Cards */}
+            <div className="absolute -right-16 top-4 w-24 h-16 bg-white/90 dark:bg-gray-800/90 rounded-lg border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm">
+              <div className="p-3">
+                <div className="w-4 h-2 bg-blue-500/60 rounded mb-2"></div>
+                <div className="w-12 h-2 bg-gray-300/60 dark:bg-gray-600/60 rounded"></div>
+              </div>
+            </div>
+
+            <div className="absolute -right-8 bottom-8 w-20 h-14 bg-white/90 dark:bg-gray-800/90 rounded-lg border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm">
+              <div className="p-2">
+                <div className="w-3 h-3 bg-green-500/60 rounded-full mb-1"></div>
+                <div className="w-10 h-1.5 bg-gray-300/60 dark:bg-gray-600/60 rounded"></div>
+              </div>
+            </div>
+
+            {/* Clock Element */}
+            <div className="absolute -left-12 top-12 w-16 h-16 bg-white/90 dark:bg-gray-800/90 rounded-full border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm flex items-center justify-center">
+              <div className="relative w-8 h-8">
+                <div className="absolute inset-0 border-2 border-gray-300/60 dark:border-gray-600/60 rounded-full"></div>
+                <div className="absolute top-1 left-1/2 w-0.5 h-3 bg-gray-400/80 -translate-x-0.5 origin-bottom rotate-90"></div>
+                <div className="absolute top-2 left-1/2 w-0.5 h-2 bg-gray-600/80 -translate-x-0.5 origin-bottom rotate-45"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Left Side - Subtle Elements */}
+        <div className="absolute left-8 top-1/4 opacity-25 dark:opacity-20 hidden lg:block">
+          {/* Progress Bars */}
+          <div className="space-y-4">
+            <div className="w-32 h-2 bg-gray-200/40 dark:bg-gray-700/40 rounded-full">
+              <div className="w-20 h-2 bg-blue-500/30 rounded-full"></div>
+            </div>
+            <div className="w-28 h-2 bg-gray-200/40 dark:bg-gray-700/40 rounded-full">
+              <div className="w-16 h-2 bg-green-500/30 rounded-full"></div>
+            </div>
+            <div className="w-24 h-2 bg-gray-200/40 dark:bg-gray-700/40 rounded-full">
+              <div className="w-18 h-2 bg-purple-500/30 rounded-full"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Right - Stats Cards */}
+        <div className="absolute bottom-16 right-16 opacity-30 dark:opacity-25 hidden xl:block">
+          <div className="flex space-x-3">
+            <div className="w-16 h-20 bg-white/80 dark:bg-gray-800/80 rounded-lg border border-gray-200/30 dark:border-gray-700/30 backdrop-blur-sm p-3">
+              <div className="w-6 h-6 bg-blue-500/40 rounded mb-2"></div>
+              <div className="w-8 h-1.5 bg-gray-300/60 dark:bg-gray-600/60 rounded mb-1"></div>
+              <div className="w-10 h-1 bg-gray-200/60 dark:bg-gray-700/60 rounded"></div>
+            </div>
+            <div className="w-16 h-20 bg-white/80 dark:bg-gray-800/80 rounded-lg border border-gray-200/30 dark:border-gray-700/30 backdrop-blur-sm p-3">
+              <div className="w-6 h-6 bg-green-500/40 rounded mb-2"></div>
+              <div className="w-8 h-1.5 bg-gray-300/60 dark:bg-gray-600/60 rounded mb-1"></div>
+              <div className="w-10 h-1 bg-gray-200/60 dark:bg-gray-700/60 rounded"></div>
+            </div>
+          </div>
+        </div>
+      </div>
       
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
+      {/* Main Content - Centered */}
+      <div className="relative z-10 min-h-screen flex items-center justify-center px-8">
+        <div className="w-full max-w-md">
+          {/* Logo */}
+          <div className="mb-12">
             <img 
               src={actualTheme === 'dark' ? "/tooljet-dark.svg" : "/tooljet-light.svg"}
               alt="ToolJet Logo" 
-              className="h-8 w-auto object-contain"
+              className="h-6 w-auto object-contain"
               onError={(e) => {
                 // Fallback to light logo if dark logo fails
                 e.currentTarget.src = "/tooljet-light.svg";
               }}
             />
           </div>
-        </div>
 
-        <Card className="shadow-professional-lg border-0 bg-gradient-card">
-          <CardHeader className="space-y-1">
-            {/* <CardTitle className="text-2xl font-bold text-center">Welcome Back</CardTitle> */}
-            <CardDescription className="text-center">
-              Log in to track and approve leaves
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="flex items-center space-x-2">
-                  <Mail size={16} />
-                  <span>Email</span>
-                </Label>
+          {/* Sign in Title */}
+          <div className="mb-6">
+            <h1 className="text-3xl font-semibold text-foreground mb-2">Sign in</h1>
+          </div>
+
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm font-medium text-foreground">
+                Email <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Enter your work email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="h-11 border-border focus:border-primary"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-sm font-medium text-foreground">
+                Password <span className="text-red-500">*</span>
+              </Label>
+              <div className="relative">
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="bg-background/50"
+                  className="h-11 border-border focus:border-primary pr-10"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password" className="flex items-center space-x-2">
-                  <Lock size={16} />
-                  <span>Password</span>
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="bg-background/50 pr-12"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    tabIndex={-1}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <Button 
-                type="submit" 
-                className="w-full bg-gradient-primary hover:opacity-90 transition-smooth shadow-professional-sm"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Signing In...' : 'Sign In'}
-              </Button>
-            </form>
-
-          </CardContent>
-        </Card>
+            <Button 
+              type="submit" 
+              className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Signing in...' : 'Sign in ➜'}
+            </Button>
+          </form>
+        </div>
       </div>
     </div>
   );
