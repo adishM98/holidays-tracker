@@ -826,7 +826,14 @@ const ApplyLeave: React.FC = () => {
 
       {/* Apply Leave Dialog */}
       <Dialog open={isApplyDialogOpen} onOpenChange={setIsApplyDialogOpen}>
-        <DialogContent \n          className="sm:max-w-md"\n          style={{ \n            borderRadius: '24px',\n            border: 'none',\n            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'\n          }}\n        >
+        <DialogContent 
+          className="sm:max-w-md"
+          style={{ 
+            borderRadius: '24px',
+            border: 'none',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center text-lg">
               <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center mr-3">
