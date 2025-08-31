@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Calendar, Clock, CheckCircle, XCircle, Plus, Users, Loader2, Check, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { employeeAPI, managerAPI, adminAPI } from '@/services/api';
@@ -17,68 +18,144 @@ const Dashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [adminRequests, setAdminRequests] = useState<any>(null);
   const [isProcessingApproval, setIsProcessingApproval] = useState<string | null>(null);
+  const [lastFetch, setLastFetch] = useState<number>(0);
+  const [roleChecked, setRoleChecked] = useState<boolean>(false);
   const { toast } = useToast();
+
+  const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
+
+  // Memoized date calculations to avoid recalculating on every render
+  const dateFilters = useMemo(() => {
+    const today = new Date();
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(today.getDate() + 30);
+    return { today, thirtyDaysFromNow };
+  }, []);
+
+  // Memoized holiday filtering
+  const filteredHolidays = useMemo(() => {
+    if (!upcomingHolidays?.length) return [];
+    
+    return upcomingHolidays.filter(holiday => {
+      const holidayDate = new Date(holiday.date);
+      return holidayDate >= dateFilters.today && holidayDate <= dateFilters.thirtyDaysFromNow;
+    });
+  }, [upcomingHolidays, dateFilters]);
 
   useEffect(() => {
     if (user && !authLoading) {
-      // Check for role changes immediately when dashboard loads
-      checkRoleChange().catch(error => {
-        console.warn('Failed to check role changes on dashboard load:', error);
-      });
-      loadDashboardData();
+      const now = Date.now();
+      const shouldFetch = !lastFetch || (now - lastFetch) > CACHE_DURATION;
+      
+      // Only check role changes once per session unless explicitly needed
+      if (!roleChecked) {
+        checkRoleChange().catch(error => {
+          console.warn('Failed to check role changes on dashboard load:', error);
+        });
+        setRoleChecked(true);
+      }
+      
+      if (shouldFetch) {
+        loadDashboardData();
+      } else {
+        setIsLoading(false); // Skip loading if using cached data
+      }
     }
-  }, [user?.id, authLoading]); // Only depend on user.id to avoid infinite loops
+  }, [user?.id, authLoading]);
 
   const loadDashboardData = async () => {
     try {
       setIsLoading(true);
       
+      // Prepare all API calls based on user role
+      const apiCalls: Promise<any>[] = [];
+      const callMap: string[] = [];
+      
+      // Employee/Manager dashboard data
       if (user?.role === 'employee' || user?.role === 'manager') {
-        const data = await employeeAPI.getDashboard();
-        setDashboardData(data);
+        apiCalls.push(employeeAPI.getDashboard());
+        callMap.push('dashboard');
       }
       
+      // Manager specific data
       if (user?.role === 'manager') {
-        const managerStats = await managerAPI.getDashboardStats();
-        const pendingRequests = await managerAPI.getTeamRequests(1, 5, 'pending');
-        setManagerData({ 
-          stats: managerStats, 
-          pendingRequests: pendingRequests
-        });
+        apiCalls.push(managerAPI.getDashboardStats(), managerAPI.getTeamRequests(1, 5, 'pending'));
+        callMap.push('managerStats', 'managerRequests');
       }
       
+      // Admin data
       if (user?.role === 'admin') {
-        // Get all recent requests, not just pending ones for the Recent Requests section
-        const adminLeaveRequests = await adminAPI.getAllLeaveRequests();
-        console.log('Admin leave requests:', adminLeaveRequests);
-        setAdminRequests(adminLeaveRequests);
+        apiCalls.push(adminAPI.getAllLeaveRequests(), adminAPI.getUpcomingHolidays(30));
+        callMap.push('adminRequests', 'adminHolidays');
       }
-
-      // Load upcoming holidays for all users
-      try {
-        let holidays = [];
-        if (user?.role === 'admin') {
-          holidays = await adminAPI.getUpcomingHolidays(30);
-        } else {
-          // For employees and managers, use the employee API
-          const currentYear = new Date().getFullYear();
-          const holidaysResponse = await employeeAPI.getHolidays(currentYear);
-          // Filter to get only upcoming holidays in the next 30 days
-          const today = new Date();
-          const thirtyDaysFromNow = new Date();
-          thirtyDaysFromNow.setDate(today.getDate() + 30);
-          
-          holidays = (holidaysResponse.holidays || []).filter(holiday => {
-            const holidayDate = new Date(holiday.date);
-            return holidayDate >= today && holidayDate <= thirtyDaysFromNow;
+      
+      // Holidays for employee/manager (different API)
+      if (user?.role === 'employee' || user?.role === 'manager') {
+        const currentYear = new Date().getFullYear();
+        apiCalls.push(employeeAPI.getHolidays(currentYear));
+        callMap.push('holidays');
+      }
+      
+      // Execute all API calls in parallel
+      const results = await Promise.allSettled(apiCalls);
+      
+      // Process results based on call map
+      let dashboardIndex = -1, managerStatsIndex = -1, managerRequestsIndex = -1;
+      let adminRequestsIndex = -1, adminHolidaysIndex = -1, holidaysIndex = -1;
+      
+      callMap.forEach((call, index) => {
+        switch (call) {
+          case 'dashboard': dashboardIndex = index; break;
+          case 'managerStats': managerStatsIndex = index; break;
+          case 'managerRequests': managerRequestsIndex = index; break;
+          case 'adminRequests': adminRequestsIndex = index; break;
+          case 'adminHolidays': adminHolidaysIndex = index; break;
+          case 'holidays': holidaysIndex = index; break;
+        }
+      });
+      
+      // Set dashboard data
+      if (dashboardIndex >= 0 && results[dashboardIndex].status === 'fulfilled') {
+        setDashboardData(results[dashboardIndex].value);
+      }
+      
+      // Set manager data
+      if (managerStatsIndex >= 0 && managerRequestsIndex >= 0) {
+        const statsResult = results[managerStatsIndex];
+        const requestsResult = results[managerRequestsIndex];
+        
+        if (statsResult.status === 'fulfilled' && requestsResult.status === 'fulfilled') {
+          setManagerData({
+            stats: statsResult.value,
+            pendingRequests: requestsResult.value
           });
         }
-        setUpcomingHolidays(holidays || []);
-      } catch (error) {
-        // Holidays are optional, don't fail the dashboard if they can't be loaded
-        console.warn('Failed to load upcoming holidays:', error);
-        setUpcomingHolidays([]);
       }
+      
+      // Set admin data
+      if (adminRequestsIndex >= 0 && results[adminRequestsIndex].status === 'fulfilled') {
+        setAdminRequests(results[adminRequestsIndex].value);
+      }
+      
+      // Process holidays
+      let holidaysData = [];
+      if (adminHolidaysIndex >= 0 && results[adminHolidaysIndex].status === 'fulfilled') {
+        // Admin holidays are already filtered by backend
+        holidaysData = results[adminHolidaysIndex].value || [];
+      } else if (holidaysIndex >= 0 && results[holidaysIndex].status === 'fulfilled') {
+        // Store all holidays - filtering will be done by memoized filteredHolidays
+        const holidaysResponse = results[holidaysIndex].value;
+        holidaysData = holidaysResponse.holidays || [];
+      }
+      setUpcomingHolidays(holidaysData);
+      
+      // Log any failed requests for debugging
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          console.warn(`Failed to load ${callMap[index]}:`, result.reason);
+        }
+      });
+      
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
       toast({
@@ -88,6 +165,7 @@ const Dashboard: React.FC = () => {
       });
     } finally {
       setIsLoading(false);
+      setLastFetch(Date.now()); // Update cache timestamp
     }
   };
 
@@ -162,7 +240,8 @@ const Dashboard: React.FC = () => {
         description: `Leave request has been ${action} successfully.`,
       });
 
-      // Refresh the dashboard data
+      // Refresh the dashboard data and invalidate cache
+      setLastFetch(0);
       loadDashboardData();
     } catch (error: any) {
       toast({
@@ -190,7 +269,8 @@ const Dashboard: React.FC = () => {
         description: `Leave request has been ${action} successfully.`,
       });
 
-      // Refresh the dashboard data
+      // Refresh the dashboard data and invalidate cache
+      setLastFetch(0);
       loadDashboardData();
     } catch (error: any) {
       toast({
@@ -203,12 +283,82 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  if (authLoading || isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
+  const DashboardSkeleton = () => (
+    <div className="space-y-8 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between">
+        <div>
+          <Skeleton className="h-8 w-64 mb-2" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+        <Skeleton className="h-10 w-32" />
       </div>
-    );
+
+      {/* Leave Balance Cards Skeleton */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[1, 2, 3].map(i => (
+          <Card key={i} className="bg-gradient-card shadow-professional-md border border-border/50 dark:border-0">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-4 rounded" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-8 w-12 mb-1" />
+              <Skeleton className="h-3 w-32" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid gap-8 grid-cols-1 lg:grid-cols-2">
+        {/* Left Card Skeleton */}
+        <Card className="shadow-professional-md border border-border/50 bg-gradient-card dark:border-0">
+          <CardHeader>
+            <Skeleton className="h-6 w-48 mb-2" />
+            <Skeleton className="h-4 w-64" />
+          </CardHeader>
+          <CardContent className="p-8 pt-0">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="flex items-center justify-between p-3 bg-background/50 rounded-lg border mb-3">
+                <div className="flex-1">
+                  <Skeleton className="h-5 w-32 mb-2" />
+                  <Skeleton className="h-4 w-48 mb-1" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+                <Skeleton className="h-6 w-20 rounded-full" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Right Card Skeleton */}
+        <Card className="shadow-professional-md border border-border/50 bg-gradient-card dark:border-0">
+          <CardHeader>
+            <Skeleton className="h-6 w-48 mb-2" />
+            <Skeleton className="h-4 w-64" />
+          </CardHeader>
+          <CardContent className="p-8 pt-0">
+            {[1, 2].map(i => (
+              <div key={i} className="flex items-center justify-between p-4 bg-background/50 rounded-lg mb-4">
+                <div className="flex-1">
+                  <Skeleton className="h-5 w-40 mb-2" />
+                  <Skeleton className="h-4 w-32 mb-1" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+                <Skeleton className="h-6 w-16 rounded-full" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+
+  if (authLoading) {
+    return <DashboardSkeleton />;
+  }
+
+  if (isLoading && (!dashboardData && !adminRequests && !managerData)) {
+    return <DashboardSkeleton />;
   }
 
   if (!user) {
@@ -261,7 +411,7 @@ const Dashboard: React.FC = () => {
             };
 
             return (
-              <Card key={balance.id} className="bg-gradient-card shadow-professional-md border-0">
+              <Card key={balance.id} className="bg-gradient-card shadow-professional-md border border-border/50 dark:border-0">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
                     {getLeaveTypeLabel(balance.leaveType)}
@@ -289,7 +439,7 @@ const Dashboard: React.FC = () => {
 
       <div className="grid gap-8 grid-cols-1 lg:grid-cols-2">
         {/* Open Requests - Left Side */}
-        <Card className="shadow-professional-md border-0 bg-gradient-card">
+        <Card className="shadow-professional-md border border-border/50 bg-gradient-card dark:border-0">
           <CardHeader>
             <CardTitle className="flex items-center">
               <Clock className="h-5 w-5 mr-2 text-primary" />
@@ -430,7 +580,7 @@ const Dashboard: React.FC = () => {
 
         {/* Manager Dashboard - Pending Approvals */}
         {user?.role === 'manager' && managerData && (
-          <Card className="shadow-professional-md border-0 bg-gradient-card">
+          <Card className="shadow-professional-md border border-border/50 bg-gradient-card dark:border-0">
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Users className="h-5 w-5 mr-2 text-warning" />
@@ -510,10 +660,10 @@ const Dashboard: React.FC = () => {
 
 
         {/* Upcoming Holidays Section - Right Side */}
-        <Card className="shadow-professional-md border-0 bg-gradient-card">
+        <Card className="shadow-professional-md border border-border/50 bg-gradient-card dark:border-0">
           <CardHeader>
             <CardTitle className="flex items-center">
-              <Calendar className="h-5 w-5 mr-2 text-accent" />
+              <Calendar className="h-5 w-5 mr-2 text-primary" />
               Upcoming Holidays
             </CardTitle>
             <CardDescription>
@@ -521,9 +671,9 @@ const Dashboard: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="p-8 pt-0">
-            {upcomingHolidays && upcomingHolidays.length > 0 ? (
+            {filteredHolidays && filteredHolidays.length > 0 ? (
               <div className="space-y-4">
-                {upcomingHolidays.slice(0, 5).map((holiday) => (
+                {filteredHolidays.slice(0, 5).map((holiday) => (
                   <div key={holiday.id} className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
                     <div className="flex-1">
                       <p className="font-medium text-foreground">{holiday.name}</p>
