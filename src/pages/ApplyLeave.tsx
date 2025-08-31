@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -109,15 +109,44 @@ const ApplyLeave: React.FC = () => {
     }
   };
 
-  const navigateMonth = (direction: 'prev' | 'next') => {
-    const newDate = new Date(currentDate);
-    if (direction === 'prev') {
-      newDate.setMonth(currentMonth - 1);
-    } else {
-      newDate.setMonth(currentMonth + 1);
+  const navigationLockRef = useRef(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  const navigateMonth = useCallback((direction: 'prev' | 'next') => {
+    if (navigationLockRef.current) {
+      console.log('Navigation blocked - lock active');
+      return;
     }
-    setCurrentDate(newDate);
-  };
+    
+    navigationLockRef.current = true;
+    setIsNavigating(true);
+    console.log(`Navigation lock acquired for ${direction}`);
+    
+    setCurrentDate(prevDate => {
+      const currentMonthNum = prevDate.getMonth();
+      const currentYear = prevDate.getFullYear();
+      
+      console.log(`Navigate ${direction}: from ${currentMonthNum}/${currentYear}`);
+      
+      // Create new date with explicit month calculation
+      const targetMonth = direction === 'prev' ? currentMonthNum - 1 : currentMonthNum + 1;
+      console.log(`Target month calculation: ${currentMonthNum} ${direction === 'prev' ? '-' : '+'} 1 = ${targetMonth}`);
+      
+      const newDate = new Date(currentYear, targetMonth, 1);
+      
+      console.log(`Navigate ${direction}: to ${newDate.getMonth()}/${newDate.getFullYear()}`);
+      console.log(`New date object created:`, newDate.toString());
+      
+      // Release lock after state update
+      setTimeout(() => {
+        navigationLockRef.current = false;
+        setIsNavigating(false);
+        console.log('Navigation lock released');
+      }, 200);
+      
+      return newDate;
+    });
+  }, []);
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -470,6 +499,7 @@ const ApplyLeave: React.FC = () => {
               variant="outline"
               size="sm"
               onClick={() => navigateMonth('prev')}
+              disabled={isNavigating}
               className="h-8 w-8 p-0"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -482,7 +512,11 @@ const ApplyLeave: React.FC = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigateMonth('next')}
+              onClick={() => {
+                console.log('Next button clicked, lock state:', navigationLockRef.current);
+                navigateMonth('next');
+              }}
+              disabled={isNavigating}
               className="h-8 w-8 p-0"
             >
               <ChevronRight className="h-4 w-4" />
