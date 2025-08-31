@@ -4,11 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Calendar, Clock, CheckCircle, XCircle, Plus, Users, Loader2, Check, X } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, XCircle, Plus, Users, Loader2, Check, X, BarChart3, TrendingUp, Heart, Sun, Gift, CalendarPlus, Clipboard } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { employeeAPI, managerAPI, adminAPI } from '@/services/api';
 import { DashboardData, LeaveRequest, LeaveBalance } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { TimeManagementBackground } from '@/components/ui/time-management-background';
 
 const Dashboard: React.FC = () => {
   const { user, isLoading: authLoading, checkRoleChange } = useAuth();
@@ -370,21 +371,29 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">
-            Welcome back, {dashboardData?.employee?.fullName?.split(' ')[0] || 'Admin'}!
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Your Time Away at a Glance
-          </p>
+    <div className="relative min-h-screen">
+      <TimeManagementBackground />
+      <div className="relative z-10 space-y-8 max-w-7xl mx-auto">
+      {/* Hero Section */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center space-x-4">
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+            <BarChart3 className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">
+              Welcome back, {dashboardData?.employee?.fullName?.split(' ')[0] || 'Admin'}!
+            </h1>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Track, approve, and manage leave requests
+            </p>
+          </div>
         </div>
         {(user.role === 'employee' || user.role === 'manager') && (
           <Link to="/apply-leave">
-            <Button className="bg-gradient-primary hover:opacity-90 transition-smooth shadow-professional-sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Apply Leave
+            <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex items-center space-x-2">
+              <CalendarPlus className="h-4 w-4" />
+              <span>Apply Leave</span>
             </Button>
           </Link>
         )}
@@ -394,37 +403,74 @@ const Dashboard: React.FC = () => {
       {dashboardData?.leaveBalances && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {dashboardData.leaveBalances.map((balance: LeaveBalance) => {
+            const getBalanceIcon = (type: string) => {
+              switch (type) {
+                case 'earned':
+                case 'annual': // legacy support
+                  return Gift;
+                case 'sick':
+                  return Heart;
+                case 'casual':
+                  return Sun;
+                case 'compensation':
+                  return Calendar;
+                default:
+                  return Calendar;
+              }
+            };
+
             const getBalanceColor = (type: string) => {
               switch (type) {
                 case 'earned':
                 case 'annual': // legacy support
-                  return 'text-primary';
+                  return { text: 'text-blue-600', bg: 'bg-blue-500', lightBg: 'bg-blue-100' };
                 case 'sick':
-                  return 'text-red-500';
+                  return { text: 'text-red-600', bg: 'bg-red-500', lightBg: 'bg-red-100' };
                 case 'casual':
-                  return 'text-green-500';
+                  return { text: 'text-green-600', bg: 'bg-green-500', lightBg: 'bg-green-100' };
                 case 'compensation':
-                  return 'text-orange-500';
+                  return { text: 'text-orange-600', bg: 'bg-orange-500', lightBg: 'bg-orange-100' };
                 default:
-                  return 'text-muted-foreground';
+                  return { text: 'text-gray-600', bg: 'bg-gray-500', lightBg: 'bg-gray-100' };
               }
             };
 
+            const IconComponent = getBalanceIcon(balance.leaveType);
+            const colors = getBalanceColor(balance.leaveType);
+            const usedDays = balance.totalAllocated - balance.availableDays;
+            const progressPercentage = (usedDays / balance.totalAllocated) * 100;
+
             return (
-              <Card key={balance.id} className="bg-gradient-card shadow-professional-md border border-border/50 dark:border-0">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    {getLeaveTypeLabel(balance.leaveType)}
-                  </CardTitle>
-                  <Calendar className={`h-4 w-4 ${getBalanceColor(balance.leaveType)}`} />
+              <Card key={balance.id} className="bg-gradient-card shadow-professional-md border border-border/50 dark:border-0 hover:shadow-lg transition-shadow duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-10 h-10 ${colors.lightBg} rounded-lg flex items-center justify-center`}>
+                      <IconComponent className={`h-5 w-5 ${colors.text}`} />
+                    </div>
+                    <CardTitle className={`text-sm font-semibold ${colors.text}`}>
+                      {getLeaveTypeLabel(balance.leaveType)}
+                    </CardTitle>
+                  </div>
                 </CardHeader>
-                <CardContent>
-                  <div className={`text-2xl font-bold ${getBalanceColor(balance.leaveType)}`}>
+                <CardContent className="pt-0">
+                  <div className={`text-3xl font-bold ${colors.text} mb-2`}>
                     {balance.availableDays}
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground mb-3">
                     of {balance.totalAllocated} days remaining
                   </p>
+                  
+                  {/* Progress Bar */}
+                  <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                    <div 
+                      className={`h-2 rounded-full ${colors.bg} transition-all duration-300`}
+                      style={{ width: `${Math.min(progressPercentage, 100)}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {usedDays}/{balance.totalAllocated} used
+                  </p>
+                  
                   {balance.carryForward > 0 && (
                     <p className="text-xs text-muted-foreground mt-1">
                       (includes {balance.carryForward} carried forward)
@@ -439,10 +485,15 @@ const Dashboard: React.FC = () => {
 
       <div className="grid gap-8 grid-cols-1 lg:grid-cols-2">
         {/* Open Requests - Left Side */}
-        <Card className="shadow-professional-md border border-border/50 bg-gradient-card dark:border-0">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Clock className="h-5 w-5 mr-2 text-primary" />
+        <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-900 dark:to-blue-950/20 backdrop-blur-sm">
+          <CardHeader className="relative">
+            <div className="absolute top-4 right-4 w-8 h-8 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-lg flex items-center justify-center">
+              <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            <CardTitle className="flex items-center text-xl">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mr-3 shadow-md">
+                <Clock className="h-5 w-5 text-white" />
+              </div>
               {user?.role === 'admin' ? 'Pending Approvals' : 'My Leave Requests'}
               {(() => {
                 const pendingCount = user?.role === 'admin' 
@@ -496,10 +547,15 @@ const Dashboard: React.FC = () => {
                 </div>
               ) : (
                 <div className="text-center py-12">
-                  <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground mb-4">No leave requests yet</p>
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Clipboard className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">No requests yet</h3>
+                  <p className="text-muted-foreground mb-6">When you apply, your requests will appear here</p>
                   <Link to="/apply-leave" className="block">
-                    <Button>Apply for Leave</Button>
+                    <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105">
+                      Apply for Leave
+                    </Button>
                   </Link>
                 </div>
               )
@@ -569,8 +625,11 @@ const Dashboard: React.FC = () => {
                   </div>
                 ) : (
                   <div className="text-center py-12">
-                    <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">No pending requests from employees</p>
+                    <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <Clock className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">All caught up!</h3>
+                    <p className="text-muted-foreground">No pending requests from employees at the moment</p>
                   </div>
                 );
               })()
@@ -660,13 +719,18 @@ const Dashboard: React.FC = () => {
 
 
         {/* Upcoming Holidays Section - Right Side */}
-        <Card className="shadow-professional-md border border-border/50 bg-gradient-card dark:border-0">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Calendar className="h-5 w-5 mr-2 text-primary" />
+        <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-green-50/30 dark:from-gray-900 dark:to-green-950/20 backdrop-blur-sm">
+          <CardHeader className="relative">
+            <div className="absolute top-4 right-4 w-8 h-8 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-lg flex items-center justify-center">
+              <Calendar className="h-4 w-4 text-green-600 dark:text-green-400" />
+            </div>
+            <CardTitle className="flex items-center text-xl">
+              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center mr-3 shadow-md">
+                <Calendar className="h-5 w-5 text-white" />
+              </div>
               Upcoming Holidays
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-base">
               Company holidays in the next 30 days
             </CardDescription>
           </CardHeader>
@@ -705,18 +769,26 @@ const Dashboard: React.FC = () => {
               </div>
             ) : (
               <div className="text-center py-12">
-                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No upcoming holidays</p>
+                <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Calendar className="h-8 w-8 text-green-600 dark:text-green-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">No holidays in the next 30 days</h3>
                 {user?.role === 'admin' && (
-                  <Link to="/admin/settings" className="block mt-4">
-                    <Button>Add Holidays</Button>
-                  </Link>
+                  <div className="flex justify-center">
+                    <Link to="/admin/settings">
+                      <Button className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2">
+                        <Plus className="h-4 w-4" />
+                        <span>Add Holidays</span>
+                      </Button>
+                    </Link>
+                  </div>
                 )}
               </div>
             )}
           </CardContent>
         </Card>
 
+      </div>
       </div>
     </div>
   );

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -178,7 +178,8 @@ const Login: React.FC = () => {
 
           {/* Sign in Title */}
           <div className="mb-6">
-            <h1 className="text-3xl font-semibold text-foreground mb-2">Sign in</h1>
+            <h1 className="text-4xl font-bold text-foreground mb-2">Sign in</h1>
+            <p className="text-muted-foreground">Manage your leave requests with ease</p>
           </div>
 
           {/* Login Form */}
@@ -194,7 +195,7 @@ const Login: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="h-11 border-border focus:border-primary"
+                className="h-11 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
               />
             </div>
 
@@ -210,7 +211,7 @@ const Login: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="h-11 border-border focus:border-primary pr-10"
+                  className="h-11 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200 pr-10"
                 />
                 <button
                   type="button"
@@ -229,10 +230,11 @@ const Login: React.FC = () => {
 
             <Button 
               type="submit" 
-              className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md"
+              className="w-full h-11 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-md shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center space-x-2"
               disabled={isLoading}
             >
-              {isLoading ? 'Signing in...' : 'Sign in ➜'}
+              <span>{isLoading ? 'Signing in...' : 'Sign in'}</span>
+              {!isLoading && <ArrowRight className="h-4 w-4" />}
             </Button>
           </form>
         </div>

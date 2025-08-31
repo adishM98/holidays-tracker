@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff, Calendar } from 'lucide-react';
+import { Eye, EyeOff, Calendar, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -336,7 +336,10 @@ const Invite: React.FC = () => {
               }}
             />
           </div>
-          <p className="text-muted-foreground">Complete your account setup</p>
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-foreground mb-2">Complete Setup</h2>
+            <p className="text-muted-foreground">Set up your account to start managing leave requests</p>
+          </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -365,7 +368,7 @@ const Invite: React.FC = () => {
                   required
                   placeholder="Enter a secure password"
                   minLength={6}
-                  className="pr-10"
+                  className="h-11 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200 pr-10"
                 />
                 <button
                   type="button"
@@ -388,7 +391,7 @@ const Invite: React.FC = () => {
                   required
                   placeholder="Confirm your password"
                   minLength={6}
-                  className="pr-10"
+                  className="h-11 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200 pr-10"
                 />
                 <button
                   type="button"
@@ -402,10 +405,11 @@ const Invite: React.FC = () => {
 
             <Button 
               type="submit" 
-              className="w-full" 
+              className="w-full h-11 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-md shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center space-x-2" 
               disabled={loading}
             >
-              {loading ? 'Creating Account...' : 'Create Account'}
+              <span>{loading ? 'Creating Account...' : 'Create Account'}</span>
+              {!loading && <ArrowRight className="h-4 w-4" />}
             </Button>
           </form>
 

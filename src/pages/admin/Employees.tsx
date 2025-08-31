@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, Users, Info } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Users, Info, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { adminAPI } from '@/services/api';
+import { TimeManagementBackground } from '@/components/ui/time-management-background';
 
 interface Employee {
   id: string;
@@ -464,20 +465,34 @@ const Employees: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Employees</h1>
-          <p className="text-muted-foreground">Manage employee records and assignments</p>
-        </div>
-        
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setIsAddDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Employee
+    <div className="relative min-h-screen">
+      <TimeManagementBackground />
+      <div className="relative z-10 space-y-6">
+        {/* Hero Section */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+              <Users className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Employees</h1>
+              <p className="text-muted-foreground mt-1 text-sm">Manage all your people and their roles in one place</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <Button variant="outline" className="bg-white/80 backdrop-blur-sm border-gray-300 hover:bg-gray-50 transition-all duration-200">
+              <Upload className="h-4 w-4 mr-2" />
+              Bulk Import
             </Button>
-          </DialogTrigger>
+            
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105" onClick={() => setIsAddDialogOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Employee
+                </Button>
+              </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add New Employee</DialogTitle>
@@ -545,13 +560,30 @@ const Employees: React.FC = () => {
                 <TableBody>
                   {filteredEmployees.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                        No employees found
+                      <TableCell colSpan={7} className="text-center py-16">
+                        <div className="flex flex-col items-center space-y-4">
+                          <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center">
+                            <Users className="h-8 w-8 text-green-600" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold text-foreground mb-1">No employees added yet</h3>
+                            <p className="text-muted-foreground text-sm">Start by adding your first team member</p>
+                          </div>
+                          <div className="flex justify-center">
+                            <Button 
+                              onClick={() => setIsAddDialogOpen(true)}
+                              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Employee
+                            </Button>
+                          </div>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredEmployees.map((employee) => (
-                      <TableRow key={employee.id}>
+                    filteredEmployees.map((employee, index) => (
+                      <TableRow key={employee.id} className={index % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
                         <TableCell>
                           <div className="font-medium">{employee.employeeId || 'N/A'}</div>
                         </TableCell>
@@ -679,6 +711,7 @@ const Employees: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 };
