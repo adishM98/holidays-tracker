@@ -54,6 +54,7 @@ const ApplyLeave: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isHolidayDialogOpen, setIsHolidayDialogOpen] = useState(false);
   const [selectedHoliday, setSelectedHoliday] = useState<Holiday | null>(null);
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   
   const [leaveForm, setLeaveForm] = useState({
     leaveType: '' as LeaveType | '',
@@ -383,7 +384,7 @@ const ApplyLeave: React.FC = () => {
     setIsViewLeaveDialogOpen(true);
   };
 
-  const handleCancelLeave = async () => {
+  const handleCancelLeaveClick = () => {
     if (!selectedLeaveRequest) return;
 
     // Only allow cancellation of pending requests
@@ -396,11 +397,12 @@ const ApplyLeave: React.FC = () => {
       return;
     }
 
-    const confirmCancel = window.confirm(
-      `Are you sure you want to cancel your ${leaveTypeLabels[selectedLeaveRequest.leaveType as LeaveType]} leave from ${new Date(selectedLeaveRequest.startDate).toLocaleDateString()} to ${new Date(selectedLeaveRequest.endDate).toLocaleDateString()}?`
-    );
+    // Show confirmation dialog
+    setIsCancelDialogOpen(true);
+  };
 
-    if (!confirmCancel) return;
+  const handleCancelLeave = async () => {
+    if (!selectedLeaveRequest) return;
 
     setIsCancelling(true);
 
@@ -412,8 +414,9 @@ const ApplyLeave: React.FC = () => {
         description: "Your leave request has been cancelled successfully.",
       });
 
-      // Close dialog and refresh data
+      // Close dialogs and refresh data
       setIsViewLeaveDialogOpen(false);
+      setIsCancelDialogOpen(false);
       setSelectedLeaveRequest(null);
       fetchData();
     } catch (error: any) {
@@ -871,19 +874,12 @@ const ApplyLeave: React.FC = () => {
                 </Button>
                 {selectedLeaveRequest.status === 'pending' && (
                   <Button
-                    onClick={handleCancelLeave}
+                    onClick={handleCancelLeaveClick}
                     disabled={isCancelling}
                     variant="destructive"
                     className="flex-1"
                   >
-                    {isCancelling ? (
-                      <>
-                        <Clock className="h-4 w-4 mr-2 animate-spin" />
-                        Cancelling...
-                      </>
-                    ) : (
-                      'Cancel Request'
-                    )}
+                    Cancel Request
                   </Button>
                 )}
               </div>
@@ -938,6 +934,69 @@ const ApplyLeave: React.FC = () => {
                   className="bg-orange-600 hover:bg-orange-700 text-white"
                 >
                   Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Confirmation Dialog */}
+      <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2 text-destructive">
+              <X className="h-5 w-5" />
+              <span>Cancel Leave Request</span>
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedLeaveRequest && (
+            <div className="space-y-4 py-4">
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to cancel your{' '}
+                <span className="font-medium text-foreground">
+                  {leaveTypeLabels[selectedLeaveRequest.leaveType as LeaveType]}
+                </span>{' '}
+                leave from{' '}
+                <span className="font-medium text-foreground">
+                  {new Date(selectedLeaveRequest.startDate).toLocaleDateString()}
+                </span>{' '}
+                to{' '}
+                <span className="font-medium text-foreground">
+                  {new Date(selectedLeaveRequest.endDate).toLocaleDateString()}
+                </span>?
+              </p>
+              
+              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+                <p className="text-sm text-destructive">
+                  This action cannot be undone. Once cancelled, you'll need to create a new leave request if needed.
+                </p>
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCancelDialogOpen(false)}
+                  className="flex-1"
+                  disabled={isCancelling}
+                >
+                  Keep Request
+                </Button>
+                <Button
+                  onClick={handleCancelLeave}
+                  disabled={isCancelling}
+                  variant="destructive"
+                  className="flex-1"
+                >
+                  {isCancelling ? (
+                    <>
+                      <Clock className="h-4 w-4 mr-2 animate-spin" />
+                      Cancelling...
+                    </>
+                  ) : (
+                    'Yes, Cancel Request'
+                  )}
                 </Button>
               </div>
             </div>

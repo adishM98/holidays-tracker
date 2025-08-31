@@ -68,6 +68,9 @@ const LeaveCalendar: React.FC = () => {
   const [isProcessingApproval, setIsProcessingApproval] = useState<string | null>(null);
   const [isHolidayDialogOpen, setIsHolidayDialogOpen] = useState(false);
   const [selectedHoliday, setSelectedHoliday] = useState<Holiday | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [leaveToDelete, setLeaveToDelete] = useState<LeaveRequest | null>(null);
+  const [isDeletingLeave, setIsDeletingLeave] = useState(false);
   const { toast } = useToast();
 
   // Helper function to format date for input fields without timezone issues
@@ -366,19 +369,25 @@ const LeaveCalendar: React.FC = () => {
     }
   };
 
-  const handleDeleteLeave = async (leaveId: string) => {
-    if (!window.confirm('Are you sure you want to delete this leave request?')) {
-      return;
-    }
+  const handleDeleteLeaveClick = (leave: LeaveRequest) => {
+    setLeaveToDelete(leave);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteLeave = async () => {
+    if (!leaveToDelete) return;
 
     try {
-      await adminAPI.deleteLeaveRequest(leaveId);
+      setIsDeletingLeave(true);
+      await adminAPI.deleteLeaveRequest(leaveToDelete.id);
       
       toast({
         title: "Success",
         description: "Leave deleted successfully",
       });
       
+      setIsDeleteDialogOpen(false);
+      setLeaveToDelete(null);
       fetchLeaveData();
     } catch (error: any) {
       toast({
@@ -386,6 +395,8 @@ const LeaveCalendar: React.FC = () => {
         description: error.message || "Failed to delete leave",
         variant: "destructive",
       });
+    } finally {
+      setIsDeletingLeave(false);
     }
   };
 
@@ -675,7 +686,7 @@ const LeaveCalendar: React.FC = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleDeleteLeave(leave.id);
+                                handleDeleteLeaveClick(leave);
                               }}
                               className="hover:bg-white/20 p-0.5 rounded"
                               title="Delete leave"
@@ -1105,6 +1116,84 @@ const LeaveCalendar: React.FC = () => {
                   className="bg-orange-600 hover:bg-orange-700 text-white"
                 >
                   Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              <span>Delete Leave Request</span>
+            </DialogTitle>
+          </DialogHeader>
+          
+          {leaveToDelete && (
+            <div className="space-y-4 py-4">
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to delete the leave request for{' '}
+                <span className="font-medium text-foreground">
+                  {leaveToDelete.employee.firstName} {leaveToDelete.employee.lastName}
+                </span>?
+              </p>
+              
+              <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Leave Type:</span>
+                  <span className="font-medium">{leaveToDelete.leaveType}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Period:</span>
+                  <span className="font-medium">
+                    {new Date(leaveToDelete.startDate).toLocaleDateString()} - {new Date(leaveToDelete.endDate).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Status:</span>
+                  <span className={`font-medium ${
+                    leaveToDelete.status === 'approved' ? 'text-green-600' : 
+                    leaveToDelete.status === 'pending' ? 'text-yellow-600' : 
+                    'text-red-600'
+                  }`}>
+                    {leaveToDelete.status}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+                <p className="text-sm text-destructive">
+                  This action cannot be undone. The leave request will be permanently removed from the system.
+                </p>
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDeleteDialogOpen(false)}
+                  className="flex-1"
+                  disabled={isDeletingLeave}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleDeleteLeave}
+                  disabled={isDeletingLeave}
+                  variant="destructive"
+                  className="flex-1"
+                >
+                  {isDeletingLeave ? (
+                    <>
+                      <Clock className="h-4 w-4 mr-2 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    'Yes, Delete Request'
+                  )}
                 </Button>
               </div>
             </div>
