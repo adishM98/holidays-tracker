@@ -94,6 +94,18 @@ const PendingApprovals: React.FC = () => {
     });
   };
 
+  const formatDuration = (startDate: string, endDate: string) => {
+    const start = formatDate(startDate);
+    const end = formatDate(endDate);
+    
+    // If it's the same date, show only once
+    if (start === end) {
+      return start;
+    }
+    
+    return `${start} - ${end}`;
+  };
+
   return (
     <div className="relative min-h-screen">
       <TimeManagementBackground />
@@ -164,7 +176,7 @@ const PendingApprovals: React.FC = () => {
                     <div className="bg-blue-50/50 dark:bg-blue-950/20 rounded-lg p-3">
                       <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-1">Duration</p>
                       <p className="font-bold text-foreground">
-                        {formatDate(request.startDate)} - {formatDate(request.endDate)}
+                        {formatDuration(request.startDate, request.endDate)}
                       </p>
                       <p className="text-sm text-blue-600 dark:text-blue-400">({request.daysCount || request.days || 0} days)</p>
                     </div>
@@ -203,7 +215,7 @@ const PendingApprovals: React.FC = () => {
                         <div className="p-4 bg-secondary/50 rounded-lg space-y-2">
                           <p><span className="font-medium">Employee:</span> {request.employee ? `${request.employee.firstName} ${request.employee.lastName}` : 'Unknown Employee'}</p>
                           <p><span className="font-medium">Leave Type:</span> {leaveTypeLabels[request.leaveType] || request.leaveType}</p>
-                          <p><span className="font-medium">Duration:</span> {formatDate(request.startDate)} - {formatDate(request.endDate)} ({request.daysCount || request.days || 0} days)</p>
+                          <p><span className="font-medium">Duration:</span> {formatDuration(request.startDate, request.endDate)} ({request.daysCount || request.days || 0} days)</p>
                           <p><span className="font-medium">Reason:</span> {request.reason || 'No reason provided'}</p>
                         </div>
                         
