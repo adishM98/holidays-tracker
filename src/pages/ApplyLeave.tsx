@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -20,10 +20,18 @@ import {
   CalendarDays,
   User,
   Plus,
-  X
+  X,
+  BarChart3,
+  Heart,
+  Sun,
+  Gift,
+  CheckCircle,
+  XCircle,
+  AlertCircle
 } from 'lucide-react';
 import { leaveTypeLabels } from '@/data/mockData';
 import { employeeAPI } from '@/services/api';
+import { TimeManagementBackground } from '@/components/ui/time-management-background';
 
 interface LeaveRequest {
   id: string;
@@ -55,6 +63,7 @@ const ApplyLeave: React.FC = () => {
   const [isHolidayDialogOpen, setIsHolidayDialogOpen] = useState(false);
   const [selectedHoliday, setSelectedHoliday] = useState<Holiday | null>(null);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [leaveBalance, setLeaveBalance] = useState<any>(null);
   
   const [leaveForm, setLeaveForm] = useState({
     leaveType: '' as LeaveType | '',
@@ -90,6 +99,15 @@ const ApplyLeave: React.FC = () => {
       // Filter out cancelled requests - they should not appear on calendar
       const activeLeaves = (leaveResponse.requests || []).filter(leave => leave.status !== 'cancelled');
       setExistingLeaves(activeLeaves);
+      
+      // Fetch leave balance
+      try {
+        const balanceResponse = await employeeAPI.getDashboard();
+        setLeaveBalance(balanceResponse.leaveBalances || null);
+      } catch (error) {
+        console.warn('Failed to fetch leave balance:', error);
+        setLeaveBalance(null);
+      }
       
       // Fetch holidays for the current year
       try {
@@ -478,21 +496,122 @@ const ApplyLeave: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-            <CalendarDays className="h-4 w-4 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Apply for Leave</h1>
-            <p className="text-muted-foreground">
-              Click any working day to apply for leave
-            </p>
+    <div className="relative min-h-screen">
+      <TimeManagementBackground />
+      <div className="relative z-10 space-y-6">
+        {/* Hero Section */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+              <CalendarDays className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Apply for Leave</h1>
+              <p className="text-muted-foreground mt-1 text-sm">
+                Click any working day to apply for leave
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+
+        {/* Leave Balance Summary */}
+        {leaveBalance && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {leaveBalance.map((balance: any) => {
+              const getBalanceIcon = (type: string) => {
+                switch (type) {
+                  case 'sick': return Heart;
+                  case 'casual': return Sun;
+                  case 'earned': case 'annual': return Gift;
+                  default: return CalendarDays;
+                }
+              };
+              
+              const getBalanceColor = (type: string) => {
+                switch (type) {
+                  case 'sick': return { bg: 'bg-gradient-to-br from-red-50 to-red-100', text: 'text-red-700', icon: 'from-red-500 to-red-600' };
+                  case 'casual': return { bg: 'bg-gradient-to-br from-green-50 to-green-100', text: 'text-green-700', icon: 'from-green-500 to-green-600' };
+                  case 'earned': case 'annual': return { bg: 'bg-gradient-to-br from-blue-50 to-blue-100', text: 'text-blue-700', icon: 'from-blue-500 to-blue-600' };
+                  default: return { bg: 'bg-gradient-to-br from-gray-50 to-gray-100', text: 'text-gray-700', icon: 'from-gray-500 to-gray-600' };
+                }
+              };
+
+              const IconComponent = getBalanceIcon(balance.leaveType);
+              const colors = getBalanceColor(balance.leaveType);
+              
+              return (
+                <Card key={balance.id} className={`${colors.bg} border-0 shadow-md`}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className={`w-10 h-10 bg-gradient-to-br ${colors.icon} rounded-lg flex items-center justify-center`}>
+                        <IconComponent className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-2xl font-bold ${colors.text}`}>
+                          {balance.availableDays}
+                        </p>
+                        <p className="text-xs text-muted-foreground">remaining</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className={`font-semibold ${colors.text} mb-1`}>
+                        {balance.leaveType === 'sick' ? 'Sick Leave' :
+                         balance.leaveType === 'casual' ? 'Casual Leave' :
+                         balance.leaveType === 'earned' || balance.leaveType === 'annual' ? 'Earned Leave' :
+                         'Leave'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {balance.totalAllocated - balance.availableDays} used of {balance.totalAllocated}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Pending Requests Tracker */}
+        {existingLeaves.filter(leave => leave.status === 'pending').length > 0 && (
+          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-0 shadow-md">
+            <CardHeader>
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center">
+                  <AlertCircle className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg text-amber-800">Your Pending Requests</CardTitle>
+                  <p className="text-sm text-amber-700">Waiting for approval</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-3">
+                {existingLeaves.filter(leave => leave.status === 'pending').map((leave) => (
+                  <div key={leave.id} className="flex items-center justify-between p-3 bg-white/60 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
+                        <Clock className="h-4 w-4 text-amber-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-amber-900">
+                          {new Date(leave.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          {leave.startDate !== leave.endDate && ` - ${new Date(leave.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
+                        </p>
+                        <p className="text-sm text-amber-700">
+                          {leave.leaveType.charAt(0).toUpperCase() + leave.leaveType.slice(1)} Leave
+                        </p>
+                      </div>
+                    </div>
+                    <Badge className="bg-amber-200 text-amber-800 border-amber-300">
+                      🟡 Pending
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
       {/* Calendar */}
       <Card className="shadow-professional-md">
@@ -577,41 +696,85 @@ const ApplyLeave: React.FC = () => {
                     }`}>
                       <span>{day}</span>
                       {!isDisabled && (
-                        <Plus className="h-3 w-3 opacity-50 hover:opacity-100" />
+                        <div className="w-6 h-6 bg-blue-50 dark:bg-blue-900/30 rounded-full flex items-center justify-center hover:bg-blue-100 dark:hover:bg-blue-800/40 transition-colors duration-200 group">
+                          <Plus className="h-3 w-3 text-blue-600 dark:text-blue-400 opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all duration-200" />
+                        </div>
                       )}
                     </div>
                     
                     <div className="flex-1 space-y-1">
                       {/* Show holiday indicator first (highest priority) */}
                       {holidayOnDate && (
-                        <Badge 
-                          variant="secondary" 
-                          className="text-xs px-1 py-0 w-full justify-center bg-orange-100 dark:bg-orange-950 text-orange-800 dark:text-orange-200 border-orange-200 dark:border-orange-800"
-                          title={holidayOnDate.description || holidayOnDate.name}
-                        >
-                          {holidayOnDate.name.length > 8 ? holidayOnDate.name.substring(0, 8) + '...' : holidayOnDate.name}
-                        </Badge>
+                        <div className="space-y-1">
+                          <Badge 
+                            className="text-xs px-2 py-1 w-full justify-center bg-gradient-to-r from-red-100 to-pink-100 text-red-700 border border-red-200 rounded-full font-medium shadow-sm"
+                            title={holidayOnDate.description || holidayOnDate.name}
+                          >
+                            <div className="flex items-center space-x-1">
+                              <span className="text-xs">🎉</span>
+                              <span>
+                                {holidayOnDate.name.length > 6 ? holidayOnDate.name.substring(0, 6) + '...' : holidayOnDate.name}
+                              </span>
+                            </div>
+                          </Badge>
+                        </div>
                       )}
                       
                       {/* Show existing leave only if no holiday */}
                       {leaveOnDate && !holidayOnDate && (
-                        <Badge 
-                          variant="secondary" 
-                          className={`text-xs px-1 py-0 w-full justify-center cursor-pointer hover:opacity-80 ${getLeaveTypeColor(leaveOnDate.leaveType, leaveOnDate.status)}`}
-                          onClick={(e) => {
-                            e.stopPropagation(); // Prevent date selection
-                            handleLeaveClick(leaveOnDate);
-                          }}
-                          title="Click to view details"
-                        >
-                          {leaveOnDate.leaveType}
-                        </Badge>
+                        <div className="space-y-1">
+                          <Badge 
+                            className={`text-xs px-2 py-1 w-full justify-center cursor-pointer hover:shadow-md transition-all duration-200 rounded-full font-medium ${
+                              leaveOnDate.leaveType === 'sick' ? 'bg-red-100 text-red-700 border-red-200' :
+                              leaveOnDate.leaveType === 'casual' ? 'bg-green-100 text-green-700 border-green-200' :
+                              leaveOnDate.leaveType === 'earned' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                              'bg-purple-100 text-purple-700 border-purple-200'
+                            }`}
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent date selection
+                              handleLeaveClick(leaveOnDate);
+                            }}
+                            title="Click to view details"
+                          >
+                            <div className="flex items-center space-x-1">
+                              {leaveOnDate.leaveType === 'sick' && <Heart className="h-2.5 w-2.5" />}
+                              {leaveOnDate.leaveType === 'casual' && <Sun className="h-2.5 w-2.5" />}
+                              {leaveOnDate.leaveType === 'earned' && <Gift className="h-2.5 w-2.5" />}
+                              {leaveOnDate.leaveType === 'compensation' && <CalendarDays className="h-2.5 w-2.5" />}
+                              <span>
+                                {leaveOnDate.leaveType === 'sick' ? 'Sick' :
+                                 leaveOnDate.leaveType === 'casual' ? 'Casual' :
+                                 leaveOnDate.leaveType === 'earned' ? 'Earned' :
+                                 'Comp Off'}
+                              </span>
+                            </div>
+                          </Badge>
+                          <div className="flex justify-center">
+                            <Badge 
+                              className={`text-xs px-1.5 py-0.5 rounded-full border hover:shadow-md transition-all duration-200 hover:scale-105 ${
+                                leaveOnDate.status === 'approved' ? 'bg-gradient-to-br from-green-50 to-green-100 text-green-800 border-green-300 hover:from-green-100 hover:to-green-200' :
+                                leaveOnDate.status === 'rejected' ? 'bg-gradient-to-br from-red-50 to-red-100 text-red-800 border-red-300 hover:from-red-100 hover:to-red-200' :
+                                'bg-gradient-to-br from-amber-50 to-amber-100 text-amber-800 border-amber-300 hover:from-amber-100 hover:to-amber-200'
+                              }`}
+                            >
+                              {leaveOnDate.status === 'approved' && '🟢'}
+                              {leaveOnDate.status === 'rejected' && '🔴'}
+                              {leaveOnDate.status === 'pending' && '🟡'}
+                              <span className="ml-0.5 font-semibold text-xs">
+                                {leaveOnDate.status === 'approved' ? 'Approved' : leaveOnDate.status === 'rejected' ? 'Rejected' : 'Pending'}
+                              </span>
+                            </Badge>
+                          </div>
+                        </div>
                       )}
                       
                       {/* Show weekend indicator only if no leave and no holiday */}
                       {!leaveOnDate && !holidayOnDate && isWeekendDate && (
-                        <div className="text-xs text-center text-gray-500 dark:text-gray-400 font-medium">
-                          Weekend
+                        <div className="flex items-center justify-center">
+                          <Badge className="text-xs px-2 py-1 bg-gradient-to-br from-gray-100 to-gray-200 text-gray-700 border border-gray-300 rounded-full font-medium">
+                            <span className="mr-1">🛏️</span>
+                            Weekend
+                          </Badge>
                         </div>
                       )}
                       
@@ -625,36 +788,37 @@ const ApplyLeave: React.FC = () => {
       </Card>
 
       {/* Legend */}
-      <Card className="shadow-professional-sm">
+      <Card className="shadow-md border-0 bg-gradient-to-br from-white to-gray-50/30 dark:from-gray-900 dark:to-gray-950/20 backdrop-blur-sm">
         <CardContent className="p-4">
-          <div className="flex flex-wrap gap-4 text-sm">
+          <h3 className="text-sm font-semibold text-foreground mb-3">Calendar Legend</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-green-100 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded"></div>
-              <span>Casual Leave</span>
+              <Badge className="w-4 h-4 p-0 bg-gradient-to-br from-green-100 to-green-200 border-green-300"></Badge>
+              <span className="text-foreground">Casual Leave</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-blue-100 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded"></div>
-              <span>Earned Leave</span>
+              <Badge className="w-4 h-4 p-0 bg-gradient-to-br from-blue-100 to-blue-200 border-blue-300"></Badge>
+              <span className="text-foreground">Earned Leave</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-red-100 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded"></div>
-              <span>Sick Leave</span>
+              <Badge className="w-4 h-4 p-0 bg-gradient-to-br from-red-100 to-red-200 border-red-300"></Badge>
+              <span className="text-foreground">Sick Leave</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-purple-100 dark:bg-purple-950 border border-purple-200 dark:border-purple-800 rounded"></div>
-              <span>Compensation Off</span>
+              <Badge className="w-4 h-4 p-0 bg-gradient-to-br from-purple-100 to-purple-200 border-purple-300"></Badge>
+              <span className="text-foreground">Compensation Off</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-muted border border-border border-dashed rounded"></div>
-              <span>Pending Approval</span>
+              <Badge className="w-4 h-4 p-0 bg-gradient-to-br from-amber-100 to-amber-200 border-amber-300 border-dashed"></Badge>
+              <span className="text-foreground">Pending Approval</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded"></div>
-              <span>Weekend</span>
+              <Badge className="w-4 h-4 p-0 bg-gradient-to-br from-gray-100 to-gray-200 border-gray-300"></Badge>
+              <span className="text-foreground">Weekend</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-orange-100 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded"></div>
-              <span>Holiday</span>
+              <Badge className="w-4 h-4 p-0 bg-gradient-to-br from-orange-100 to-red-100 border-red-300"></Badge>
+              <span className="text-foreground flex items-center">Holiday <span className="ml-1 text-xs">🎉</span></span>
             </div>
           </div>
         </CardContent>
@@ -664,10 +828,15 @@ const ApplyLeave: React.FC = () => {
       <Dialog open={isApplyDialogOpen} onOpenChange={setIsApplyDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <FileText className="h-5 w-5 mr-2 text-primary" />
+            <DialogTitle className="flex items-center text-lg">
+              <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center mr-3">
+                <CalendarDays className="h-4 w-4 text-white" />
+              </div>
               Apply for Leave
             </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground mt-2">
+              Fill out the details below to submit your leave request for approval.
+            </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
@@ -726,7 +895,7 @@ const ApplyLeave: React.FC = () => {
               />
             </div>
             
-            <div className="flex space-x-3 pt-4">
+            <div className="flex space-x-3 pt-6 border-t border-border/50">
               <Button
                 variant="outline"
                 type="button"
@@ -734,14 +903,14 @@ const ApplyLeave: React.FC = () => {
                   resetLeaveForm();
                   setIsApplyDialogOpen(false);
                 }}
-                className="flex-1 border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white"
+                className="flex-1 border-gray-300 text-gray-600 hover:bg-gray-50 rounded-full"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="flex-1 bg-gradient-primary hover:opacity-90"
+                className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 rounded-full font-semibold"
               >
                 {isSubmitting ? (
                   <>
@@ -749,7 +918,10 @@ const ApplyLeave: React.FC = () => {
                     Submitting...
                   </>
                 ) : (
-                  'Submit Request'
+                  <>
+                    <CalendarDays className="h-4 w-4 mr-2" />
+                    Submit Leave Request
+                  </>
                 )}
               </Button>
             </div>
@@ -1003,6 +1175,7 @@ const ApplyLeave: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 };

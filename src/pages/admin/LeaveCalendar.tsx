@@ -85,6 +85,19 @@ const LeaveCalendar: React.FC = () => {
     return `${year}-${month}-${day}`;
   };
 
+  // Helper function to format duration display
+  const formatDuration = (startDate: string, endDate: string) => {
+    const start = new Date(startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const end = new Date(endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    
+    // If it's the same date, show only once
+    if (start === end) {
+      return start;
+    }
+    
+    return `${start} - ${end}`;
+  };
+
   const [leaveForm, setLeaveForm] = useState({
     employeeId: '',
     leaveType: 'sick' as 'sick' | 'casual' | 'earned' | 'compensation',
@@ -995,7 +1008,7 @@ const LeaveCalendar: React.FC = () => {
                           <div className="text-center bg-blue-50/50 dark:bg-blue-950/20 rounded-lg p-2">
                             <p className="text-xs font-semibold text-blue-900 dark:text-blue-200 mb-1">Duration</p>
                             <p className="text-sm font-bold text-foreground">
-                              {new Date(leave.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(leave.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                              {formatDuration(leave.startDate, leave.endDate)}
                             </p>
                           </div>
                           <div className="flex items-center space-x-2">
@@ -1419,7 +1432,7 @@ const LeaveCalendar: React.FC = () => {
             Leave Type: <span className="font-medium">{hoveredLeave.leaveType}</span>
           </div>
           <div className="mb-1">
-            Duration: {new Date(hoveredLeave.startDate).toLocaleDateString()} - {new Date(hoveredLeave.endDate).toLocaleDateString()}
+            Duration: {formatDuration(hoveredLeave.startDate, hoveredLeave.endDate)}
           </div>
           <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${
             hoveredLeave.status === 'approved' ? 'bg-green-100 text-green-800' :
