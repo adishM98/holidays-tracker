@@ -228,10 +228,17 @@ const ApplyLeave: React.FC = () => {
 
   const hasLeaveOnDate = (day: number) => {
     const dateString = formatDateString(day);
+    const checkDate = new Date(dateString);
+    
+    // Don't show leave on weekends since they don't count as leave days
+    const dayOfWeek = checkDate.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      return null;
+    }
+    
     return existingLeaves.find(leave => {
       const startDate = new Date(leave.startDate);
       const endDate = new Date(leave.endDate);
-      const checkDate = new Date(dateString);
       return checkDate >= startDate && checkDate <= endDate;
     });
   };

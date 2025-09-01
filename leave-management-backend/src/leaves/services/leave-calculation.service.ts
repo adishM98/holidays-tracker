@@ -530,4 +530,71 @@ export class LeaveCalculationService {
 
     return Math.max(0, months);
   }
+
+  /**
+   * Update existing leave balances for an employee
+   */
+  async updateLeaveBalances(
+    employeeId: string,
+    balances: { earned?: number; sick?: number; casual?: number }
+  ): Promise<void> {
+    const currentYear = new Date().getFullYear();
+    
+    console.log(`Updating leave balances for employee ${employeeId} for year ${currentYear}:`, balances);
+
+    // Update each balance type if provided
+    if (balances.earned !== undefined) {
+      await this.setLeaveBalance(employeeId, LeaveType.EARNED, currentYear, balances.earned);
+    }
+    
+    if (balances.sick !== undefined) {
+      await this.setLeaveBalance(employeeId, LeaveType.SICK, currentYear, balances.sick);
+    }
+    
+    if (balances.casual !== undefined) {
+      await this.setLeaveBalance(employeeId, LeaveType.CASUAL, currentYear, balances.casual);
+    }
+    
+    console.log("Leave balances updated successfully");
+  }
+
+  /**
+   * Update a specific leave balance for an employee (manual update)
+   */
+  private async setLeaveBalance(
+    employeeId: string,
+    leaveType: LeaveType,
+    year: number,
+    balance: number
+  ): Promise<void> {
+    // Find existing balance record
+    const existingBalance = await this.leaveBalanceRepository.findOne({
+      where: {
+        employeeId,
+        leaveType,
+        year,
+      },
+    });
+
+    if (existingBalance) {
+      // Update existing balance
+      existingBalance.availableDays = balance;
+      existingBalance.totalAllocated = balance; // Also update total allocated
+      await this.leaveBalanceRepository.save(existingBalance);
+      console.log(`Updated ${leaveType} balance to ${balance} for employee ${employeeId}`);
+    } else {
+      // Create new balance record if it doesn't exist
+      const newBalance = this.leaveBalanceRepository.create({
+        employeeId,
+        leaveType,
+        year,
+        availableDays: balance,
+        totalAllocated: balance, // Set allocated to the same value initially
+        usedDays: 0,
+        carryForward: 0,
+      });
+      await this.leaveBalanceRepository.save(newBalance);
+      console.log(`Created new ${leaveType} balance of ${balance} for employee ${employeeId}`);
+    }
+  }
 }

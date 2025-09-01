@@ -148,6 +148,16 @@ export class AdminController {
     return { message: "Employee activated successfully" };
   }
 
+  @Put("employees/:id/leave-balance")
+  @ApiOperation({ summary: "Update employee leave balance" })
+  async updateEmployeeLeaveBalance(
+    @Param("id") id: string,
+    @Body() data: { earnedBalance: number; sickBalance: number; casualBalance: number }
+  ) {
+    await this.employeesService.updateEmployeeLeaveBalance(id, data);
+    return { message: "Leave balance updated successfully" };
+  }
+
   @Post("employees/:id/regenerate-invite")
   @ApiOperation({
     summary: "Regenerate invite for employee with expired invite",

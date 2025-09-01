@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, Users, Info, Upload } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Users, Info, Upload, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,6 +70,13 @@ const Employees: React.FC = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [leaveStatusEmployee, setLeaveStatusEmployee] = useState<Employee | null>(null);
   const [leaveStatus, setLeaveStatus] = useState<any>(null);
+  const [isLeaveBalanceDialogOpen, setIsLeaveBalanceDialogOpen] = useState(false);
+  const [leaveBalanceEmployee, setLeaveBalanceEmployee] = useState<Employee | null>(null);
+  const [leaveBalanceData, setLeaveBalanceData] = useState({
+    earnedBalance: 0,
+    sickBalance: 0,
+    casualBalance: 0,
+  });
   const [useManualBalances, setUseManualBalances] = useState(false);
   const { toast } = useToast();
 
@@ -264,6 +271,39 @@ const Employees: React.FC = () => {
       toast({
         title: "Error",
         description: "Failed to fetch leave status.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const openLeaveBalanceDialog = (employee: Employee) => {
+    setLeaveBalanceEmployee(employee);
+    setLeaveBalanceData({
+      earnedBalance: 0,
+      sickBalance: 0,
+      casualBalance: 0,
+    });
+    setIsLeaveBalanceDialogOpen(true);
+  };
+
+  const handleUpdateLeaveBalance = async () => {
+    if (!leaveBalanceEmployee) return;
+    
+    try {
+      await adminAPI.updateEmployeeLeaveBalance(leaveBalanceEmployee.id, leaveBalanceData);
+      
+      toast({
+        title: "Success",
+        description: "Leave balance updated successfully.",
+      });
+      
+      setIsLeaveBalanceDialogOpen(false);
+      setLeaveBalanceEmployee(null);
+      loadData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update leave balance.",
         variant: "destructive",
       });
     }
@@ -761,14 +801,25 @@ const Employees: React.FC = () => {
                               size="sm"
                               onClick={() => showLeaveStatus(employee)}
                               className="text-blue-600 hover:text-blue-700"
+                              title="View Leave Status"
                             >
                               <Info className="w-4 h-4" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
+                              onClick={() => openLeaveBalanceDialog(employee)}
+                              className="text-green-600 hover:text-green-700"
+                              title="Update Leave Balance"
+                            >
+                              <Calendar className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               onClick={() => handleDeleteEmployee(employee)}
                               className="text-destructive hover:text-destructive"
+                              title="Delete Employee"
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -853,6 +904,99 @@ const Employees: React.FC = () => {
               <div className="flex justify-end pt-4">
                 <Button variant="outline" onClick={() => setIsLeaveStatusDialogOpen(false)}>
                   Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Leave Balance Update Dialog */}
+      <Dialog open={isLeaveBalanceDialogOpen} onOpenChange={setIsLeaveBalanceDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Update Leave Balance</DialogTitle>
+          </DialogHeader>
+          {leaveBalanceEmployee && (
+            <div className="space-y-4">
+              <div className="text-center border-b pb-4">
+                <h3 className="text-lg font-semibold">
+                  {leaveBalanceEmployee.firstName} {leaveBalanceEmployee.lastName}
+                </h3>
+                <p className="text-sm text-muted-foreground">{leaveBalanceEmployee.position}</p>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="earnedBalance" className="text-sm font-medium">
+                    Current Earned/Privilege Balance
+                  </Label>
+                  <Input
+                    id="earnedBalance"
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={leaveBalanceData.earnedBalance}
+                    onChange={(e) => setLeaveBalanceData({
+                      ...leaveBalanceData, 
+                      earnedBalance: parseFloat(e.target.value) || 0
+                    })}
+                    placeholder="Enter current balance"
+                  />
+                  <p className="text-xs text-muted-foreground">Available days remaining</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="sickBalance" className="text-sm font-medium">
+                    Current Sick Leave Balance
+                  </Label>
+                  <Input
+                    id="sickBalance"
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={leaveBalanceData.sickBalance}
+                    onChange={(e) => setLeaveBalanceData({
+                      ...leaveBalanceData, 
+                      sickBalance: parseFloat(e.target.value) || 0
+                    })}
+                    placeholder="Enter current balance"
+                  />
+                  <p className="text-xs text-muted-foreground">Available days remaining</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="casualBalance" className="text-sm font-medium">
+                    Current Casual Leave Balance
+                  </Label>
+                  <Input
+                    id="casualBalance"
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={leaveBalanceData.casualBalance}
+                    onChange={(e) => setLeaveBalanceData({
+                      ...leaveBalanceData, 
+                      casualBalance: parseFloat(e.target.value) || 0
+                    })}
+                    placeholder="Enter current balance"
+                  />
+                  <p className="text-xs text-muted-foreground">Available days remaining</p>
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsLeaveBalanceDialogOpen(false);
+                    setLeaveBalanceEmployee(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdateLeaveBalance}>
+                  Update Balance
                 </Button>
               </div>
             </div>

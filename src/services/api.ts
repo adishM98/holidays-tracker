@@ -270,6 +270,13 @@ export const adminAPI = {
     });
   },
 
+  updateEmployeeLeaveBalance: async (id: string, data: { earnedBalance: number; sickBalance: number; casualBalance: number }) => {
+    return apiRequest(`/admin/employees/${id}/leave-balance`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
   bulkImportEmployees: async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);

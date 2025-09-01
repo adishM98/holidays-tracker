@@ -675,4 +675,21 @@ export class EmployeesService {
       });
     }
   }
+
+  async updateEmployeeLeaveBalance(
+    employeeId: string, 
+    data: { earnedBalance: number; sickBalance: number; casualBalance: number }
+  ): Promise<void> {
+    console.log(`Updating leave balance for employee ${employeeId}:`, data);
+    
+    // Use the LeaveCalculationService to update balances
+    await this.leaveCalculationService.updateLeaveBalances(
+      employeeId,
+      {
+        earned: data.earnedBalance,
+        sick: data.sickBalance,
+        casual: data.casualBalance,
+      }
+    );
+  }
 }

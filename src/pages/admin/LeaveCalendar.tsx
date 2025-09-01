@@ -509,10 +509,17 @@ const LeaveCalendar: React.FC = () => {
 
   const getLeaveForDate = (day: number) => {
     const dateString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const checkDate = new Date(dateString);
+    
+    // Don't show leave on weekends since they don't count as leave days
+    const dayOfWeek = checkDate.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      return [];
+    }
+    
     return leaveRequests.filter(leave => {
       const startDate = new Date(leave.startDate);
       const endDate = new Date(leave.endDate);
-      const checkDate = new Date(dateString);
       
       return checkDate >= startDate && checkDate <= endDate;
     });
