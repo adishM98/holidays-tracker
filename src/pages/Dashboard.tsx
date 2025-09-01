@@ -425,13 +425,13 @@ const Dashboard: React.FC = () => {
                 case 'annual': // legacy support
                   return { text: 'text-blue-600', bg: 'bg-blue-500', lightBg: 'bg-blue-100' };
                 case 'sick':
-                  return { text: 'text-red-600', bg: 'bg-red-500', lightBg: 'bg-red-100' };
+                  return { text: 'text-blue-600', bg: 'bg-blue-500', lightBg: 'bg-blue-100' };
                 case 'casual':
-                  return { text: 'text-green-600', bg: 'bg-green-500', lightBg: 'bg-green-100' };
+                  return { text: 'text-blue-600', bg: 'bg-blue-500', lightBg: 'bg-blue-100' };
                 case 'compensation':
-                  return { text: 'text-orange-600', bg: 'bg-orange-500', lightBg: 'bg-orange-100' };
+                  return { text: 'text-blue-600', bg: 'bg-blue-500', lightBg: 'bg-blue-100' };
                 default:
-                  return { text: 'text-gray-600', bg: 'bg-gray-500', lightBg: 'bg-gray-100' };
+                  return { text: 'text-blue-600', bg: 'bg-blue-500', lightBg: 'bg-blue-100' };
               }
             };
 
@@ -719,13 +719,13 @@ const Dashboard: React.FC = () => {
 
 
         {/* Upcoming Holidays Section - Right Side */}
-        <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-green-50/30 dark:from-gray-900 dark:to-green-950/20 backdrop-blur-sm">
+        <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-900 dark:to-blue-950/20 backdrop-blur-sm">
           <CardHeader className="relative">
-            <div className="absolute top-4 right-4 w-8 h-8 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-lg flex items-center justify-center">
-              <Calendar className="h-4 w-4 text-green-600 dark:text-green-400" />
+            <div className="absolute top-4 right-4 w-8 h-8 bg-gradient-to-br from-blue-500/20 to-blue-500/20 rounded-lg flex items-center justify-center">
+              <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             </div>
             <CardTitle className="flex items-center text-xl">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center mr-3 shadow-md">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mr-3 shadow-md">
                 <Calendar className="h-5 w-5 text-white" />
               </div>
               Upcoming Holidays
@@ -769,14 +769,14 @@ const Dashboard: React.FC = () => {
               </div>
             ) : (
               <div className="text-center py-12">
-                <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Calendar className="h-8 w-8 text-green-600 dark:text-green-400" />
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-100 dark:from-blue-900/30 dark:to-blue-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Calendar className="h-8 w-8 text-blue-600 dark:text-blue-400" />
                 </div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">No holidays in the next 30 days</h3>
                 {user?.role === 'admin' && (
                   <div className="flex justify-center">
                     <Link to="/admin/settings">
-                      <Button className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2">
+                      <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2">
                         <Plus className="h-4 w-4" />
                         <span>Add Holidays</span>
                       </Button>

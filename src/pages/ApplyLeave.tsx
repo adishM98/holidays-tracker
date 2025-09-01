@@ -502,7 +502,7 @@ const ApplyLeave: React.FC = () => {
         {/* Hero Section */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
               <CalendarDays className="h-6 w-6 text-white" />
             </div>
             <div>
@@ -529,10 +529,10 @@ const ApplyLeave: React.FC = () => {
               
               const getBalanceColor = (type: string) => {
                 switch (type) {
-                  case 'sick': return { bg: 'bg-gradient-to-br from-red-50 to-red-100', text: 'text-red-700', icon: 'from-red-500 to-red-600' };
-                  case 'casual': return { bg: 'bg-gradient-to-br from-green-50 to-green-100', text: 'text-green-700', icon: 'from-green-500 to-green-600' };
+                  case 'sick': return { bg: 'bg-gradient-to-br from-blue-50 to-blue-100', text: 'text-blue-700', icon: 'from-blue-500 to-blue-600' };
+                  case 'casual': return { bg: 'bg-gradient-to-br from-blue-50 to-blue-100', text: 'text-blue-700', icon: 'from-blue-500 to-blue-600' };
                   case 'earned': case 'annual': return { bg: 'bg-gradient-to-br from-blue-50 to-blue-100', text: 'text-blue-700', icon: 'from-blue-500 to-blue-600' };
-                  default: return { bg: 'bg-gradient-to-br from-gray-50 to-gray-100', text: 'text-gray-700', icon: 'from-gray-500 to-gray-600' };
+                  default: return { bg: 'bg-gradient-to-br from-blue-50 to-blue-100', text: 'text-blue-700', icon: 'from-blue-500 to-blue-600' };
                 }
               };
 
@@ -725,10 +725,10 @@ const ApplyLeave: React.FC = () => {
                         <div className="space-y-1">
                           <Badge 
                             className={`text-xs px-2 py-1 w-full justify-center cursor-pointer hover:shadow-md transition-all duration-200 rounded-full font-medium ${
-                              leaveOnDate.leaveType === 'sick' ? 'bg-red-100 text-red-700 border-red-200' :
-                              leaveOnDate.leaveType === 'casual' ? 'bg-green-100 text-green-700 border-green-200' :
+                              leaveOnDate.leaveType === 'sick' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                              leaveOnDate.leaveType === 'casual' ? 'bg-blue-100 text-blue-700 border-blue-200' :
                               leaveOnDate.leaveType === 'earned' ? 'bg-blue-100 text-blue-700 border-blue-200' :
-                              'bg-purple-100 text-purple-700 border-purple-200'
+                              'bg-blue-100 text-blue-700 border-blue-200'
                             }`}
                             onClick={(e) => {
                               e.stopPropagation(); // Prevent date selection
@@ -793,7 +793,7 @@ const ApplyLeave: React.FC = () => {
           <h3 className="text-sm font-semibold text-foreground mb-3">Calendar Legend</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div className="flex items-center space-x-2">
-              <Badge className="w-4 h-4 p-0 bg-gradient-to-br from-green-100 to-green-200 border-green-300"></Badge>
+              <Badge className="w-4 h-4 p-0 bg-gradient-to-br from-blue-100 to-blue-200 border-blue-300"></Badge>
               <span className="text-foreground">Casual Leave</span>
             </div>
             <div className="flex items-center space-x-2">
@@ -801,11 +801,11 @@ const ApplyLeave: React.FC = () => {
               <span className="text-foreground">Earned Leave</span>
             </div>
             <div className="flex items-center space-x-2">
-              <Badge className="w-4 h-4 p-0 bg-gradient-to-br from-red-100 to-red-200 border-red-300"></Badge>
+              <Badge className="w-4 h-4 p-0 bg-gradient-to-br from-blue-100 to-blue-200 border-blue-300"></Badge>
               <span className="text-foreground">Sick Leave</span>
             </div>
             <div className="flex items-center space-x-2">
-              <Badge className="w-4 h-4 p-0 bg-gradient-to-br from-purple-100 to-purple-200 border-purple-300"></Badge>
+              <Badge className="w-4 h-4 p-0 bg-gradient-to-br from-blue-100 to-blue-200 border-blue-300"></Badge>
               <span className="text-foreground">Compensation Off</span>
             </div>
             <div className="flex items-center space-x-2">
@@ -836,7 +836,7 @@ const ApplyLeave: React.FC = () => {
         >
           <DialogHeader>
             <DialogTitle className="flex items-center text-lg">
-              <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center mr-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mr-3">
                 <CalendarDays className="h-4 w-4 text-white" />
               </div>
               Apply for Leave
@@ -917,7 +917,7 @@ const ApplyLeave: React.FC = () => {
               <Button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 rounded-full font-semibold"
+                className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 rounded-full font-semibold"
               >
                 {isSubmitting ? (
                   <>

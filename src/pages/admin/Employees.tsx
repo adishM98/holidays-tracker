@@ -70,6 +70,7 @@ const Employees: React.FC = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [leaveStatusEmployee, setLeaveStatusEmployee] = useState<Employee | null>(null);
   const [leaveStatus, setLeaveStatus] = useState<any>(null);
+  const [useManualBalances, setUseManualBalances] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -84,6 +85,10 @@ const Employees: React.FC = () => {
     annualLeaveDays: 25,
     sickLeaveDays: 12,
     casualLeaveDays: 8,
+    // Manual balance overrides for existing employees
+    manualEarnedBalance: 0,
+    manualSickBalance: 0,
+    manualCasualBalance: 0,
   });
 
   useEffect(() => {
@@ -126,11 +131,20 @@ const Employees: React.FC = () => {
 
   const handleAddEmployee = async () => {
     try {
-      await adminAPI.createEmployee({
+      const employeeData = {
         ...formData,
         joiningDate: formData.joiningDate.toISOString().split('T')[0], // Convert Date to string
         managerId: formData.managerId || undefined,
-      });
+        // Include manual balance overrides if using manual mode
+        useManualBalances,
+        manualBalances: useManualBalances ? {
+          earned: formData.manualEarnedBalance,
+          sick: formData.manualSickBalance,
+          casual: formData.manualCasualBalance,
+        } : undefined,
+      };
+      
+      await adminAPI.createEmployee(employeeData);
       
       toast({
         title: "Success",
@@ -213,7 +227,11 @@ const Employees: React.FC = () => {
       annualLeaveDays: 25,
       sickLeaveDays: 12,
       casualLeaveDays: 8,
+      manualEarnedBalance: 0,
+      manualSickBalance: 0,
+      manualCasualBalance: 0,
     });
+    setUseManualBalances(false);
   };
 
   const showLeaveStatus = async (employee: Employee) => {
@@ -266,7 +284,11 @@ const Employees: React.FC = () => {
       annualLeaveDays: 25, // These would come from the API in a real implementation
       sickLeaveDays: 12,
       casualLeaveDays: 8,
+      manualEarnedBalance: 0,
+      manualSickBalance: 0,
+      manualCasualBalance: 0,
     });
+    setUseManualBalances(false);
     console.log('Form data set to:', {
       firstName: employee.firstName,
       lastName: employee.lastName,
@@ -408,40 +430,166 @@ const Employees: React.FC = () => {
         </div>
       </div>
       
-      <div className="grid grid-cols-3 gap-4">
-        <div>
-          <Label htmlFor="annualLeave">Annual Leave Days</Label>
-          <Input
-            id="annualLeave"
-            type="number"
-            value={formData.annualLeaveDays}
-            onChange={(e) => setFormData({...formData, annualLeaveDays: parseInt(e.target.value)})}
-            min="0"
-            max="50"
-          />
+      <div className="border rounded p-4">
+        <div className="flex items-start justify-between mb-4">
+          <h3 className="font-semibold text-lg">Leave Entitlements</h3>
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="manualBalances"
+              checked={useManualBalances}
+              onChange={(e) => setUseManualBalances(e.target.checked)}
+              className="w-4 h-4 mt-0.5"
+            />
+            <Label htmlFor="manualBalances" className="text-sm cursor-pointer text-right leading-tight">
+              Existing Employee (Set current balances manually)
+            </Label>
+          </div>
         </div>
-        <div>
-          <Label htmlFor="sickLeave">Sick Leave Days</Label>
-          <Input
-            id="sickLeave"
-            type="number"
-            value={formData.sickLeaveDays}
-            onChange={(e) => setFormData({...formData, sickLeaveDays: parseInt(e.target.value)})}
-            min="0"
-            max="30"
-          />
-        </div>
-        <div>
-          <Label htmlFor="casualLeave">Casual Leave Days</Label>
-          <Input
-            id="casualLeave"
-            type="number"
-            value={formData.casualLeaveDays}
-            onChange={(e) => setFormData({...formData, casualLeaveDays: parseInt(e.target.value)})}
-            min="0"
-            max="20"
-          />
-        </div>
+
+        {!useManualBalances ? (
+          <>
+            {/* Annual Allocation Fields */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="annualLeave" className="text-sm font-medium">
+                  Earned/Privilege Days
+                </Label>
+                <Input
+                  id="annualLeave"
+                  type="number"
+                  min="0"
+                  value={formData.annualLeaveDays}
+                  onChange={(e) => setFormData({...formData, annualLeaveDays: parseInt(e.target.value) || 0})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sickLeave" className="text-sm font-medium">
+                  Sick Leave Days
+                </Label>
+                <Input
+                  id="sickLeave"
+                  type="number"
+                  min="0"
+                  value={formData.sickLeaveDays}
+                  onChange={(e) => setFormData({...formData, sickLeaveDays: parseInt(e.target.value) || 0})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="casualLeave" className="text-sm font-medium">
+                  Casual Leave Days
+                </Label>
+                <Input
+                  id="casualLeave"
+                  type="number"
+                  min="0"
+                  value={formData.casualLeaveDays}
+                  onChange={(e) => setFormData({...formData, casualLeaveDays: parseInt(e.target.value) || 0})}
+                />
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Manual Current Balance Fields */}
+            <div className="bg-orange-50 dark:bg-orange-950/30 p-3 rounded-lg border dark:border-orange-800/50 mb-4">
+              <p className="text-sm text-orange-800 dark:text-orange-200 mb-2">
+                <strong>Migration Mode:</strong> Enter the employee's current leave balances from your previous system
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="manualEarned" className="text-sm font-medium">
+                  Current Earned/Privilege Balance
+                </Label>
+                <Input
+                  id="manualEarned"
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={formData.manualEarnedBalance}
+                  onChange={(e) => setFormData({...formData, manualEarnedBalance: parseFloat(e.target.value) || 0})}
+                  placeholder="e.g. 5"
+                />
+                <p className="text-xs text-muted-foreground">Available days remaining</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="manualSick" className="text-sm font-medium">
+                  Current Sick Leave Balance
+                </Label>
+                <Input
+                  id="manualSick"
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={formData.manualSickBalance}
+                  onChange={(e) => setFormData({...formData, manualSickBalance: parseFloat(e.target.value) || 0})}
+                  placeholder="e.g. 4"
+                />
+                <p className="text-xs text-muted-foreground">Available days remaining</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="manualCasual" className="text-sm font-medium">
+                  Current Casual Leave Balance
+                </Label>
+                <Input
+                  id="manualCasual"
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={formData.manualCasualBalance}
+                  onChange={(e) => setFormData({...formData, manualCasualBalance: parseFloat(e.target.value) || 0})}
+                  placeholder="e.g. 4"
+                />
+                <p className="text-xs text-muted-foreground">Available days remaining</p>
+              </div>
+            </div>
+
+            {/* Annual Allocation Fields (still needed for future calculations) */}
+            <div className="mt-6">
+              <h4 className="text-sm font-medium mb-4">Annual Leave Allocations (for next year)</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="annualLeave" className="text-sm font-medium">
+                    Earned/Privilege Days
+                  </Label>
+                  <Input
+                    id="annualLeave"
+                    type="number"
+                    min="0"
+                    value={formData.annualLeaveDays}
+                    onChange={(e) => setFormData({...formData, annualLeaveDays: parseInt(e.target.value) || 0})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sickLeave" className="text-sm font-medium">
+                    Sick Leave Days
+                  </Label>
+                  <Input
+                    id="sickLeave"
+                    type="number"
+                    min="0"
+                    value={formData.sickLeaveDays}
+                    onChange={(e) => setFormData({...formData, sickLeaveDays: parseInt(e.target.value) || 0})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="casualLeave" className="text-sm font-medium">
+                    Casual Leave Days
+                  </Label>
+                  <Input
+                    id="casualLeave"
+                    type="number"
+                    min="0"
+                    value={formData.casualLeaveDays}
+                    onChange={(e) => setFormData({...formData, casualLeaveDays: parseInt(e.target.value) || 0})}
+                  />
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
       
       <div className="flex justify-end space-x-2 pt-4">
