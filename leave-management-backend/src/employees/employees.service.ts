@@ -1111,6 +1111,22 @@ export class EmployeesService {
         }
 
         // PHASE 2: Update manager relationships for successfully created employees
+        // First identify all employees who are managers based on the CSV data
+        const managerEmployeeIds = new Set<string>();
+        
+        // Find all employee IDs that are mentioned as managers
+        for (const validRow of validRows) {
+          const { row } = validRow;
+          if (row.manager) {
+            managerEmployeeIds.add(row.manager);
+            console.log(`Identified manager in CSV: ${row.manager}`);
+          }
+        }
+        
+        // Set to collect database IDs of all managers
+        const managerDbIds = new Set<string>();
+        
+        // Set manager relationships and collect manager database IDs
         for (const validRow of validRows) {
           try {
             const { row } = validRow;
@@ -1131,14 +1147,21 @@ export class EmployeesService {
                 await manager.update(Employee, employeeDbId, {
                   managerId: managerDbId,
                 });
-
-                // Auto-promote manager if assigned
-                await this.autoPromoteToManager(managerDbId);
+                
+                // Add to list of managers to update
+                managerDbIds.add(managerDbId);
 
                 console.log(
                   `Updated manager relationship: ${row.employeeId} -> ${row.manager}`,
                 );
               }
+            }
+            
+            // If this employee is identified as a manager in the CSV, ensure they're in the managers set
+            if (managerEmployeeIds.has(row.employeeId) && createdEmployees.has(row.employeeId)) {
+              const employeeDbId = createdEmployees.get(row.employeeId)!;
+              managerDbIds.add(employeeDbId);
+              console.log(`Added ${row.employeeId} to managers list because they supervise others`);
             }
           } catch (error) {
             console.error(
@@ -1146,6 +1169,39 @@ export class EmployeesService {
               error,
             );
             // Don't fail the entire import for manager relationship errors
+          }
+        }
+        
+        // PHASE 3: Directly update user roles in the database for all identified managers
+        console.log(`Updating roles for ${managerDbIds.size} managers`);
+        for (const managerDbId of managerDbIds) {
+          try {
+            // Find the manager's employee record
+            const managerEmployee = await manager.findOne(Employee, {
+              where: { id: managerDbId },
+              relations: ["user"],
+            });
+            
+            if (!managerEmployee || !managerEmployee.user) {
+              console.log(`❌ Manager employee record or user not found for ID: ${managerDbId}`);
+              continue;
+            }
+            
+            // Skip if already a manager or admin
+            if (managerEmployee.user.role === UserRole.MANAGER || 
+                managerEmployee.user.role === UserRole.ADMIN) {
+              console.log(`✅ User ${managerEmployee.user.email} is already ${managerEmployee.user.role}`);
+              continue;
+            }
+            
+            // Update role to manager
+            await manager.update(User, managerEmployee.user.id, {
+              role: UserRole.MANAGER,
+            });
+            
+            console.log(`🎉 Set ${managerEmployee.user.email} as manager during bulk import`);
+          } catch (error) {
+            console.error(`Error setting manager role for ${managerDbId}: ${error.message}`);
           }
         }
       });
