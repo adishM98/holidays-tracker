@@ -21,6 +21,8 @@ A comprehensive leave management system backend built with NestJS, TypeScript, a
 - Multiple leave types (Annual, Sick, Casual)
 - Real-time leave balance calculations
 - Leave calendar and reporting
+- Year-end leave balance reset and archiving
+- Historical leave balance records for auditing
 
 ### 📧 Email Notifications
 - Welcome emails for new employees

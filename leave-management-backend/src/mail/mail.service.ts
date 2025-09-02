@@ -324,4 +324,83 @@ export class MailService {
       // Don't throw error - just log and continue
     }
   }
+  
+  async sendLeaveBalanceResetNotification(
+    email: string,
+    employeeName: string,
+    year: number,
+    leaveBalances: any[],
+  ): Promise<void> {
+    if (!this.isEmailEnabled()) {
+      this.logger.warn(
+        `SMTP not configured - skipping leave balance reset notification to ${email}`,
+      );
+      return;
+    }
+
+    const fromEmail = this.configService.get("FROM_EMAIL");
+    const frontendUrl = this.configService.get("FRONTEND_URL");
+
+    try {
+      // Format leave balances table
+      let balancesHtml = '';
+      leaveBalances.forEach(balance => {
+        const leaveTypeName = balance.leaveType.charAt(0).toUpperCase() + balance.leaveType.slice(1);
+        balancesHtml += `
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd;">${leaveTypeName}</td>
+            <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${balance.totalAllocated}</td>
+            <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${balance.usedDays}</td>
+            <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${balance.availableDays}</td>
+          </tr>
+        `;
+      });
+
+      await this.transporter!.sendMail({
+        from: fromEmail,
+        to: email,
+        subject: `Your ${year} Leave Balances Have Been Updated`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #333;">Leave Balance Update</h2>
+            <p>Dear ${employeeName},</p>
+            
+            <p>Your leave balances for ${year} have been updated. Here's a summary of your new leave balances:</p>
+            
+            <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+              <thead>
+                <tr style="background-color: #f4f4f4;">
+                  <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Leave Type</th>
+                  <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">Total Allocated</th>
+                  <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">Used</th>
+                  <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">Available</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${balancesHtml}
+              </tbody>
+            </table>
+            
+            <p style="margin-top: 20px;">
+              <a href="${frontendUrl}/dashboard" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+                View in Dashboard
+              </a>
+            </p>
+            
+            <p style="color: #666; font-size: 12px; margin-top: 30px;">
+              This is an automated message. Please do not reply to this email.
+            </p>
+          </div>
+        `,
+      });
+
+      this.logger.log(`Leave balance reset notification sent to ${email}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send leave balance reset notification to ${email}`,
+        error,
+      );
+      // Don't throw error - just log and continue
+    }
+  }
 }
