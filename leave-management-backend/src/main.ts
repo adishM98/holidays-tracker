@@ -10,6 +10,14 @@ import { existsSync } from "fs";
 import { UserRole } from "./common/enums/user-role.enum";
 import { DataSource } from "typeorm";
 import * as bcrypt from "bcrypt";
+import { randomUUID } from "crypto";
+
+// Polyfill for crypto.randomUUID in case it's not available globally
+if (typeof globalThis.crypto === 'undefined') {
+  globalThis.crypto = {
+    randomUUID: randomUUID
+  } as any;
+}
 
 async function createInitialData(app: NestExpressApplication): Promise<void> {
   try {
