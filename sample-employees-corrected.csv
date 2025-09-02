@@ -1,0 +1,5 @@
+Employee ID,First Name,Last Name,Email,Department,Position,Manager,Joining Date,Earned/Privilege Balance,Sick Leave Balance,Casual Leave Balance
+EMP001,John,Doe,john.doe@company.com,Engineering,Software Engineer,,2025-01-15,12,8,6
+EMP002,Jane,Smith,jane.smith@company.com,HR,HR Specialist,,2025-02-01,11,7,7
+EMP003,Mike,Johnson,mike.johnson@company.com,Finance,Financial Analyst,,2025-01-10,10,6,4
+EMP004,Sarah,Wilson,sarah.wilson@company.com,Engineering,Senior Developer,EMP001,2024-12-01,15,8,5

@@ -32,13 +32,11 @@ import { EmployeesService } from "../employees/employees.service";
 import { DepartmentsService } from "../departments/departments.service";
 import { LeavesService } from "../leaves/leaves.service";
 import { LeaveCleanupService } from "../leaves/services/leave-cleanup.service";
-import { BulkImportService } from "./services/bulk-import.service";
 import { HolidaysService } from "../holidays/holidays.service";
 import { CreateEmployeeDto } from "../employees/dto/create-employee.dto";
 import { UpdateEmployeeDto } from "../employees/dto/update-employee.dto";
 import { CreateDepartmentDto } from "../departments/dto/create-department.dto";
 import { UpdateDepartmentDto } from "../departments/dto/update-department.dto";
-import { BulkImportResultDto } from "./dto/bulk-import-result.dto";
 import { CreateLeaveRequestDto } from "../leaves/dto/create-leave-request.dto";
 import { UpdateLeaveRequestDto } from "../leaves/dto/update-leave-request.dto";
 import { ApproveLeaveRequestDto } from "../leaves/dto/approve-leave-request.dto";
@@ -57,7 +55,6 @@ export class AdminController {
     private departmentsService: DepartmentsService,
     private leavesService: LeavesService,
     private leaveCleanupService: LeaveCleanupService,
-    private bulkImportService: BulkImportService,
     private holidaysService: HolidaysService,
   ) {}
 
@@ -152,7 +149,8 @@ export class AdminController {
   @ApiOperation({ summary: "Update employee leave balance" })
   async updateEmployeeLeaveBalance(
     @Param("id") id: string,
-    @Body() data: { earnedBalance: number; sickBalance: number; casualBalance: number }
+    @Body()
+    data: { earnedBalance: number; sickBalance: number; casualBalance: number },
   ) {
     await this.employeesService.updateEmployeeLeaveBalance(id, data);
     return { message: "Leave balance updated successfully" };
@@ -171,8 +169,26 @@ export class AdminController {
   @Post("employees/bulk-import")
   @ApiOperation({ summary: "Bulk import employees from CSV file" })
   @ApiConsumes("multipart/form-data")
-  @ApiResponse({ status: 200, type: BulkImportResultDto })
-  @UseInterceptors(FileInterceptor("file"))
+  @ApiResponse({ status: 200 })
+  @UseInterceptors(
+    FileInterceptor("file", {
+      limits: {
+        fileSize: 2 * 1024 * 1024, // 2MB limit
+      },
+      fileFilter: (req, file, cb) => {
+        if (
+          file.mimetype !== "text/csv" &&
+          !file.originalname.endsWith(".csv")
+        ) {
+          return cb(
+            new BadRequestException("Only CSV files are allowed"),
+            false,
+          );
+        }
+        cb(null, true);
+      },
+    }),
+  )
   async bulkImportEmployees(
     @UploadedFile() file: Express.Multer.File,
     @CurrentUser() user: User,
@@ -181,16 +197,22 @@ export class AdminController {
       throw new BadRequestException("CSV file is required");
     }
 
-    const result = await this.bulkImportService.importEmployees(file);
-
-    // Send email report to admin
-    if (user.email) {
-      try {
-        // await this.mailService.sendBulkImportReport(user.email, result);
-      } catch (error) {
-        console.warn("Failed to send bulk import report email:", error.message);
-      }
+    // Validate file size (additional check)
+    if (file.size > 2 * 1024 * 1024) {
+      throw new BadRequestException("File size cannot exceed 2MB");
     }
+
+    console.log(
+      `Admin ${user.email} initiated bulk import of ${file.originalname} (${file.size} bytes)`,
+    );
+
+    const result = await this.employeesService.bulkImportEmployees(file.buffer);
+
+    console.log(`Bulk import completed by ${user.email}:`, {
+      totalRows: result.summary.totalRows,
+      successfulImports: result.summary.successfulImports,
+      failedImports: result.summary.failedImports,
+    });
 
     return result;
   }
@@ -198,7 +220,7 @@ export class AdminController {
   @Get("employees/import-template")
   @ApiOperation({ summary: "Download CSV import template" })
   async downloadImportTemplate(@Res() res: Response) {
-    const template = this.bulkImportService.generateCsvTemplate();
+    const template = this.employeesService.generateCsvTemplate();
 
     res.set({
       "Content-Type": "text/csv",

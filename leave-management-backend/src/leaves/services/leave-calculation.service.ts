@@ -163,7 +163,7 @@ export class LeaveCalculationService {
   async calculateWorkingDays(startDate: Date, endDate: Date): Promise<number> {
     let count = 0;
     const current = new Date(startDate);
-    
+
     // Get active holidays for the year(s) covered by the date range
     const startYear = startDate.getFullYear();
     const endYear = endDate.getFullYear();
@@ -171,28 +171,28 @@ export class LeaveCalculationService {
     for (let year = startYear; year <= endYear; year++) {
       years.push(year);
     }
-    
+
     const holidays = await this.holidayRepository.find({
       where: {
         isActive: true,
       },
     });
-    
+
     // Create a set of holiday dates for faster lookup
     const holidayDates = new Set(
       holidays
-        .filter(h => years.includes(new Date(h.date).getFullYear()))
-        .map(h => new Date(h.date).toISOString().split('T')[0])
+        .filter((h) => years.includes(new Date(h.date).getFullYear()))
+        .map((h) => new Date(h.date).toISOString().split("T")[0]),
     );
 
     while (current <= endDate) {
       const dayOfWeek = current.getDay();
-      const dateString = current.toISOString().split('T')[0];
-      
+      const dateString = current.toISOString().split("T")[0];
+
       // Exclude Saturday (6), Sunday (0), and holidays
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
       const isHoliday = holidayDates.has(dateString);
-      
+
       if (!isWeekend && !isHoliday) {
         count++;
       }
@@ -536,25 +536,43 @@ export class LeaveCalculationService {
    */
   async updateLeaveBalances(
     employeeId: string,
-    balances: { earned?: number; sick?: number; casual?: number }
+    balances: { earned?: number; sick?: number; casual?: number },
   ): Promise<void> {
     const currentYear = new Date().getFullYear();
-    
-    console.log(`Updating leave balances for employee ${employeeId} for year ${currentYear}:`, balances);
+
+    console.log(
+      `Updating leave balances for employee ${employeeId} for year ${currentYear}:`,
+      balances,
+    );
 
     // Update each balance type if provided
     if (balances.earned !== undefined) {
-      await this.setLeaveBalance(employeeId, LeaveType.EARNED, currentYear, balances.earned);
+      await this.setLeaveBalance(
+        employeeId,
+        LeaveType.EARNED,
+        currentYear,
+        balances.earned,
+      );
     }
-    
+
     if (balances.sick !== undefined) {
-      await this.setLeaveBalance(employeeId, LeaveType.SICK, currentYear, balances.sick);
+      await this.setLeaveBalance(
+        employeeId,
+        LeaveType.SICK,
+        currentYear,
+        balances.sick,
+      );
     }
-    
+
     if (balances.casual !== undefined) {
-      await this.setLeaveBalance(employeeId, LeaveType.CASUAL, currentYear, balances.casual);
+      await this.setLeaveBalance(
+        employeeId,
+        LeaveType.CASUAL,
+        currentYear,
+        balances.casual,
+      );
     }
-    
+
     console.log("Leave balances updated successfully");
   }
 
@@ -565,7 +583,7 @@ export class LeaveCalculationService {
     employeeId: string,
     leaveType: LeaveType,
     year: number,
-    balance: number
+    balance: number,
   ): Promise<void> {
     // Find existing balance record
     const existingBalance = await this.leaveBalanceRepository.findOne({
@@ -581,7 +599,9 @@ export class LeaveCalculationService {
       existingBalance.availableDays = balance;
       existingBalance.totalAllocated = balance; // Also update total allocated
       await this.leaveBalanceRepository.save(existingBalance);
-      console.log(`Updated ${leaveType} balance to ${balance} for employee ${employeeId}`);
+      console.log(
+        `Updated ${leaveType} balance to ${balance} for employee ${employeeId}`,
+      );
     } else {
       // Create new balance record if it doesn't exist
       const newBalance = this.leaveBalanceRepository.create({
@@ -594,7 +614,9 @@ export class LeaveCalculationService {
         carryForward: 0,
       });
       await this.leaveBalanceRepository.save(newBalance);
-      console.log(`Created new ${leaveType} balance of ${balance} for employee ${employeeId}`);
+      console.log(
+        `Created new ${leaveType} balance of ${balance} for employee ${employeeId}`,
+      );
     }
   }
 }

@@ -61,11 +61,11 @@ export class LeavesService {
     // Allow applications from today onwards (employees can fall sick today)
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Set to start of today
-    
+
     // Ensure startDate is also set to start of day for proper comparison
     const startDateOnly = new Date(startDate);
     startDateOnly.setHours(0, 0, 0, 0);
-    
+
     if (startDateOnly < today) {
       throw new BadRequestException("Cannot apply for leave in the past");
     }
@@ -75,11 +75,11 @@ export class LeavesService {
       startDate,
       endDate,
     );
-    
+
     // Ensure there are working days in the range
     if (daysCount === 0) {
       throw new BadRequestException(
-        'The selected date range contains no working days. Please select dates that include at least one working day.'
+        "The selected date range contains no working days. Please select dates that include at least one working day.",
       );
     }
 
@@ -620,5 +620,4 @@ export class LeavesService {
       })),
     };
   }
-
 }

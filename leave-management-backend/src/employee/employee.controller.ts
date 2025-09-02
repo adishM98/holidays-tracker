@@ -369,8 +369,8 @@ export class EmployeeController {
     @Query("isActive") isActive?: string,
   ) {
     const targetYear = year || new Date().getFullYear();
-    const activeOnly = isActive !== undefined ? isActive === 'true' : true;
-    
+    const activeOnly = isActive !== undefined ? isActive === "true" : true;
+
     const holidays = await this.holidaysService.findAll({
       year: targetYear,
       isActive: activeOnly,

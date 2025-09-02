@@ -12,7 +12,13 @@ import { MailModule } from "../mail/mail.module";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([LeaveRequest, LeaveBalance, Employee, User, Holiday]),
+    TypeOrmModule.forFeature([
+      LeaveRequest,
+      LeaveBalance,
+      Employee,
+      User,
+      Holiday,
+    ]),
     MailModule,
   ],
   providers: [LeavesService, LeaveCalculationService, LeaveCleanupService],

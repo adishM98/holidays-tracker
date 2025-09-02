@@ -84,6 +84,9 @@ export class Employee {
   @OneToMany(() => LeaveBalance, (leaveBalance) => leaveBalance.employee)
   leaveBalances: LeaveBalance[];
 
+  @Column({ name: "use_manual_balances", default: false })
+  useManualBalances: boolean;
+
   @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 

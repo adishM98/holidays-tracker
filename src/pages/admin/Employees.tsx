@@ -31,6 +31,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { adminAPI } from '@/services/api';
 import { TimeManagementBackground } from '@/components/ui/time-management-background';
+import { BulkImportDialog } from '@/components/admin/BulkImportDialog';
 
 interface Employee {
   id: string;
@@ -78,6 +79,7 @@ const Employees: React.FC = () => {
     casualBalance: 0,
   });
   const [useManualBalances, setUseManualBalances] = useState(false);
+  const [isBulkImportDialogOpen, setIsBulkImportDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -102,10 +104,6 @@ const Employees: React.FC = () => {
     loadData();
   }, []);
 
-  useEffect(() => {
-    console.log('formData changed:', formData);
-  }, [formData]);
-
   const loadData = async () => {
     try {
       setIsLoading(true);
@@ -114,8 +112,6 @@ const Employees: React.FC = () => {
         adminAPI.getDepartments(),
       ]);
       
-      console.log('API Response:', employeesResponse);
-      console.log('First employee:', employeesResponse.employees?.[0] || employeesResponse.data?.[0]);
       
       setEmployees(employeesResponse.employees || employeesResponse.data || []);
       setDepartments(departmentsResponse);
@@ -310,7 +306,6 @@ const Employees: React.FC = () => {
   };
 
   const openEditDialog = (employee: Employee) => {
-    console.log('Opening edit dialog for employee:', employee);
     setSelectedEmployee(employee);
     setFormData({
       employeeId: employee.employeeId || '',
@@ -329,15 +324,6 @@ const Employees: React.FC = () => {
       manualCasualBalance: 0,
     });
     setUseManualBalances(false);
-    console.log('Form data set to:', {
-      firstName: employee.firstName,
-      lastName: employee.lastName,
-      email: employee.email,
-      departmentId: employee.department.id,
-      position: employee.position,
-      managerId: employee.manager?.id || '',
-      joiningDate: employee.joiningDate.split('T')[0],
-    });
     setIsEditDialogOpen(true);
   };
 
@@ -396,16 +382,10 @@ const Employees: React.FC = () => {
           id="email"
           type="email"
           value={formData.email}
-          onChange={(e) => {
-            console.log('Email input changed:', e.target.value);
-            setFormData({...formData, email: e.target.value});
-          }}
+          onChange={(e) => setFormData({...formData, email: e.target.value})}
           placeholder="Enter email address"
           required
         />
-        <div className="text-xs text-muted-foreground mt-1">
-          Current value: "{formData.email}"
-        </div>
       </div>
       
       <div className="grid grid-cols-2 gap-4">
@@ -635,13 +615,11 @@ const Employees: React.FC = () => {
       <div className="flex justify-end space-x-2 pt-4">
         <Button 
           variant="outline"
-          className="border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-500" 
           onClick={() => {
             setIsAddDialogOpen(false);
             setIsEditDialogOpen(false);
             resetForm();
           }}
-          className=""
         >
           Cancel
         </Button>
@@ -669,7 +647,11 @@ const Employees: React.FC = () => {
           </div>
           
           <div className="flex items-center space-x-3">
-            <Button variant="outline" className="bg-white/80 backdrop-blur-sm border-gray-300 hover:bg-gray-50 transition-all duration-200">
+            <Button 
+              variant="outline" 
+              className="bg-white/80 backdrop-blur-sm border-gray-300 hover:bg-gray-50 transition-all duration-200"
+              onClick={() => setIsBulkImportDialogOpen(true)}
+            >
               <Upload className="h-4 w-4 mr-2" />
               Bulk Import
             </Button>
@@ -1003,6 +985,16 @@ const Employees: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Import Dialog */}
+      <BulkImportDialog
+        isOpen={isBulkImportDialogOpen}
+        onClose={() => setIsBulkImportDialogOpen(false)}
+        onSuccess={() => {
+          setIsBulkImportDialogOpen(false);
+          loadData(); // Refresh the employee list
+        }}
+      />
       </div>
     </div>
   );

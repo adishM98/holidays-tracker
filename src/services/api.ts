@@ -277,26 +277,6 @@ export const adminAPI = {
     });
   },
 
-  bulkImportEmployees: async (file: File) => {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/admin/employees/bulk-import`, {
-      method: 'POST',
-      headers: {
-        ...(token && { Authorization: `Bearer ${token}` }),
-      },
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-    }
-
-    return response.json();
-  },
 
   downloadImportTemplate: async () => {
     const token = getAuthToken();
@@ -310,7 +290,36 @@ export const adminAPI = {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    return response.blob();
+    return response.text();
+  },
+
+  bulkImportEmployees: async (fileOrFormData: File | FormData) => {
+    const token = getAuthToken();
+    
+    // Create FormData if a File was passed directly
+    let formData: FormData;
+    if (fileOrFormData instanceof FormData) {
+      formData = fileOrFormData;
+    } else {
+      formData = new FormData();
+      formData.append('file', fileOrFormData);
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/admin/employees/bulk-import`, {
+      method: 'POST',
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+        // Don't set Content-Type for FormData, let the browser set it with boundary
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
   },
 
   getLeaveSummaryReport: async (year?: number, department?: string) => {

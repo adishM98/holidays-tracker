@@ -2,7 +2,6 @@ import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { MulterModule } from "@nestjs/platform-express";
 import { AdminController } from "./admin.controller";
-import { BulkImportService } from "./services/bulk-import.service";
 import { User } from "../users/entities/user.entity";
 import { Employee } from "../employees/entities/employee.entity";
 import { Department } from "../departments/entities/department.entity";
@@ -31,6 +30,6 @@ import { HolidaysModule } from "../holidays/holidays.module";
     HolidaysModule,
   ],
   controllers: [AdminController],
-  providers: [BulkImportService],
+  providers: [],
 })
 export class AdminModule {}

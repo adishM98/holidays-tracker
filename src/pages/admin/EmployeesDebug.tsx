@@ -404,7 +404,11 @@ const EmployeesDebug: React.FC = () => {
 
     setIsUploading(true);
     try {
-      await adminAPI.bulkImportEmployees(file);
+      // Create FormData and append the file
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      await adminAPI.bulkImportEmployees(formData);
       toast({
         title: "Success",
         description: "Employees imported successfully",

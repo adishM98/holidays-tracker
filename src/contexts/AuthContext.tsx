@@ -8,7 +8,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const userRef = useRef<User | null>(null);
+  const lastRoleCheckRef = useRef<number>(0);
 
+  // Initialize auth on mount
   useEffect(() => {
     initializeAuth();
   }, []);
@@ -129,10 +131,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     userRef.current = user;
   }, [user]);
 
-  const refreshUser = useCallback(async () => {
+  const refreshUser = useCallback(async (force = false) => {
     try {
       const currentUser = userRef.current;
       if (!currentUser) return;
+      
+      const now = Date.now();
+      // Rate limit to avoid excessive API calls (minimum 5 seconds between calls unless forced)
+      if (!force && (now - lastRoleCheckRef.current) < 5000) {
+        return;
+      }
+      lastRoleCheckRef.current = now;
       
       // Get updated profile data including current role
       if (currentUser.role !== 'admin') {
@@ -165,9 +174,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Failed to refresh user data:', error);
-      throw error;
+      // Don't throw error to prevent cascading failures
     }
-  }, []); // Remove user dependency
+  }, []);
 
   const updateUser = (userData: Partial<User>) => {
     if (!user) return;
@@ -178,52 +187,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const checkRoleChange = useCallback(async () => {
-    await refreshUser();
+    await refreshUser(true); // Force refresh for explicit role check
   }, [refreshUser]);
 
   const forceRoleSync = useCallback(async () => {
     console.log('🔄 Force role sync triggered');
-    await refreshUser();
+    await refreshUser(true); // Force refresh for explicit sync
   }, [refreshUser]);
 
-  // Set up periodic role checking when user is logged in
+  // Set up less aggressive periodic role checking when user is logged in
   useEffect(() => {
     if (!user?.id) return;
 
-    // Check for role changes every 2 seconds for immediate updates
+    // Check for role changes every 30 seconds instead of 2 seconds
     const roleCheckInterval = setInterval(async () => {
-      try {
-        await refreshUser();
-      } catch (error) {
-        console.warn('Periodic role check failed:', error);
-      }
-    }, 2000); // 2 seconds
+      await refreshUser(); // Use rate-limited refresh
+    }, 30000); // 30 seconds
 
     return () => clearInterval(roleCheckInterval);
-  }, [user?.id]); // Only depend on user.id to prevent infinite loops
+  }, [user?.id, refreshUser]); // Include refreshUser in deps but it's stable
 
-  // Set up immediate role checking on page visibility/focus events
+  // Set up role checking on page visibility/focus events (less aggressive)
   useEffect(() => {
     if (!user?.id) return;
 
-    const handleVisibilityChange = async () => {
+    const handleVisibilityChange = () => {
       if (!document.hidden) {
-        // Page became visible - check for role changes immediately
-        try {
-          await refreshUser();
-        } catch (error) {
-          console.warn('Visibility-based role check failed:', error);
-        }
+        // Page became visible - check for role changes with rate limiting
+        refreshUser();
       }
     };
 
-    const handleFocus = async () => {
-      // Window focused - check for role changes immediately
-      try {
-        await refreshUser();
-      } catch (error) {
-        console.warn('Focus-based role check failed:', error);
-      }
+    const handleFocus = () => {
+      // Window focused - check for role changes with rate limiting
+      refreshUser();
     };
 
     // Add event listeners
@@ -235,7 +232,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [user?.id]);
+  }, [user?.id, refreshUser]); // Include refreshUser but it's stable
 
   return (
     <AuthContext.Provider value={{ user, isLoading, login, logout, refreshUser, updateUser, checkRoleChange }}>
@@ -244,10 +241,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-export const useAuth = () => {
+// Export useAuth hook with proper component signature for HMR compatibility
+export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-};
+}

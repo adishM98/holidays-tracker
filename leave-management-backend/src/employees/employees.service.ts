@@ -13,8 +13,17 @@ import { User } from "../users/entities/user.entity";
 import { UserRole } from "../common/enums/user-role.enum";
 import { LeaveRequest } from "../leaves/entities/leave-request.entity";
 import { LeaveBalance } from "../leaves/entities/leave-balance.entity";
+import { Department } from "../departments/entities/department.entity";
+import { LeaveType } from "../common/enums/leave-type.enum";
+import {
+  BulkImportEmployeeDto,
+  BulkImportResultDto,
+  BulkImportReportDto,
+} from "./dto/bulk-import-employee.dto";
 import * as bcrypt from "bcrypt";
 import * as crypto from "crypto";
+import * as csv from "csv-parser";
+import { Readable } from "stream";
 
 @Injectable()
 export class EmployeesService {
@@ -23,6 +32,8 @@ export class EmployeesService {
     private employeeRepository: Repository<Employee>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(Department)
+    private departmentRepository: Repository<Department>,
     private leaveCalculationService: LeaveCalculationService,
   ) {}
 
@@ -677,19 +688,550 @@ export class EmployeesService {
   }
 
   async updateEmployeeLeaveBalance(
-    employeeId: string, 
-    data: { earnedBalance: number; sickBalance: number; casualBalance: number }
+    employeeId: string,
+    data: { earnedBalance: number; sickBalance: number; casualBalance: number },
   ): Promise<void> {
     console.log(`Updating leave balance for employee ${employeeId}:`, data);
-    
+
     // Use the LeaveCalculationService to update balances
-    await this.leaveCalculationService.updateLeaveBalances(
-      employeeId,
-      {
-        earned: data.earnedBalance,
-        sick: data.sickBalance,
-        casual: data.casualBalance,
+    await this.leaveCalculationService.updateLeaveBalances(employeeId, {
+      earned: data.earnedBalance,
+      sick: data.sickBalance,
+      casual: data.casualBalance,
+    });
+  }
+
+  /**
+   * Parse CSV file buffer and validate data
+   */
+  private async parseCsvFile(buffer: Buffer): Promise<BulkImportEmployeeDto[]> {
+    return new Promise((resolve, reject) => {
+      const results: any[] = [];
+      const stream = Readable.from(buffer.toString());
+
+      stream
+        .pipe(
+          csv({
+            headers: [
+              "employeeId",
+              "firstName",
+              "lastName",
+              "email",
+              "department",
+              "position",
+              "manager",
+              "joiningDate",
+              "earnedBalance",
+              "sickBalance",
+              "casualBalance",
+            ],
+          }),
+        )
+        .on("data", (data) => {
+          // Skip header row
+          if (data.employeeId === "Employee ID") return;
+
+          // Transform and clean data
+          const cleaned = {
+            employeeId: data.employeeId?.trim(),
+            firstName: data.firstName?.trim(),
+            lastName: data.lastName?.trim() || "",
+            email: data.email?.trim().toLowerCase(),
+            department: data.department?.trim(),
+            position: data.position?.trim() || "",
+            manager: data.manager?.trim() || "",
+            joiningDate: data.joiningDate?.trim(),
+            earnedBalance: data.earnedBalance
+              ? parseFloat(data.earnedBalance)
+              : undefined,
+            sickBalance: data.sickBalance
+              ? parseFloat(data.sickBalance)
+              : undefined,
+            casualBalance: data.casualBalance
+              ? parseFloat(data.casualBalance)
+              : undefined,
+          };
+
+          results.push(cleaned);
+        })
+        .on("end", () => {
+          resolve(results);
+        })
+        .on("error", (error) => {
+          reject(error);
+        });
+    });
+  }
+
+  /**
+   * Validate CSV row data
+   */
+  private async validateCsvRow(
+    row: BulkImportEmployeeDto,
+    rowIndex: number,
+    existingEmployeeIds: Set<string>,
+    existingEmails: Set<string>,
+    departments: Map<string, string>,
+    managers: Map<string, string>,
+    csvEmployeeIds: Set<string> = new Set(),
+  ): Promise<string[]> {
+    const errors: string[] = [];
+
+    // Required fields validation
+    if (!row.employeeId) {
+      errors.push("Employee ID is required");
+    } else if (existingEmployeeIds.has(row.employeeId)) {
+      errors.push("Employee ID already exists in database");
+    }
+
+    if (!row.firstName) {
+      errors.push("First Name is required");
+    }
+
+    if (!row.email) {
+      errors.push("Email is required");
+    } else {
+      // Email format validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(row.email)) {
+        errors.push("Invalid email format");
+      } else if (existingEmails.has(row.email)) {
+        errors.push("Email already exists in database");
       }
-    );
+    }
+
+    if (!row.department) {
+      errors.push("Department is required");
+    } else if (!departments.has(row.department)) {
+      errors.push(`Department "${row.department}" not found`);
+    }
+
+    if (!row.joiningDate) {
+      errors.push("Joining Date is required");
+    } else {
+      // Date format validation (YYYY-MM-DD)
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(row.joiningDate)) {
+        errors.push("Invalid date format. Use YYYY-MM-DD");
+      } else {
+        const date = new Date(row.joiningDate);
+        if (isNaN(date.getTime())) {
+          errors.push("Invalid date");
+        }
+      }
+    }
+
+    // Manager validation (optional)
+    if (
+      row.manager &&
+      !managers.has(row.manager) &&
+      !csvEmployeeIds.has(row.manager)
+    ) {
+      errors.push(`Manager "${row.manager}" not found by employee ID or email`);
+    }
+
+    // Leave balance validation (optional, but must be non-negative)
+    if (
+      row.earnedBalance !== undefined &&
+      (isNaN(row.earnedBalance) || row.earnedBalance < 0)
+    ) {
+      errors.push("Earned/Privilege Balance must be a non-negative number");
+    }
+    if (
+      row.sickBalance !== undefined &&
+      (isNaN(row.sickBalance) || row.sickBalance < 0)
+    ) {
+      errors.push("Sick Leave Balance must be a non-negative number");
+    }
+    if (
+      row.casualBalance !== undefined &&
+      (isNaN(row.casualBalance) || row.casualBalance < 0)
+    ) {
+      errors.push("Casual Leave Balance must be a non-negative number");
+    }
+
+    return errors;
+  }
+
+  /**
+   * Create lookup maps for departments and managers
+   */
+  private async createLookupMaps(): Promise<{
+    departments: Map<string, string>;
+    managers: Map<string, string>;
+  }> {
+    // Get all departments
+    const departments = await this.departmentRepository.find();
+    const departmentMap = new Map<string, string>();
+    departments.forEach((dept) => {
+      departmentMap.set(dept.name, dept.id);
+    });
+
+    // Get all employees to use as potential managers
+    const employees = await this.employeeRepository.find();
+    const managerMap = new Map<string, string>();
+    employees.forEach((emp) => {
+      managerMap.set(emp.employeeId, emp.id); // Map by employee ID
+      managerMap.set(emp.email, emp.id); // Map by email
+    });
+
+    return { departments: departmentMap, managers: managerMap };
+  }
+
+  /**
+   * Get existing employee IDs and emails to check for duplicates
+   */
+  private async getExistingEmployeeData(): Promise<{
+    employeeIds: Set<string>;
+    emails: Set<string>;
+  }> {
+    const employees = await this.employeeRepository.find({
+      select: ["employeeId", "email"],
+    });
+
+    const employeeIds = new Set(employees.map((e) => e.employeeId));
+    const emails = new Set(employees.map((e) => e.email));
+
+    return { employeeIds, emails };
+  }
+
+  /**
+   * Bulk import employees from CSV
+   */
+  async bulkImportEmployees(csvBuffer: Buffer): Promise<BulkImportResultDto> {
+    console.log("Starting bulk employee import...");
+
+    try {
+      // Parse CSV data
+      const csvData = await this.parseCsvFile(csvBuffer);
+      console.log(`Parsed ${csvData.length} rows from CSV`);
+
+      if (csvData.length === 0) {
+        return {
+          success: false,
+          message: "CSV file is empty or contains no valid data",
+          summary: {
+            totalRows: 0,
+            successfulImports: 0,
+            failedImports: 0,
+            errors: [],
+          },
+        };
+      }
+
+      // Create lookup maps
+      const { departments, managers } = await this.createLookupMaps();
+      const { employeeIds: existingEmployeeIds, emails: existingEmails } =
+        await this.getExistingEmployeeData();
+
+      // Validate all rows first
+      const validationResults: Array<{
+        row: BulkImportEmployeeDto;
+        rowIndex: number;
+        errors: string[];
+      }> = [];
+
+      // Create set of employee IDs in the CSV for manager validation
+      const csvEmployeeIds = new Set<string>();
+      csvData.forEach((row) => {
+        if (row.employeeId) {
+          csvEmployeeIds.add(row.employeeId);
+        }
+      });
+
+      for (let i = 0; i < csvData.length; i++) {
+        const row = csvData[i];
+        const errors = await this.validateCsvRow(
+          row,
+          i + 1,
+          existingEmployeeIds,
+          existingEmails,
+          departments,
+          managers,
+          csvEmployeeIds,
+        );
+
+        validationResults.push({
+          row,
+          rowIndex: i + 1,
+          errors,
+        });
+
+        // Add to existing sets to prevent duplicates within the CSV
+        if (!errors.some((e) => e.includes("Employee ID"))) {
+          existingEmployeeIds.add(row.employeeId);
+        }
+        if (!errors.some((e) => e.includes("Email"))) {
+          existingEmails.add(row.email);
+        }
+      }
+
+      // Separate valid and invalid rows
+      const validRows = validationResults.filter((r) => r.errors.length === 0);
+      const invalidRows = validationResults.filter((r) => r.errors.length > 0);
+
+      console.log(
+        `Validation complete. Valid: ${validRows.length}, Invalid: ${invalidRows.length}`,
+      );
+
+      // Process valid rows in transaction
+      const successfulImports: BulkImportReportDto[] = [];
+      const failedImports: Array<{
+        row: number;
+        employeeId: string;
+        email: string;
+        errors: string[];
+      }> = [];
+
+      // Add validation errors to failed imports
+      invalidRows.forEach((invalid) => {
+        failedImports.push({
+          row: invalid.rowIndex,
+          employeeId: invalid.row.employeeId || "N/A",
+          email: invalid.row.email || "N/A",
+          errors: invalid.errors,
+        });
+      });
+
+      // Process valid rows using transaction with two-phase import
+      await this.employeeRepository.manager.transaction(async (manager) => {
+        const createdEmployees = new Map<string, string>(); // Map employee ID to database ID
+
+        // PHASE 1: Create all employees without manager relationships
+        for (const validRow of validRows) {
+          try {
+            const { row, rowIndex } = validRow;
+
+            // Create user account
+            const now = new Date();
+            const inviteExpiresAt = new Date(
+              now.getTime() + 24 * 60 * 60 * 1000,
+            );
+
+            const user = manager.create(User, {
+              email: row.email,
+              passwordHash: "",
+              role: UserRole.EMPLOYEE,
+              isActive: false,
+              mustChangePassword: false,
+              inviteStatus: "invited",
+              invitedAt: now,
+              inviteExpiresAt: inviteExpiresAt,
+            });
+            const savedUser = await manager.save(user);
+
+            // Create employee record without manager relationship initially
+            const employee = manager.create(Employee, {
+              employeeId: row.employeeId,
+              firstName: row.firstName,
+              lastName: row.lastName || "",
+              email: row.email,
+              departmentId: departments.get(row.department),
+              position: row.position || "",
+              managerId: null, // Set manager in phase 2
+              joiningDate: new Date(row.joiningDate),
+              userId: savedUser.id,
+              // Use consistent policy values for annual allocations (same as manual entry)
+              annualLeaveDays: 12, // Standard policy allocation
+              sickLeaveDays: 8, // Standard policy allocation
+              casualLeaveDays: 8, // Standard policy allocation
+              useManualBalances: true, // Mark as existing employee with manual balances
+            });
+
+            const savedEmployee = await manager.save(employee);
+            createdEmployees.set(row.employeeId, savedEmployee.id);
+
+            // Create leave balances with CSV current balance values
+            const currentYear = new Date().getFullYear();
+
+            // Create earned leave balance
+            const earnedBalance = manager.create(LeaveBalance, {
+              employeeId: savedEmployee.id,
+              year: currentYear,
+              leaveType: LeaveType.EARNED,
+              totalAllocated:
+                row.earnedBalance !== undefined ? row.earnedBalance : 0,
+              usedDays: 0,
+              availableDays:
+                row.earnedBalance !== undefined ? row.earnedBalance : 0,
+              carryForward: 0,
+            });
+            await manager.save(earnedBalance);
+
+            // Create sick leave balance
+            const sickBalance = manager.create(LeaveBalance, {
+              employeeId: savedEmployee.id,
+              year: currentYear,
+              leaveType: LeaveType.SICK,
+              totalAllocated:
+                row.sickBalance !== undefined ? row.sickBalance : 0,
+              usedDays: 0,
+              availableDays:
+                row.sickBalance !== undefined ? row.sickBalance : 0,
+              carryForward: 0,
+            });
+            await manager.save(sickBalance);
+
+            // Create casual leave balance
+            const casualBalance = manager.create(LeaveBalance, {
+              employeeId: savedEmployee.id,
+              year: currentYear,
+              leaveType: LeaveType.CASUAL,
+              totalAllocated:
+                row.casualBalance !== undefined ? row.casualBalance : 0,
+              usedDays: 0,
+              availableDays:
+                row.casualBalance !== undefined ? row.casualBalance : 0,
+              carryForward: 0,
+            });
+            await manager.save(casualBalance);
+
+            successfulImports.push({
+              row: rowIndex,
+              employeeId: row.employeeId,
+              firstName: row.firstName,
+              lastName: row.lastName || "",
+              email: row.email,
+              status: "success",
+              errors: [],
+            });
+
+            console.log(
+              `Successfully imported employee: ${row.employeeId} - ${row.email}`,
+            );
+          } catch (error) {
+            console.error(`Error importing row ${validRow.rowIndex}:`, error);
+            failedImports.push({
+              row: validRow.rowIndex,
+              employeeId: validRow.row.employeeId || "N/A",
+              email: validRow.row.email || "N/A",
+              errors: [`Database error: ${error.message}`],
+            });
+          }
+        }
+
+        // PHASE 2: Update manager relationships for successfully created employees
+        for (const validRow of validRows) {
+          try {
+            const { row } = validRow;
+            if (row.manager && createdEmployees.has(row.employeeId)) {
+              let managerDbId: string | null = null;
+
+              // Check if manager exists in current CSV batch
+              if (createdEmployees.has(row.manager)) {
+                managerDbId = createdEmployees.get(row.manager)!;
+              }
+              // Check if manager exists in existing database
+              else if (managers.has(row.manager)) {
+                managerDbId = managers.get(row.manager)!;
+              }
+
+              if (managerDbId) {
+                const employeeDbId = createdEmployees.get(row.employeeId)!;
+                await manager.update(Employee, employeeDbId, {
+                  managerId: managerDbId,
+                });
+
+                // Auto-promote manager if assigned
+                await this.autoPromoteToManager(managerDbId);
+
+                console.log(
+                  `Updated manager relationship: ${row.employeeId} -> ${row.manager}`,
+                );
+              }
+            }
+          } catch (error) {
+            console.error(
+              `Error setting manager for ${validRow.row.employeeId}:`,
+              error,
+            );
+            // Don't fail the entire import for manager relationship errors
+          }
+        }
+      });
+
+      const summary = {
+        totalRows: csvData.length,
+        successfulImports: successfulImports.length,
+        failedImports: failedImports.length,
+        errors: failedImports,
+      };
+
+      console.log("Bulk import completed:", summary);
+
+      return {
+        success: failedImports.length === 0,
+        message:
+          failedImports.length === 0
+            ? `Successfully imported all ${successfulImports.length} employees`
+            : `Imported ${successfulImports.length} employees, ${failedImports.length} failed`,
+        summary,
+      };
+    } catch (error) {
+      console.error("Bulk import failed:", error);
+      return {
+        success: false,
+        message: `Import failed: ${error.message}`,
+        summary: {
+          totalRows: 0,
+          successfulImports: 0,
+          failedImports: 0,
+          errors: [],
+        },
+      };
+    }
+  }
+
+  /**
+   * Generate CSV template for bulk import
+   */
+  generateCsvTemplate(): string {
+    const headers = [
+      "Employee ID",
+      "First Name",
+      "Last Name",
+      "Email",
+      "Department",
+      "Position",
+      "Manager",
+      "Joining Date",
+      "Earned/Privilege Balance",
+      "Sick Leave Balance",
+      "Casual Leave Balance",
+    ];
+
+    const sampleData = [
+      "EMP001",
+      "John",
+      "Doe",
+      "john.doe@company.com",
+      "Engineering",
+      "Software Engineer",
+      "",
+      "2025-01-15",
+      "12",
+      "8",
+      "6",
+    ];
+
+    const instructionsRow = [
+      "# Instructions:",
+      "# Required fields: Employee ID, First Name, Email, Department, Joining Date",
+      "# Department must exist in system (Engineering, HR, Finance, etc.)",
+      "# Manager can be Employee ID or email, leave blank if none",
+      "# Date format: YYYY-MM-DD",
+      "# Leave balances are current available days (not annual allocation)",
+      "# Delete this instruction row before uploading",
+      "",
+      "",
+      "",
+      "",
+    ];
+
+    return [
+      headers.join(","),
+      instructionsRow.join(","),
+      sampleData.join(","),
+    ].join("\n");
   }
 }
