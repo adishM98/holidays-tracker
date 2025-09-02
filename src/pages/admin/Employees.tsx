@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { DatePicker } from '@/components/ui/date-picker';
+import { TailwindDatePicker } from '@/components/ui/tailwind-date-picker';
 import { 
   Table, 
   TableBody, 
@@ -461,7 +461,7 @@ const Employees: React.FC = () => {
         </div>
         <div>
           <Label htmlFor="joiningDate">Joining Date *</Label>
-          <DatePicker
+          <TailwindDatePicker
             date={formData.joiningDate}
             onSelect={(date) => setFormData({...formData, joiningDate: date || new Date()})}
             placeholder="Select joining date"

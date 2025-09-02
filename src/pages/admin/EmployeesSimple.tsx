@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { TailwindDatePicker } from '@/components/ui/tailwind-date-picker';
 import { 
   Table, 
   TableBody, 
@@ -49,7 +50,7 @@ const EmployeesSimple: React.FC = () => {
     departmentId: '',
     position: '',
     managerId: '',
-    joiningDate: new Date().toISOString().split('T')[0],
+    joiningDate: new Date(),
     annualLeaveDays: 25,
     sickLeaveDays: 12,
     casualLeaveDays: 8,
@@ -89,7 +90,7 @@ const EmployeesSimple: React.FC = () => {
       departmentId: '',
       position: '',
       managerId: '',
-      joiningDate: new Date().toISOString().split('T')[0],
+      joiningDate: new Date(),
       annualLeaveDays: 25,
       sickLeaveDays: 12,
       casualLeaveDays: 8,
@@ -100,6 +101,7 @@ const EmployeesSimple: React.FC = () => {
     try {
       await adminAPI.createEmployee({
         ...formData,
+        joiningDate: formData.joiningDate.toISOString().split('T')[0], // Convert Date to string
         managerId: formData.managerId || undefined,
       });
       
@@ -318,12 +320,11 @@ const EmployeesSimple: React.FC = () => {
                 </div>
                 <div>
                   <Label htmlFor="joiningDate">Joining Date *</Label>
-                  <Input
-                    id="joiningDate"
-                    type="date"
-                    value={formData.joiningDate}
-                    onChange={(e) => setFormData({...formData, joiningDate: e.target.value})}
-                    required
+                  <TailwindDatePicker
+                    date={formData.joiningDate}
+                    onSelect={(date) => setFormData({...formData, joiningDate: date || new Date()})}
+                    placeholder="Select joining date"
+                    className="w-full"
                   />
                 </div>
               </div>

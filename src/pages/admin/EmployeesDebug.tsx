@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { TailwindDatePicker } from '@/components/ui/tailwind-date-picker';
 import { useToast } from '@/hooks/use-toast';
 import { adminAPI } from '@/services/api';
 import { TimeManagementBackground } from '@/components/ui/time-management-background';
@@ -1136,11 +1137,10 @@ const EmployeesDebug: React.FC = () => {
             {/* Joining Date */}
             <div>
               <Label htmlFor="joiningDate">Joining Date</Label>
-              <Input
-                type="date"
-                id="joiningDate"
-                value={formData.joiningDate ? formData.joiningDate.toISOString().split('T')[0] : ''}
-                onChange={(e) => handleInputChange('joiningDate', e.target.value ? new Date(e.target.value) : undefined)}
+              <TailwindDatePicker
+                date={formData.joiningDate}
+                onSelect={(date) => handleInputChange('joiningDate', date || new Date())}
+                placeholder="Select joining date"
                 className="w-full"
               />
             </div>
@@ -1317,7 +1317,7 @@ const EmployeesDebug: React.FC = () => {
                     <div className="text-center">
                       <div className="font-medium text-gray-700 dark:text-gray-300">Earned/Privilege</div>
                       <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                        {calculateProRataLeave(formData.joiningDate, 'earned')}
+                        {calculateProRataLeave(formData.joiningDate instanceof Date ? formData.joiningDate.toISOString().split('T')[0] : formData.joiningDate, 'earned')}
                       </div>
                       <div className="text-xs text-gray-600 dark:text-gray-400">
                         of {formData.annualLeaveDays || 0} days allocated
@@ -1326,7 +1326,7 @@ const EmployeesDebug: React.FC = () => {
                     <div className="text-center">
                       <div className="font-medium text-gray-700 dark:text-gray-300">Sick Leave</div>
                       <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                        {calculateProRataLeave(formData.joiningDate, 'sick')}
+                        {calculateProRataLeave(formData.joiningDate instanceof Date ? formData.joiningDate.toISOString().split('T')[0] : formData.joiningDate, 'sick')}
                       </div>
                       <div className="text-xs text-gray-600 dark:text-gray-400">
                         of {formData.sickLeaveDays || 0} days allocated
@@ -1335,7 +1335,7 @@ const EmployeesDebug: React.FC = () => {
                     <div className="text-center">
                       <div className="font-medium text-gray-700 dark:text-gray-300">Casual Leave</div>
                       <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                        {calculateProRataLeave(formData.joiningDate, 'casual')}
+                        {calculateProRataLeave(formData.joiningDate instanceof Date ? formData.joiningDate.toISOString().split('T')[0] : formData.joiningDate, 'casual')}
                       </div>
                       <div className="text-xs text-gray-600 dark:text-gray-400">
                         of {formData.casualLeaveDays || 0} days allocated
