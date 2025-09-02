@@ -44,8 +44,9 @@ COPY leave-management-backend/scripts ./scripts
 # Build backend for production
 RUN npm run build
 
-# Install only production dependencies for runtime
-RUN npm ci --only=production --silent && npm cache clean --force
+# Keep all dependencies (including dev dependencies for TypeORM CLI)
+# This is needed for running migrations in production containers
+RUN npm cache clean --force
 
 # Stage 3: Production Runtime
 FROM node:18-alpine AS production
@@ -66,11 +67,19 @@ COPY --from=backend-builder /app/backend/node_modules ./node_modules
 COPY --from=backend-builder /app/backend/package.json ./
 COPY --from=backend-builder /app/backend/scripts ./scripts
 
+# Copy source files and config needed for migrations
+COPY --from=backend-builder /app/backend/src ./src
+COPY --from=backend-builder /app/backend/tsconfig.json ./
+COPY --from=backend-builder /app/backend/nest-cli.json ./
+
 # Copy database initialization script
 COPY leave-management-backend/init-db.sql ./
 
 # Copy entrypoint script
 COPY leave-management-backend/entrypoint.sh ./entrypoint.sh
+
+# Copy migration helper script
+COPY leave-management-backend/migrate.sh ./migrate.sh
 
 # Copy frontend build to be served by backend
 COPY --from=frontend-builder /app/frontend/dist ./public
@@ -78,6 +87,7 @@ COPY --from=frontend-builder /app/frontend/dist ./public
 # Create uploads directory and set permissions
 RUN mkdir -p uploads && \
     chmod +x entrypoint.sh && \
+    chmod +x migrate.sh && \
     chown -R nodeuser:nodejs /app && \
     chmod -R 755 /app
 

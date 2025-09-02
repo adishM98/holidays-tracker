@@ -180,12 +180,91 @@ DATABASE_NAME=leave_management
 For production environments, use TypeORM migrations:
 
 ```bash
-# Generate migration
+# Generate migration (development)
 npm run migration:generate -- CreateInitialSchema
 
-# Run migrations
+# Run migrations (development)
 npm run migration:run
 
-# Revert migration
+# Revert migration (development)
 npm run migration:revert
 ```
+
+### Running Migrations in Docker Container
+
+When running in a Docker container, use the production migration commands:
+
+```bash
+# Access the container
+docker exec -it leave_management_app bash
+
+# Run migrations in production
+npm run migration:run:prod
+
+# Revert migrations in production
+npm run migration:revert:prod
+
+# Generate new migration in production (after adding entities)
+npm run migration:generate:prod -- MigrationName
+```
+
+### Adding New Tables
+
+To add new tables to the system:
+
+1. **Create Entity File**: Add your new entity in the appropriate module (e.g., `src/entities/new-entity.entity.ts`)
+
+2. **Generate Migration**: 
+   - Development: `npm run migration:generate -- AddNewEntity`
+   - Production/Container: `npm run migration:generate:prod -- AddNewEntity`
+
+3. **Run Migration**:
+   - Development: `npm run migration:run`
+   - Production/Container: `npm run migration:run:prod`
+
+### Container Migration Example
+
+```bash
+# Connect to container
+docker exec -it leave_management_app bash
+
+# Check if there are pending migrations
+npm run migration:run:prod
+
+# If you need to create a new entity, first create it in your code
+# Then generate and run the migration
+npm run migration:generate:prod -- AddYourNewTable
+npm run migration:run:prod
+```
+
+### Migration Helper Script
+
+For easier container migrations, use the provided helper script:
+
+```bash
+# Make the script executable (first time only)
+chmod +x migrate.sh
+
+# Run migrations in container
+./migrate.sh run
+
+# Generate new migration
+./migrate.sh generate AddNewTable
+
+# Revert last migration
+./migrate.sh revert
+
+# Check database status
+./migrate.sh status
+
+# Open shell in container
+./migrate.sh shell
+
+# Show help
+./migrate.sh help
+
+# Use with custom container name
+CONTAINER_NAME=my_custom_container ./migrate.sh run
+```
+
+**Note:** The script defaults to container name `leave_management_app`. Use the `CONTAINER_NAME` environment variable if your production container has a different name.
