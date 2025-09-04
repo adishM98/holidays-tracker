@@ -34,10 +34,11 @@ const removeAuthToken = (): void => {
   localStorage.removeItem('auth_token');
 };
 
-// API request helper with authentication
+// API request helper with authentication and automatic token refresh
 const apiRequest = async <T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  retryCount = 0
 ): Promise<T> => {
   const token = getAuthToken();
   
@@ -53,6 +54,45 @@ const apiRequest = async <T>(
   const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
   
   if (!response.ok) {
+    // Handle 401 Unauthorized - attempt token refresh
+    if (response.status === 401 && retryCount === 0) {
+      try {
+        // Try to refresh the token
+        const refreshToken = localStorage.getItem('refresh_token');
+        if (refreshToken && !endpoint.includes('/auth/refresh')) {
+          const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ refresh_token: refreshToken }),
+          });
+          
+          if (refreshResponse.ok) {
+            const { access_token } = await refreshResponse.json();
+            setAuthToken(access_token);
+            
+            // Retry the original request with new token
+            return apiRequest<T>(endpoint, options, retryCount + 1);
+          } else {
+            // Refresh token is invalid, clear auth data and redirect to login
+            removeAuthToken();
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('user_data');
+            window.location.href = '/login';
+            throw new Error('Session expired. Please login again.');
+          }
+        }
+      } catch (refreshError) {
+        // Refresh failed, clear auth data and redirect to login
+        removeAuthToken();
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user_data');
+        window.location.href = '/login';
+        throw new Error('Session expired. Please login again.');
+      }
+    }
+    
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
   }
