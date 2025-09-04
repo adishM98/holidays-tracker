@@ -74,7 +74,7 @@ const LeaveHistory: React.FC = () => {
       request.reason || '',
       request.employee?.firstName || '',
       request.employee?.lastName || '',
-      leaveTypeLabels[request.leaveType] || request.leaveType || ''
+      request.isHalfDay ? `Half ${leaveTypeLabels[request.leaveType]}` : leaveTypeLabels[request.leaveType] || request.leaveType || ''
     ];
     
     const matchesSearch = searchFields.some(field => 
@@ -343,7 +343,7 @@ const LeaveHistory: React.FC = () => {
                                   <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                                 </div>
                                 <div>
-                                  <p className="font-medium">{leaveTypeLabels[request.leaveType] || request.leaveType}</p>
+                                  <p className="font-medium">{request.isHalfDay ? `Half ${leaveTypeLabels[request.leaveType]}` : leaveTypeLabels[request.leaveType] || request.leaveType}</p>
                                   <p className="text-xs text-muted-foreground capitalize">{request.leaveType}</p>
                                 </div>
                               </div>
@@ -409,7 +409,7 @@ const LeaveHistory: React.FC = () => {
                               </Avatar>
                             )}
                             <div>
-                              <p className="font-semibold">{leaveTypeLabels[request.leaveType] || request.leaveType}</p>
+                              <p className="font-semibold">{request.isHalfDay ? `Half ${leaveTypeLabels[request.leaveType]}` : leaveTypeLabels[request.leaveType] || request.leaveType}</p>
                               {user?.role === 'manager' && request.employee && (
                                 <p className="text-sm text-muted-foreground">
                                   {request.employee.firstName} {request.employee.lastName}

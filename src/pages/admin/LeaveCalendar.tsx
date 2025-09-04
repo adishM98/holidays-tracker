@@ -100,7 +100,7 @@ const LeaveCalendar: React.FC = () => {
 
   const [leaveForm, setLeaveForm] = useState({
     employeeId: '',
-    leaveType: 'sick' as 'sick' | 'casual' | 'earned' | 'compensation',
+    leaveType: 'sick' as 'sick' | 'casual' | 'earned' | 'compensation' | 'half-sick' | 'half-casual' | 'half-earned',
     startDate: undefined as Date | undefined,
     endDate: undefined as Date | undefined,
     reason: '',
@@ -240,6 +240,18 @@ const LeaveCalendar: React.FC = () => {
       return;
     }
     
+    const isHalfDay = leaveForm.leaveType.startsWith('half-');
+    
+    // For half-day leaves, start date and end date must be the same
+    if (isHalfDay && leaveForm.startDate?.getTime() !== leaveForm.endDate?.getTime()) {
+      toast({
+        title: "Invalid Date Range",
+        description: "Half-day leaves can only be created for a single day.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     // Convert dates to strings for validation and API
     const startDateString = leaveForm.startDate ? formatDateForInput(leaveForm.startDate) : '';
     const endDateString = leaveForm.endDate ? formatDateForInput(leaveForm.endDate) : '';
@@ -268,12 +280,15 @@ const LeaveCalendar: React.FC = () => {
 
     try {
       setIsSubmitting(true);
+      const baseLeaveType = isHalfDay ? leaveForm.leaveType.replace('half-', '') : leaveForm.leaveType;
+      
       await adminAPI.createLeaveForEmployee({
         employeeId: leaveForm.employeeId,
-        leaveType: leaveForm.leaveType,
+        leaveType: baseLeaveType,
         startDate: startDateString,
         endDate: endDateString,
         reason: leaveForm.reason,
+        isHalfDay: isHalfDay,
       });
 
       toast({
@@ -823,7 +838,7 @@ const LeaveCalendar: React.FC = () => {
                           <div className="flex items-center space-x-1 truncate">
                             <LeaveIcon className="h-3 w-3 flex-shrink-0" />
                             <span className="truncate font-medium">
-                              {leaveTypeLabels[leave.leaveType]}
+                              {leave.isHalfDay ? `Half ${leaveTypeLabels[leave.leaveType]}` : leaveTypeLabels[leave.leaveType]}
                             </span>
                           </div>
                           <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1117,7 +1132,7 @@ const LeaveCalendar: React.FC = () => {
               <Label htmlFor="leaveType">Leave Type *</Label>
               <Select 
                 value={leaveForm.leaveType} 
-                onValueChange={(value: 'sick' | 'casual' | 'earned' | 'compensation') => setLeaveForm({...leaveForm, leaveType: value})}
+                onValueChange={(value: 'sick' | 'casual' | 'earned' | 'compensation' | 'half-sick' | 'half-casual' | 'half-earned') => setLeaveForm({...leaveForm, leaveType: value})}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -1127,6 +1142,9 @@ const LeaveCalendar: React.FC = () => {
                   <SelectItem value="casual">Casual Leave</SelectItem>
                   <SelectItem value="earned">Earned/Privilege Leave</SelectItem>
                   <SelectItem value="compensation">Compensation Off</SelectItem>
+                  <SelectItem value="half-sick">Half Sick Leave</SelectItem>
+                  <SelectItem value="half-casual">Half Casual Leave</SelectItem>
+                  <SelectItem value="half-earned">Half Earned/Privilege Leave</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1237,7 +1255,7 @@ const LeaveCalendar: React.FC = () => {
               <Label htmlFor="editLeaveType">Leave Type *</Label>
               <Select 
                 value={leaveForm.leaveType} 
-                onValueChange={(value: 'sick' | 'casual' | 'earned' | 'compensation') => setLeaveForm({...leaveForm, leaveType: value})}
+                onValueChange={(value: 'sick' | 'casual' | 'earned' | 'compensation' | 'half-sick' | 'half-casual' | 'half-earned') => setLeaveForm({...leaveForm, leaveType: value})}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -1247,6 +1265,9 @@ const LeaveCalendar: React.FC = () => {
                   <SelectItem value="casual">Casual Leave</SelectItem>
                   <SelectItem value="earned">Earned/Privilege Leave</SelectItem>
                   <SelectItem value="compensation">Compensation Off</SelectItem>
+                  <SelectItem value="half-sick">Half Sick Leave</SelectItem>
+                  <SelectItem value="half-casual">Half Casual Leave</SelectItem>
+                  <SelectItem value="half-earned">Half Earned/Privilege Leave</SelectItem>
                 </SelectContent>
               </Select>
             </div>

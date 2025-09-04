@@ -149,6 +149,7 @@ export const employeeAPI = {
     startDate: string;
     endDate: string;
     reason?: string;
+    isHalfDay?: boolean;
   }) => {
     return apiRequest('/employee/leave-requests', {
       method: 'POST',
@@ -373,6 +374,7 @@ export const adminAPI = {
     endDate: string;
     reason: string;
     status?: 'approved' | 'pending';
+    isHalfDay?: boolean;
   }) => {
     return apiRequest('/admin/leave-requests', {
       method: 'POST',

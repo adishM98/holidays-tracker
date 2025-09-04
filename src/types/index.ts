@@ -1,6 +1,6 @@
 export type UserRole = 'employee' | 'manager' | 'admin';
 
-export type LeaveType = 'sick' | 'casual' | 'earned' | 'compensation';
+export type LeaveType = 'sick' | 'casual' | 'earned' | 'compensation' | 'half-sick' | 'half-casual' | 'half-earned';
 
 export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
@@ -45,6 +45,7 @@ export interface LeaveRequest {
   startDate: string;
   endDate: string;
   daysCount: number;
+  isHalfDay?: boolean;
   reason?: string;
   status: LeaveStatus;
   appliedAt: string;

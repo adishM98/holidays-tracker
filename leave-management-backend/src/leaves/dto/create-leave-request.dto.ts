@@ -1,4 +1,4 @@
-import { IsEnum, IsDateString, IsOptional, IsString } from "class-validator";
+import { IsEnum, IsDateString, IsOptional, IsString, IsBoolean } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { LeaveType } from "../../common/enums/leave-type.enum";
 
@@ -19,4 +19,13 @@ export class CreateLeaveRequestDto {
   @IsOptional()
   @IsString()
   reason?: string;
+
+  @ApiPropertyOptional({ 
+    example: false, 
+    description: "Whether this is a half-day leave request",
+    default: false 
+  })
+  @IsOptional()
+  @IsBoolean()
+  isHalfDay?: boolean;
 }

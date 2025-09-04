@@ -52,10 +52,16 @@ export class LeavesService {
 
     const startDate = new Date(createLeaveRequestDto.startDate);
     const endDate = new Date(createLeaveRequestDto.endDate);
+    const isHalfDay = createLeaveRequestDto.isHalfDay || false;
 
     // Validate date range
     if (startDate > endDate) {
       throw new BadRequestException("Start date cannot be after end date");
+    }
+
+    // For half-day leaves, start and end date must be the same
+    if (isHalfDay && startDate.getTime() !== endDate.getTime()) {
+      throw new BadRequestException("Half-day leaves can only be applied for a single day");
     }
 
     // Allow applications from today onwards (employees can fall sick today)
@@ -71,10 +77,15 @@ export class LeavesService {
     }
 
     // Calculate working days (automatically excludes weekends and holidays)
-    const daysCount = await this.leaveCalculationService.calculateWorkingDays(
+    let daysCount = await this.leaveCalculationService.calculateWorkingDays(
       startDate,
       endDate,
     );
+
+    // For half-day leaves, set the count to 0.5
+    if (isHalfDay) {
+      daysCount = 0.5;
+    }
 
     // Ensure there are working days in the range
     if (daysCount === 0) {
@@ -106,6 +117,7 @@ export class LeavesService {
       startDate,
       endDate,
       daysCount,
+      isHalfDay,
       reason: createLeaveRequestDto.reason,
       status: LeaveStatus.PENDING,
       approvedBy: employee.manager?.id, // Assign manager as approver

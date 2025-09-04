@@ -327,11 +327,33 @@ const ApplyLeave: React.FC = () => {
     return { isValid: true, reason: null };
   };
 
+  // Helper function to check if leave type is half-day
+  const isHalfDayLeaveType = (leaveType: string) => {
+    return leaveType.startsWith('half-');
+  };
+
+  // Helper function to get base leave type from half-day type
+  const getBaseLeaveType = (leaveType: string) => {
+    return leaveType.replace('half-', '');
+  };
+
   const handleSubmit = async () => {
     if (!leaveForm.leaveType || !leaveForm.reason.trim() || !leaveForm.startDate || !leaveForm.endDate) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const isHalfDay = isHalfDayLeaveType(leaveForm.leaveType);
+    
+    // For half-day leaves, start date and end date must be the same
+    if (isHalfDay && leaveForm.startDate?.getTime() !== leaveForm.endDate?.getTime()) {
+      toast({
+        title: "Invalid Date Range",
+        description: "Half-day leaves can only be applied for a single day.",
         variant: "destructive",
       });
       return;
@@ -366,11 +388,14 @@ const ApplyLeave: React.FC = () => {
     setIsSubmitting(true);
 
     try {
+      const baseLeaveType = isHalfDay ? getBaseLeaveType(leaveForm.leaveType) : leaveForm.leaveType;
+      
       await employeeAPI.createLeaveRequest({
-        leaveType: leaveForm.leaveType as string,
+        leaveType: baseLeaveType as string,
         startDate: startDateString,
         endDate: endDateString,
         reason: leaveForm.reason,
+        isHalfDay: isHalfDay,
       });
 
       toast({
@@ -692,6 +717,10 @@ const ApplyLeave: React.FC = () => {
                           ? 'bg-orange-50 dark:bg-orange-950 cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-900/20 hover:border-orange-300 dark:hover:border-orange-600 border-border'
                           : 'bg-muted/30 cursor-not-allowed opacity-60 border-border'
                         : 'cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-600 border-border'
+                  } ${
+                    leaveOnDate?.isHalfDay 
+                      ? 'after:content-[""] after:absolute after:top-0 after:left-0 after:w-1/2 after:h-full after:bg-blue-200/50 after:rounded-l-lg after:pointer-events-none' 
+                      : ''
                   }`}
                   onClick={() => handleDateClick(day)}
                 >
@@ -749,6 +778,7 @@ const ApplyLeave: React.FC = () => {
                               {leaveOnDate.leaveType === 'earned' && <Gift className="h-2.5 w-2.5" />}
                               {leaveOnDate.leaveType === 'compensation' && <CalendarDays className="h-2.5 w-2.5" />}
                               <span>
+                                {leaveOnDate.isHalfDay ? 'Half ' : ''}
                                 {leaveOnDate.leaveType === 'sick' ? 'Sick' :
                                  leaveOnDate.leaveType === 'casual' ? 'Casual' :
                                  leaveOnDate.leaveType === 'earned' ? 'Earned' :
@@ -1014,7 +1044,7 @@ const ApplyLeave: React.FC = () => {
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Duration</Label>
                 <div className="mt-1 text-sm">
-                  {selectedLeaveRequest.daysCount} day(s)
+                  {selectedLeaveRequest.isHalfDay ? `${selectedLeaveRequest.daysCount} half day` : `${selectedLeaveRequest.daysCount} day(s)`}
                 </div>
               </div>
 

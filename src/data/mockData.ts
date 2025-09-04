@@ -4,7 +4,10 @@ export const leaveTypeLabels = {
   sick: 'Sick Leave',
   casual: 'Casual Leave',
   earned: 'Earned/Privilege Leave',
-  compensation: 'Compensation Off'
+  compensation: 'Compensation Off',
+  'half-sick': 'Half Sick Leave',
+  'half-casual': 'Half Casual Leave',
+  'half-earned': 'Half Earned/Privilege Leave'
 };
 
 export const statusConfig = {

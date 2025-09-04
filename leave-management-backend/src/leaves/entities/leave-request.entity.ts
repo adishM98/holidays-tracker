@@ -49,6 +49,9 @@ export class LeaveRequest {
   })
   daysCount: number;
 
+  @Column({ name: "is_half_day", type: "boolean", default: false })
+  isHalfDay: boolean;
+
   @Column({ type: "text", nullable: true })
   reason: string;
 
