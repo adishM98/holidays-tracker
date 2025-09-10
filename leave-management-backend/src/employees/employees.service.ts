@@ -141,7 +141,7 @@ export class EmployeesService {
     }
 
     // Add department filter
-    if (options?.departmentId) {
+    if (options?.departmentId && options.departmentId !== "all") {
       queryBuilder.andWhere("employee.departmentId = :departmentId", {
         departmentId: options.departmentId,
       });

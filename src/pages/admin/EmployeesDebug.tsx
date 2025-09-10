@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Pencil, Trash2, Upload, Info, Clipboard, MoreHorizontal, Key, CheckCircle, UserX, UserCheck, RefreshCw, Clock, Users, Search, Calendar } from 'lucide-react';
+import { Plus, Pencil, Trash2, Upload, Info, Clipboard, MoreHorizontal, Key, CheckCircle, UserX, UserCheck, RefreshCw, Clock, Users, Search, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { TailwindDatePicker } from '@/components/ui/tailwind-date-picker';
@@ -79,6 +80,13 @@ const EmployeesDebug: React.FC = () => {
     sickBalance: 0,
     casualBalance: 0,
   });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalEmployees, setTotalEmployees] = useState(0);
+  const ITEMS_PER_PAGE = 10;
+  const [selectedEmployees, setSelectedEmployees] = useState<Set<string>>(new Set());
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -214,16 +222,22 @@ const EmployeesDebug: React.FC = () => {
     }
   };
 
-  const fetchEmployees = async () => {
+  const fetchEmployees = async (page = currentPage) => {
     try {
-      console.log('Fetching employees...');
-      const response = await adminAPI.getEmployees();
+      console.log('Fetching employees for page:', page);
+      const response = await adminAPI.getEmployees(page, ITEMS_PER_PAGE, searchTerm, selectedDepartment);
       console.log('Employees API response:', response);
       console.log('Employees data:', response.data);
       // The API returns { employees: [...], total, page, limit }
       const employeesList = response.data?.employees || response.employees || [];
+      const total = response.total || response.data?.total || response.totalCount || employeesList.length;
+      
       console.log('Processed employees list:', employeesList);
+      console.log('Total employees:', total);
+      
       setEmployees(employeesList);
+      setTotalEmployees(total);
+      setTotalPages(Math.ceil(total / ITEMS_PER_PAGE));
     } catch (error) {
       console.error('Error fetching employees:', error);
       toast({
@@ -258,6 +272,17 @@ const EmployeesDebug: React.FC = () => {
     fetchEmployees();
     fetchDepartments();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+    setSelectedEmployees(new Set()); // Clear selections when filtering
+    fetchEmployees(1);
+  }, [searchTerm, selectedDepartment]);
+
+  useEffect(() => {
+    setSelectedEmployees(new Set()); // Clear selections when changing pages
+    fetchEmployees(currentPage);
+  }, [currentPage]);
 
   const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -342,7 +367,8 @@ const EmployeesDebug: React.FC = () => {
 
         // Refresh the employee list after creation
         console.log('Refreshing employee list after creation...');
-        await fetchEmployees();
+        setCurrentPage(1);
+        await fetchEmployees(1);
         console.log('Employee list refreshed after creation');
       }
 
@@ -413,7 +439,8 @@ const EmployeesDebug: React.FC = () => {
         title: "Success",
         description: "Employees imported successfully",
       });
-      fetchEmployees();
+      setCurrentPage(1);
+      fetchEmployees(1);
     } catch (error) {
       console.error('Error importing employees:', error);
       toast({
@@ -429,19 +456,65 @@ const EmployeesDebug: React.FC = () => {
     }
   };
 
-  // Filter employees based on search and department
-  const filteredEmployees = employees.filter(employee => {
-    const matchesSearch = searchTerm === '' || 
-      employee.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      `${employee.firstName} ${employee.lastName}`.toLowerCase().includes(searchTerm.toLowerCase());
+  // Remove client-side filtering since it's now handled server-side
+  const filteredEmployees = employees;
+
+  // Selection utility functions
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const newSelected = new Set(filteredEmployees.map(emp => emp.id));
+      setSelectedEmployees(newSelected);
+    } else {
+      setSelectedEmployees(new Set());
+    }
+  };
+
+  const handleSelectEmployee = (employeeId: string, checked: boolean) => {
+    const newSelected = new Set(selectedEmployees);
+    if (checked) {
+      newSelected.add(employeeId);
+    } else {
+      newSelected.delete(employeeId);
+    }
+    setSelectedEmployees(newSelected);
+  };
+
+  const isAllSelected = filteredEmployees.length > 0 && filteredEmployees.every(emp => selectedEmployees.has(emp.id));
+  const isSomeSelected = filteredEmployees.some(emp => selectedEmployees.has(emp.id));
+
+  // Bulk delete functionality
+  const handleBulkDelete = async () => {
+    if (selectedEmployees.size === 0) return;
     
-    const matchesDepartment = selectedDepartment === '' || selectedDepartment === 'all' || 
-      employee.department.id === selectedDepartment;
-    
-    return matchesSearch && matchesDepartment;
-  });
+    setIsBulkDeleting(true);
+    try {
+      // Delete each selected employee
+      const deletePromises = Array.from(selectedEmployees).map(employeeId =>
+        adminAPI.deleteEmployee(employeeId)
+      );
+      
+      await Promise.all(deletePromises);
+      
+      toast({
+        title: "Success",
+        description: `Successfully deleted ${selectedEmployees.size} employee${selectedEmployees.size > 1 ? 's' : ''}`,
+      });
+      
+      // Clear selection and refresh data
+      setSelectedEmployees(new Set());
+      setIsBulkDeleteDialogOpen(false);
+      fetchEmployees(); // Refresh the list
+    } catch (error) {
+      console.error('Error deleting employees:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete some employees. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
 
   const generateInviteURL = (employee: Employee) => {
     // Generate a secure invite token (in a real implementation, this would be generated on the backend)
@@ -786,6 +859,17 @@ const EmployeesDebug: React.FC = () => {
               <Plus className="w-4 h-4 mr-2" />
               Add Employee
             </Button>
+
+            {selectedEmployees.size > 0 && (
+              <Button
+                onClick={() => setIsBulkDeleteDialogOpen(true)}
+                variant="destructive"
+                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Selected ({selectedEmployees.size})
+              </Button>
+            )}
           </div>
         </div>
 
@@ -829,6 +913,13 @@ const EmployeesDebug: React.FC = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={isAllSelected}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Select all employees"
+                  />
+                </TableHead>
                 <TableHead>Serial No.</TableHead>
                 <TableHead>Employee ID</TableHead>
                 <TableHead>Employee Name</TableHead>
@@ -843,7 +934,14 @@ const EmployeesDebug: React.FC = () => {
             <TableBody>
               {filteredEmployees.map((employee, index) => (
                 <TableRow key={employee.id}>
-                  <TableCell>{index + 1}</TableCell>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedEmployees.has(employee.id)}
+                      onCheckedChange={(checked) => handleSelectEmployee(employee.id, checked as boolean)}
+                      aria-label={`Select ${employee.firstName} ${employee.lastName}`}
+                    />
+                  </TableCell>
+                  <TableCell>{((currentPage - 1) * ITEMS_PER_PAGE) + index + 1}</TableCell>
                   <TableCell>{employee.employeeId || 'N/A'}</TableCell>
                   <TableCell>{`${employee.firstName} ${employee.lastName}`}</TableCell>
                   <TableCell>{employee.email}</TableCell>
@@ -1001,7 +1099,7 @@ const EmployeesDebug: React.FC = () => {
               ))}
               {filteredEmployees.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-16">
+                  <TableCell colSpan={10} className="text-center py-16">
                     <div className="flex flex-col items-center space-y-4">
                       <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center">
                         <Users className="h-8 w-8 text-green-600" />
@@ -1029,6 +1127,60 @@ const EmployeesDebug: React.FC = () => {
               )}
             </TableBody>
           </Table>
+          
+          {/* Pagination Controls */}
+          {totalEmployees > 0 && (
+            <div className="flex items-center justify-between px-2 py-4">
+              <div className="text-sm text-muted-foreground">
+                Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, totalEmployees)} of {totalEmployees} employees
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage <= 1 || totalPages <= 1}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Previous
+                </Button>
+                
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(page => 
+                      page === 1 || 
+                      page === totalPages || 
+                      Math.abs(page - currentPage) <= 2
+                    )
+                    .map((page, index, array) => (
+                      <React.Fragment key={page}>
+                        {index > 0 && array[index - 1] !== page - 1 && (
+                          <span className="px-2 text-muted-foreground">...</span>
+                        )}
+                        <Button
+                          variant={page === currentPage ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(page)}
+                          className="w-8 h-8 p-0"
+                        >
+                          {page}
+                        </Button>
+                      </React.Fragment>
+                    ))}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage >= totalPages || totalPages <= 1}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -1797,6 +1949,71 @@ const EmployeesDebug: React.FC = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={isBulkDeleteDialogOpen} onOpenChange={setIsBulkDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-700 flex items-center space-x-2">
+              <Trash2 className="h-5 w-5" />
+              <span>Bulk Delete Employees</span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to delete the selected employees? This action cannot be undone.
+              </p>
+              <div className="mt-4 p-3 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200 dark:border-red-800">
+                <p className="text-sm font-semibold text-red-900 dark:text-red-100">
+                  {selectedEmployees.size} employee{selectedEmployees.size > 1 ? 's' : ''} selected for deletion
+                </p>
+              </div>
+            </div>
+            
+            <Alert className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950">
+              <AlertTitle className="text-red-800 dark:text-red-200 text-sm font-medium">
+                Warning: Permanent Action
+              </AlertTitle>
+              <AlertDescription className="text-red-700 dark:text-red-300 text-sm">
+                Deleting employees will also remove their user accounts, leave records, and all associated data. 
+                This action cannot be undone.
+              </AlertDescription>
+            </Alert>
+            
+            <div className="flex space-x-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsBulkDeleteDialogOpen(false);
+                }}
+                disabled={isBulkDeleting}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleBulkDelete}
+                disabled={isBulkDeleting}
+                className="flex-1"
+              >
+                {isBulkDeleting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete {selectedEmployees.size} Employee{selectedEmployees.size > 1 ? 's' : ''}
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
       </div>

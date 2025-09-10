@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, Users, Info, Upload, Calendar } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Users, Info, Upload, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -65,6 +65,10 @@ const Employees: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalEmployees, setTotalEmployees] = useState(0);
+  const ITEMS_PER_PAGE = 10;
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isLeaveStatusDialogOpen, setIsLeaveStatusDialogOpen] = useState(false);
@@ -104,20 +108,43 @@ const Employees: React.FC = () => {
     loadData();
   }, []);
 
-  const loadData = async () => {
+  useEffect(() => {
+    setCurrentPage(1);
+    loadData(1);
+  }, [searchTerm, selectedDepartment]);
+
+  useEffect(() => {
+    loadData(currentPage);
+  }, [currentPage]);
+
+  const loadData = async (page = currentPage) => {
     try {
       setIsLoading(true);
       const [employeesResponse, departmentsResponse] = await Promise.all([
-        adminAPI.getEmployees(1, 100),
+        adminAPI.getEmployees(page, ITEMS_PER_PAGE, searchTerm, selectedDepartment),
         adminAPI.getDepartments(),
       ]);
       
+      const employees = employeesResponse.employees || employeesResponse.data || [];
+      const total = employeesResponse.total || employeesResponse.totalCount || employees.length;
       
-      setEmployees(employeesResponse.employees || employeesResponse.data || []);
+      setEmployees(employees);
+      setTotalEmployees(total);
+      setTotalPages(Math.ceil(total / ITEMS_PER_PAGE));
+      
+      // Debug logging
+      console.log('API Response:', {
+        employees: employees.length,
+        total: employeesResponse.total,
+        totalCount: employeesResponse.totalCount,
+        calculatedTotal: total,
+        totalPages: Math.ceil(total / ITEMS_PER_PAGE)
+      });
       setDepartments(departmentsResponse);
       
-      // Filter potential managers (excluding current employee if editing)
-      const potentialManagers = (employeesResponse.employees || employeesResponse.data || [])
+      // Load all managers for the dropdown (separate call)
+      const allManagersResponse = await adminAPI.getEmployees(1, 1000);
+      const potentialManagers = (allManagersResponse.employees || allManagersResponse.data || [])
         .filter((emp: Employee) => emp.id !== selectedEmployee?.id);
       setManagers(potentialManagers);
     } catch (error) {
@@ -156,7 +183,8 @@ const Employees: React.FC = () => {
       
       setIsAddDialogOpen(false);
       resetForm();
-      loadData();
+      setCurrentPage(1);
+      loadData(1);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -327,18 +355,8 @@ const Employees: React.FC = () => {
     setIsEditDialogOpen(true);
   };
 
-  const filteredEmployees = employees.filter(employee => {
-    const matchesSearch = searchTerm === '' || 
-      employee.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      `${employee.firstName} ${employee.lastName}`.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesDepartment = selectedDepartment === '' || 
-      employee.department.id === selectedDepartment;
-    
-    return matchesSearch && matchesDepartment;
-  });
+  // Remove client-side filtering since it's now handled server-side
+  const filteredEmployees = employees;
 
   const EmployeeForm = ({ onSubmit, submitLabel }: { onSubmit: () => void; submitLabel: string }) => (
     <div className="space-y-4">
@@ -814,6 +832,60 @@ const Employees: React.FC = () => {
               </Table>
             </div>
           )}
+          
+          {/* Pagination Controls */}
+          {!isLoading && totalEmployees > 0 && (
+            <div className="flex items-center justify-between px-2 py-4">
+              <div className="text-sm text-muted-foreground">
+                Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, totalEmployees)} of {totalEmployees} employees
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage <= 1 || totalPages <= 1}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Previous
+                </Button>
+                
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(page => 
+                      page === 1 || 
+                      page === totalPages || 
+                      Math.abs(page - currentPage) <= 2
+                    )
+                    .map((page, index, array) => (
+                      <React.Fragment key={page}>
+                        {index > 0 && array[index - 1] !== page - 1 && (
+                          <span className="px-2 text-muted-foreground">...</span>
+                        )}
+                        <Button
+                          variant={page === currentPage ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(page)}
+                          className="w-8 h-8 p-0"
+                        >
+                          {page}
+                        </Button>
+                      </React.Fragment>
+                    ))}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage >= totalPages || totalPages <= 1}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -992,7 +1064,8 @@ const Employees: React.FC = () => {
         onClose={() => setIsBulkImportDialogOpen(false)}
         onSuccess={() => {
           setIsBulkImportDialogOpen(false);
-          loadData(); // Refresh the employee list
+          setCurrentPage(1);
+          loadData(1); // Refresh the employee list
         }}
       />
       </div>
