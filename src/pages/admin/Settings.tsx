@@ -37,7 +37,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Calendar, Settings as SettingsIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, Calendar, Settings as SettingsIcon, PartyPopper } from 'lucide-react';
 import { adminAPI } from '@/services/api';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -46,6 +46,7 @@ interface Holiday {
   name: string;
   date: string;
   description?: string;
+  type?: 'company' | 'public';
   isRecurring: boolean;
   isActive: boolean;
   createdAt: string;
@@ -213,6 +214,7 @@ const Settings: React.FC = () => {
     setShowDialog(true);
   };
 
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -232,7 +234,7 @@ const Settings: React.FC = () => {
 
       {/* Holiday Management Section */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <CardHeader className={holidays.length > 0 ? "flex flex-row items-center justify-between space-y-0 pb-4" : ""}>
           <div>
             <CardTitle className="flex items-center space-x-2">
               <Calendar className="h-5 w-5" />
@@ -242,10 +244,12 @@ const Settings: React.FC = () => {
               Manage company holidays and public holidays
             </p>
           </div>
-          <Button onClick={handleAdd} className="flex items-center space-x-2">
-            <Plus className="h-4 w-4" />
-            <span>Add Holiday</span>
-          </Button>
+          {holidays.length > 0 && (
+            <Button onClick={handleAdd} className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Holiday
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -253,12 +257,18 @@ const Settings: React.FC = () => {
               <div className="text-muted-foreground">Loading holidays...</div>
             </div>
           ) : holidays.length === 0 ? (
-            <div className="text-center p-8">
-              <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium text-muted-foreground mb-2">No holidays found</h3>
-              <p className="text-muted-foreground">
-                Get started by adding your first holiday using the "Add Holiday" button above
+            <div className="text-center p-12">
+              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/40 dark:to-blue-800/40 rounded-full flex items-center justify-center">
+                <PartyPopper className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">No holidays yet</h3>
+              <p className="text-muted-foreground mb-6">
+                Add holidays to manage company and public events
               </p>
+              <Button onClick={handleAdd} className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Holiday
+              </Button>
             </div>
           ) : (
             <Table>
@@ -267,8 +277,7 @@ const Settings: React.FC = () => {
                   <TableHead>Name</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Recurring</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -289,34 +298,30 @@ const Settings: React.FC = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      {holiday.isRecurring ? (
-                        <Badge variant="secondary">Recurring</Badge>
-                      ) : (
-                        <Badge variant="outline">One-time</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {holiday.isActive ? (
-                        <Badge variant="default">Active</Badge>
-                      ) : (
-                        <Badge variant="secondary">Inactive</Badge>
-                      )}
+                      <Badge variant={holiday.isRecurring ? 'outline' : 'secondary'}>
+                        {holiday.isRecurring ? 'Yes' : 'No'}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end space-x-2">
+                      <div className="flex items-center justify-end space-x-3">
+                        {/* Edit Button */}
                         <Button
-                          variant="outline"
-                className="border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-500"
+                          variant="ghost"
                           size="sm"
                           onClick={() => handleEdit(holiday)}
+                          className="h-8 w-8 p-0 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:text-gray-400 dark:hover:text-blue-400 dark:hover:bg-blue-950/50 transition-all duration-200"
+                          title="Edit holiday"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
+                        
+                        {/* Delete Button */}
                         <Button
-                          variant="outline"
-                className="border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-500"
+                          variant="ghost"
                           size="sm"
                           onClick={() => setDeletingHoliday(holiday)}
+                          className="h-8 w-8 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:text-gray-400 dark:hover:text-red-400 dark:hover:bg-red-950/50 transition-all duration-200"
+                          title="Delete holiday"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -396,6 +401,7 @@ const Settings: React.FC = () => {
                 </div>
               </div>
 
+
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Options</Label>
                 <div className="col-span-3 space-y-3">
@@ -440,8 +446,8 @@ const Settings: React.FC = () => {
               >
                 Cancel
               </Button>
-              <Button type="submit">
-                {editingHoliday ? 'Update Holiday' : 'Add Holiday'}
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                {editingHoliday ? 'Update Holiday' : 'Save Holiday'}
               </Button>
             </DialogFooter>
           </form>
