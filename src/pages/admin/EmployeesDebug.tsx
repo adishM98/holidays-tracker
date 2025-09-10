@@ -83,7 +83,7 @@ const EmployeesDebug: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [totalEmployees, setTotalEmployees] = useState(0);
-  const ITEMS_PER_PAGE = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedEmployees, setSelectedEmployees] = useState<Set<string>>(new Set());
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
@@ -225,7 +225,7 @@ const EmployeesDebug: React.FC = () => {
   const fetchEmployees = async (page = currentPage) => {
     try {
       console.log('Fetching employees for page:', page);
-      const response = await adminAPI.getEmployees(page, ITEMS_PER_PAGE, searchTerm, selectedDepartment);
+      const response = await adminAPI.getEmployees(page, itemsPerPage, searchTerm, selectedDepartment);
       console.log('Employees API response:', response);
       console.log('Employees data:', response.data);
       // The API returns { employees: [...], total, page, limit }
@@ -237,7 +237,7 @@ const EmployeesDebug: React.FC = () => {
       
       setEmployees(employeesList);
       setTotalEmployees(total);
-      setTotalPages(Math.ceil(total / ITEMS_PER_PAGE));
+      setTotalPages(Math.ceil(total / itemsPerPage));
     } catch (error) {
       console.error('Error fetching employees:', error);
       toast({
@@ -283,6 +283,16 @@ const EmployeesDebug: React.FC = () => {
     setSelectedEmployees(new Set()); // Clear selections when changing pages
     fetchEmployees(currentPage);
   }, [currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1); // Reset to first page when changing items per page
+    setSelectedEmployees(new Set()); // Clear selections when changing page size
+    fetchEmployees(1);
+  }, [itemsPerPage]);
+
+  const handleItemsPerPageChange = (newItemsPerPage: string) => {
+    setItemsPerPage(parseInt(newItemsPerPage));
+  };
 
   const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -941,7 +951,7 @@ const EmployeesDebug: React.FC = () => {
                       aria-label={`Select ${employee.firstName} ${employee.lastName}`}
                     />
                   </TableCell>
-                  <TableCell>{((currentPage - 1) * ITEMS_PER_PAGE) + index + 1}</TableCell>
+                  <TableCell>{((currentPage - 1) * itemsPerPage) + index + 1}</TableCell>
                   <TableCell>{employee.employeeId || 'N/A'}</TableCell>
                   <TableCell>{`${employee.firstName} ${employee.lastName}`}</TableCell>
                   <TableCell>{employee.email}</TableCell>
@@ -1131,8 +1141,25 @@ const EmployeesDebug: React.FC = () => {
           {/* Pagination Controls */}
           {totalEmployees > 0 && (
             <div className="flex items-center justify-between px-2 py-4">
-              <div className="text-sm text-muted-foreground">
-                Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, totalEmployees)} of {totalEmployees} employees
+              <div className="flex items-center space-x-4">
+                <div className="text-sm text-muted-foreground">
+                  Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalEmployees)} of {totalEmployees} employees
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-muted-foreground">Show</span>
+                  <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
+                    <SelectTrigger className="w-[70px] h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="20">20</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span className="text-sm text-muted-foreground">per page</span>
+                </div>
               </div>
               <div className="flex items-center space-x-2">
                 <Button
