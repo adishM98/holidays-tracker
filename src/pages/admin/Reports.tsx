@@ -497,24 +497,24 @@ const Reports: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-h-screen bg-white dark:bg-gray-900">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Reports & Analytics</h1>
-          <p className="text-muted-foreground">Detailed Leave Analytics and Reports</p>
+          <h1 className="text-xl font-semibold text-foreground">Reports & Analytics</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Detailed leave analytics and reports</p>
         </div>
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center">
+          <CardTitle className="flex items-center text-base font-medium">
             <Filter className="w-5 h-5 mr-2" />
             Filters
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
             <div>
               <label className="text-sm font-medium mb-2 block">Types</label>
               <Select value={selectedReportType} onValueChange={setSelectedReportType}>
@@ -588,7 +588,7 @@ const Reports: React.FC = () => {
             <div className="flex flex-col justify-end">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button className="h-10">
+                  <Button className="h-10 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500">
                     <Download className="w-4 h-4 mr-2" />
                     Export Report
                     <ChevronDown className="w-4 h-4 ml-2" />
@@ -920,40 +920,67 @@ const Reports: React.FC = () => {
       </Card>
 
       {/* Summary Statistics */}
-      <Card>
+      <Card className="border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center">
+          <CardTitle className="flex items-center text-base font-medium">
             <BarChart3 className="w-5 h-5 mr-2" />
             Summary Statistics
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg border dark:border-blue-800/50">
-                <h3 className="font-medium text-blue-900 dark:text-blue-100">Total Employees</h3>
-                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{employees.length}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Total Employees Card */}
+              <div className="group bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/40 dark:to-blue-900/40 p-6 rounded-xl border border-blue-200/50 dark:border-blue-800/50 hover:shadow-lg hover:scale-105 transition-all duration-200 cursor-pointer hover:shadow-blue-500/10">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-2 bg-blue-500/10 dark:bg-blue-400/20 rounded-lg">
+                    <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  </div>
+                </div>
+                <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">Total Employees</h3>
+                <p className="text-3xl font-bold text-blue-900 dark:text-blue-100">{employees.length}</p>
               </div>
-              <div className="bg-green-50 dark:bg-green-950/30 p-4 rounded-lg border dark:border-green-800/50">
-                <h3 className="font-medium text-green-900 dark:text-green-100">Departments</h3>
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400">{departments.length}</p>
+
+              {/* Departments Card */}
+              <div className="group bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/40 dark:to-green-900/40 p-6 rounded-xl border border-green-200/50 dark:border-green-800/50 hover:shadow-lg hover:scale-105 transition-all duration-200 cursor-pointer hover:shadow-green-500/10">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-2 bg-green-500/10 dark:bg-green-400/20 rounded-lg">
+                    <Target className="w-6 h-6 text-green-600 dark:text-green-400" />
+                  </div>
+                </div>
+                <h3 className="text-sm font-medium text-green-800 dark:text-green-200 mb-1">Departments</h3>
+                <p className="text-3xl font-bold text-green-900 dark:text-green-100">{departments.length}</p>
               </div>
-              <div className="bg-purple-50 dark:bg-purple-950/30 p-4 rounded-lg border dark:border-purple-800/50">
-                <h3 className="font-medium text-purple-900 dark:text-purple-100">Total Leave Requests</h3>
-                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{leaveRequests.length}</p>
+
+              {/* Total Leave Requests Card */}
+              <div className="group bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/40 dark:to-purple-900/40 p-6 rounded-xl border border-purple-200/50 dark:border-purple-800/50 hover:shadow-lg hover:scale-105 transition-all duration-200 cursor-pointer hover:shadow-purple-500/10">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-2 bg-purple-500/10 dark:bg-purple-400/20 rounded-lg">
+                    <Calendar className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                  </div>
+                </div>
+                <h3 className="text-sm font-medium text-purple-800 dark:text-purple-200 mb-1">Total Leave Requests</h3>
+                <p className="text-3xl font-bold text-purple-900 dark:text-purple-100">{leaveRequests.length}</p>
               </div>
-              <div className="bg-orange-50 dark:bg-orange-950/30 p-4 rounded-lg border dark:border-orange-800/50">
-                <h3 className="font-medium text-orange-900 dark:text-orange-100">Pending Requests</h3>
-                <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+
+              {/* Pending Requests Card */}
+              <div className="group bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/40 dark:to-orange-900/40 p-6 rounded-xl border border-orange-200/50 dark:border-orange-800/50 hover:shadow-lg hover:scale-105 transition-all duration-200 cursor-pointer hover:shadow-orange-500/10">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-2 bg-orange-500/10 dark:bg-orange-400/20 rounded-lg">
+                    <Clock className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                  </div>
+                </div>
+                <h3 className="text-sm font-medium text-orange-800 dark:text-orange-200 mb-1">Pending Requests</h3>
+                <p className="text-3xl font-bold text-orange-900 dark:text-orange-100">
                   {leaveRequests.filter(req => req.status === 'pending').length}
                 </p>
               </div>
             </div>
             
             {selectedEmployee && selectedEmployee !== 'all' && (
-              <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border dark:border-gray-700/50">
-                <h4 className="font-medium text-gray-900 dark:text-gray-100">Selected Employee</h4>
-                <p className="text-gray-700 dark:text-gray-300">{employees.find(emp => emp.id === selectedEmployee)?.firstName} {employees.find(emp => emp.id === selectedEmployee)?.lastName}</p>
+              <div className="mt-6 p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600/50">
+                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Selected Employee</h4>
+                <p className="text-base font-semibold text-gray-700 dark:text-gray-300">{employees.find(emp => emp.id === selectedEmployee)?.firstName} {employees.find(emp => emp.id === selectedEmployee)?.lastName}</p>
               </div>
             )}
           </div>

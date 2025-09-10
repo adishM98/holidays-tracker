@@ -829,7 +829,7 @@ const EmployeesDebug: React.FC = () => {
         {/* Hero Section */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
               <Users className="h-6 w-6 text-white" />
             </div>
             <div>
@@ -1111,8 +1111,8 @@ const EmployeesDebug: React.FC = () => {
                 <TableRow>
                   <TableCell colSpan={10} className="text-center py-16">
                     <div className="flex flex-col items-center space-y-4">
-                      <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center">
-                        <Users className="h-8 w-8 text-green-600" />
+                      <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center">
+                        <Users className="h-8 w-8 text-blue-600" />
                       </div>
                       <div>
                         <h3 className="text-lg font-semibold text-foreground mb-1">
