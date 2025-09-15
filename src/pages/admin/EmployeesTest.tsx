@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { TailwindDatePicker } from '@/components/ui/tailwind-date-picker';
 import { 
   Table, 
   TableBody, 
@@ -307,12 +308,11 @@ const EmployeesTest: React.FC = () => {
               </div>
               <div>
                 <Label htmlFor="joiningDate">Joining Date *</Label>
-                <Input
-                  id="joiningDate"
-                  type="date"
-                  value={formData.joiningDate}
-                  onChange={(e) => setFormData({...formData, joiningDate: e.target.value})}
-                  required
+                <TailwindDatePicker
+                  date={formData.joiningDate ? new Date(formData.joiningDate) : undefined}
+                  onSelect={(date) => setFormData({...formData, joiningDate: date ? date.toISOString().split('T')[0] : ''})}
+                  placeholder="Select joining date"
+                  className="w-full"
                 />
               </div>
             </div>

@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { TailwindDatePicker } from '@/components/ui/tailwind-date-picker';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { adminAPI } from '@/services/api';
@@ -533,20 +534,20 @@ const Reports: React.FC = () => {
 
             <div>
               <label className="text-sm font-medium mb-2 block">Start Date</label>
-              <Input
-                type="date"
-                value={dateRange.startDate.toISOString().split('T')[0]}
-                onChange={(e) => setDateRange({...dateRange, startDate: new Date(e.target.value)})}
+              <TailwindDatePicker
+                date={dateRange.startDate}
+                onSelect={(date) => date && setDateRange({...dateRange, startDate: date})}
+                placeholder="Select start date"
                 className="w-full"
               />
             </div>
 
             <div>
               <label className="text-sm font-medium mb-2 block">End Date</label>
-              <Input
-                type="date"
-                value={dateRange.endDate.toISOString().split('T')[0]}
-                onChange={(e) => setDateRange({...dateRange, endDate: new Date(e.target.value)})}
+              <TailwindDatePicker
+                date={dateRange.endDate}
+                onSelect={(date) => date && setDateRange({...dateRange, endDate: date})}
+                placeholder="Select end date"
                 className="w-full"
               />
             </div>

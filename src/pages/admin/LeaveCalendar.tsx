@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { TailwindDatePicker } from '@/components/ui/tailwind-date-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
@@ -1152,21 +1153,19 @@ const LeaveCalendar: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="startDate">Start Date *</Label>
-                <Input
-                  type="date"
-                  id="startDate"
-                  value={leaveForm.startDate ? formatDateForInput(leaveForm.startDate) : ''}
-                  onChange={(e) => setLeaveForm({...leaveForm, startDate: e.target.value ? new Date(e.target.value) : undefined})}
+                <TailwindDatePicker
+                  date={leaveForm.startDate}
+                  onSelect={(date) => setLeaveForm({...leaveForm, startDate: date})}
+                  placeholder="Select start date"
                   className="w-full"
                 />
               </div>
               <div>
                 <Label htmlFor="endDate">End Date *</Label>
-                <Input
-                  type="date"
-                  id="endDate"
-                  value={leaveForm.endDate ? formatDateForInput(leaveForm.endDate) : ''}
-                  onChange={(e) => setLeaveForm({...leaveForm, endDate: e.target.value ? new Date(e.target.value) : undefined})}
+                <TailwindDatePicker
+                  date={leaveForm.endDate}
+                  onSelect={(date) => setLeaveForm({...leaveForm, endDate: date})}
+                  placeholder="Select end date"
                   className="w-full"
                 />
               </div>
@@ -1275,21 +1274,19 @@ const LeaveCalendar: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="editStartDate">Start Date *</Label>
-                <Input
-                  type="date"
-                  id="editStartDate"
-                  value={leaveForm.startDate ? formatDateForInput(leaveForm.startDate) : ''}
-                  onChange={(e) => setLeaveForm({...leaveForm, startDate: e.target.value ? new Date(e.target.value) : undefined})}
+                <TailwindDatePicker
+                  date={leaveForm.startDate}
+                  onSelect={(date) => setLeaveForm({...leaveForm, startDate: date})}
+                  placeholder="Select start date"
                   className="w-full"
                 />
               </div>
               <div>
                 <Label htmlFor="editEndDate">End Date *</Label>
-                <Input
-                  type="date"
-                  id="editEndDate"
-                  value={leaveForm.endDate ? formatDateForInput(leaveForm.endDate) : ''}
-                  onChange={(e) => setLeaveForm({...leaveForm, endDate: e.target.value ? new Date(e.target.value) : undefined})}
+                <TailwindDatePicker
+                  date={leaveForm.endDate}
+                  onSelect={(date) => setLeaveForm({...leaveForm, endDate: date})}
+                  placeholder="Select end date"
                   className="w-full"
                 />
               </div>

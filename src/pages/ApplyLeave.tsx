@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { TailwindDatePicker } from '@/components/ui/tailwind-date-picker';
 import { LeaveType } from '@/types';
 import { 
   Calendar, 
@@ -888,21 +889,19 @@ const ApplyLeave: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="startDate">Start Date *</Label>
-                <Input
-                  type="date"
-                  id="startDate"
-                  value={leaveForm.startDate ? formatDateForInput(leaveForm.startDate) : ''}
-                  onChange={(e) => setLeaveForm(prev => ({ ...prev, startDate: e.target.value ? new Date(e.target.value) : undefined }))}
+                <TailwindDatePicker
+                  date={leaveForm.startDate}
+                  onSelect={(date) => setLeaveForm(prev => ({ ...prev, startDate: date }))}
+                  placeholder="Select start date"
                   className="w-full"
                 />
               </div>
               <div>
                 <Label htmlFor="endDate">End Date *</Label>
-                <Input
-                  type="date"
-                  id="endDate"
-                  value={leaveForm.endDate ? formatDateForInput(leaveForm.endDate) : ''}
-                  onChange={(e) => setLeaveForm(prev => ({ ...prev, endDate: e.target.value ? new Date(e.target.value) : undefined }))}
+                <TailwindDatePicker
+                  date={leaveForm.endDate}
+                  onSelect={(date) => setLeaveForm(prev => ({ ...prev, endDate: date }))}
+                  placeholder="Select end date"
                   className="w-full"
                 />
               </div>

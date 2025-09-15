@@ -657,10 +657,20 @@ const Dashboard: React.FC = () => {
             <CardContent className="p-8 pt-0">
               {managerData.pendingRequests?.requests && managerData.pendingRequests.requests.length > 0 ? (
                 <div className="space-y-4">
-                  {managerData.pendingRequests.requests.map((request: LeaveRequest) => (
+                  {managerData.pendingRequests.requests.map((request: LeaveRequest) => {
+                    // Temporary debug log to see the data structure
+                    console.log('Manager request data:', JSON.stringify(request, null, 2));
+                    return (
                     <div key={request.id} className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
                       <div className="flex-1">
-                        <p className="font-medium text-foreground">{request.employee.fullName}</p>
+                        <p className="font-bold text-foreground text-lg">
+                          {request.employee?.fullName ||
+                           (request.employee?.firstName && request.employee?.lastName
+                             ? `${request.employee.firstName} ${request.employee.lastName}`
+                             : request.employee?.name ||
+                               request.employee?.employeeName ||
+                               (request.employeeName ? request.employeeName : 'Unknown Employee'))}
+                        </p>
                         <p className="text-sm text-muted-foreground">
                           {getLeaveTypeLabel(request.leaveType)} • {formatDate(request.startDate)} - {formatDate(request.endDate)} ({request.daysCount} days)
                         </p>
@@ -671,36 +681,14 @@ const Dashboard: React.FC = () => {
                         )}
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Button
-                          onClick={() => handleManagerApproval(request.id, 'approved')}
-                          disabled={isProcessingApproval === request.id}
-                          size="sm"
-                          className="bg-green-600 hover:bg-green-700 text-white h-8 px-3"
-                          title="Approve request"
-                        >
-                          {isProcessingApproval === request.id ? (
-                            <Clock className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <Check className="h-3 w-3" />
-                          )}
-                        </Button>
-                        <Button
-                          onClick={() => handleManagerApproval(request.id, 'rejected')}
-                          disabled={isProcessingApproval === request.id}
-                          variant="outline"
-                          size="sm"
-                          className="text-red-600 border-red-300 hover:bg-red-50 h-8 px-3"
-                          title="Reject request"
-                        >
-                          {isProcessingApproval === request.id ? (
-                            <Clock className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <X className="h-3 w-3" />
-                          )}
-                        </Button>
+                        <Badge className="bg-amber-100 text-amber-700 border-amber-200 px-3 py-1 rounded-full flex items-center space-x-1">
+                          <Clock className="h-3 w-3" />
+                          <span>Pending</span>
+                        </Badge>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                   <Link to="/pending-approvals" className="block">
                     <Button variant="outline" className="w-full mt-4">
                       Review All Pending Requests

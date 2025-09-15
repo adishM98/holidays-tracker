@@ -152,7 +152,7 @@ const PendingApprovals: React.FC = () => {
                       </div>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Applied {formatDateTime(request.createdAt)}
+                      Applied leave on {formatDateTime(request.createdAt)}
                     </p>
                   </div>
 
