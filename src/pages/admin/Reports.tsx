@@ -64,36 +64,95 @@ const Reports: React.FC = () => {
     endDate: new Date() // Today
   });
   const [loading, setLoading] = useState(false);
+  const [dataReady, setDataReady] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchInitialData();
   }, []);
 
-  useEffect(() => {
-    if (employees.length > 0) {
-      fetchLeaveBalances();
-    }
-  }, [employees]);
 
   const fetchInitialData = async () => {
     try {
+      setLoading(true);
+      setDataReady(false);
+
+      console.log('=== FETCHING DATA FROM DATABASE ===');
+
       const [employeesResponse, departmentsResponse, leaveRequestsResponse] = await Promise.all([
         adminAPI.getEmployees(1, 100),
         adminAPI.getDepartments(),
         adminAPI.getAllLeaveRequests(),
       ]);
-      
-      const employeesData = employeesResponse.employees || employeesResponse.data?.employees || [];
+
+      console.log('Raw API Responses:');
+      console.log('- Employees Response:', employeesResponse);
+      console.log('- Departments Response:', departmentsResponse);
+      console.log('- Leave Requests Response:', leaveRequestsResponse);
+
+      const employeesData = employeesResponse.employees || employeesResponse.data?.employees || employeesResponse || [];
+      const departmentsData = departmentsResponse || [];
+      const leaveRequestsData = leaveRequestsResponse?.requests || leaveRequestsResponse || [];
+
+      console.log('Processed Data:');
+      console.log(`- Employees: ${employeesData.length} records`, employeesData);
+      console.log(`- Departments: ${departmentsData.length} records`, departmentsData);
+      console.log(`- Leave Requests: ${leaveRequestsData.length} records`, leaveRequestsData);
+
+      // Check if we have the expected data structure
+      if (employeesData.length === 0) {
+        console.warn('WARNING: No employees found in database response!');
+      }
+      if (leaveRequestsData.length === 0) {
+        console.warn('WARNING: No leave requests found in database response!');
+      }
+
       setEmployees(employeesData);
-      setDepartments(departmentsResponse || []);
-      setLeaveRequests(leaveRequestsResponse?.requests || []);
+      setDepartments(departmentsData);
+      setLeaveRequests(leaveRequestsData);
+
+      // Wait for leave balances to be fetched before marking data as ready
+      if (employeesData.length > 0) {
+        await fetchLeaveBalances(employeesData);
+      } else {
+        setDataReady(true);
+      }
     } catch (error) {
+      console.error('=== ERROR FETCHING DATA FROM DATABASE ===');
+      console.error('Full error details:', error);
+
+      // Try to identify which API call failed
+      try {
+        console.log('Testing individual API calls...');
+
+        const testEmployees = await adminAPI.getEmployees(1, 100);
+        console.log('✓ Employees API working:', testEmployees);
+      } catch (empError) {
+        console.error('✗ Employees API failed:', empError);
+      }
+
+      try {
+        const testDepartments = await adminAPI.getDepartments();
+        console.log('✓ Departments API working:', testDepartments);
+      } catch (deptError) {
+        console.error('✗ Departments API failed:', deptError);
+      }
+
+      try {
+        const testLeaveRequests = await adminAPI.getAllLeaveRequests();
+        console.log('✓ Leave Requests API working:', testLeaveRequests);
+      } catch (reqError) {
+        console.error('✗ Leave Requests API failed:', reqError);
+      }
+
       toast({
-        title: "Error",
-        description: "Failed to load initial data",
+        title: "Database Error",
+        description: `Failed to load data from database: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
+      setDataReady(false);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -146,6 +205,9 @@ const Reports: React.FC = () => {
   };
 
   const exportToPDF = (data: any[], filename: string, headers: string[]) => {
+    console.log('PDF Export - Full data received:', data);
+    console.log('PDF Export - Headers received:', headers);
+
     const doc = new jsPDF('l', 'mm', 'a4'); // Landscape orientation
     
     // Add title
@@ -156,16 +218,26 @@ const Reports: React.FC = () => {
     doc.setFontSize(10);
     doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 25);
     
-    // Filter data for better PDF display (only essential columns)
+    // Filter data for better PDF display (remove unwanted columns)
     const essentialHeaders = [
-      'Employee ID', 'First Name', 'Last Name', 'Department', 'Position', 
-      'Current Status', 'Total Requests', 'Earned Leave - Remaining', 'Sick Leave - Remaining', 
-      'Casual Leave - Remaining', 'Leave Utilization %'
+      'Employee ID', 'First Name', 'Last Name', 'Email', 'Department', 'Position', 'Manager',
+      'Joining Date', 'Current Status', 'Pending Requests', 'Approved Requests', 'Rejected Requests',
+      'Total Requests', 'Earned Leave - Total', 'Earned Leave - Used', 'Earned Leave - Remaining',
+      'Sick Leave - Total', 'Sick Leave - Used', 'Sick Leave - Remaining',
+      'Casual Leave - Total', 'Casual Leave - Used', 'Casual Leave - Remaining',
+      'Compensation Off - Used', 'Total Leave Days Used', 'Total Leave Days Remaining'
     ];
     
-    const pdfData = data.map(row => 
-      essentialHeaders.map(header => String(getNestedValue(row, header) || ''))
+    const pdfData = data.map(row =>
+      essentialHeaders.map(header => String(row[header] || ''))
     );
+
+    console.log('PDF Export - Essential headers:', essentialHeaders);
+    console.log('PDF Export - Processed pdfData:', pdfData);
+    console.log('PDF Export - First row mapping:', data[0]);
+    essentialHeaders.forEach((header, index) => {
+      console.log(`PDF Column ${index}: ${header} = ${data[0]?.[header]}`);
+    });
     
     // Add table
     autoTable(doc, {
@@ -173,13 +245,13 @@ const Reports: React.FC = () => {
       body: pdfData,
       startY: 35,
       styles: {
-        fontSize: 8,
-        cellPadding: 2,
+        fontSize: 6,
+        cellPadding: 1,
       },
       headStyles: {
         fillColor: [66, 139, 202],
         textColor: [255, 255, 255],
-        fontSize: 9,
+        fontSize: 7,
         fontStyle: 'bold'
       },
       alternateRowStyles: {
@@ -188,16 +260,31 @@ const Reports: React.FC = () => {
       margin: { top: 35, left: 14, right: 14 },
       tableWidth: 'auto',
       columnStyles: {
-        0: { cellWidth: 20 }, // Employee ID
-        1: { cellWidth: 25 }, // First Name
-        2: { cellWidth: 25 }, // Last Name
-        3: { cellWidth: 30 }, // Department
-        4: { cellWidth: 35 }, // Position
-        5: { cellWidth: 25 }, // Current Status
-        6: { cellWidth: 20 }, // Earned Remaining
-        7: { cellWidth: 20 }, // Sick Remaining
-        8: { cellWidth: 20 }, // Casual Remaining
-        9: { cellWidth: 25 }  // Total Used
+        0: { cellWidth: 15 }, // Employee ID
+        1: { cellWidth: 18 }, // First Name
+        2: { cellWidth: 18 }, // Last Name
+        3: { cellWidth: 25 }, // Email
+        4: { cellWidth: 20 }, // Department
+        5: { cellWidth: 20 }, // Position
+        6: { cellWidth: 20 }, // Manager
+        7: { cellWidth: 18 }, // Joining Date
+        8: { cellWidth: 18 }, // Current Status
+        9: { cellWidth: 12 }, // Pending Requests
+        10: { cellWidth: 12 }, // Approved Requests
+        11: { cellWidth: 12 }, // Rejected Requests
+        12: { cellWidth: 12 }, // Total Requests
+        13: { cellWidth: 12 }, // Earned Leave - Total
+        14: { cellWidth: 12 }, // Earned Leave - Used
+        15: { cellWidth: 12 }, // Earned Leave - Remaining
+        16: { cellWidth: 12 }, // Sick Leave - Total
+        17: { cellWidth: 12 }, // Sick Leave - Used
+        18: { cellWidth: 12 }, // Sick Leave - Remaining
+        19: { cellWidth: 12 }, // Casual Leave - Total
+        20: { cellWidth: 12 }, // Casual Leave - Used
+        21: { cellWidth: 12 }, // Casual Leave - Remaining
+        22: { cellWidth: 12 }, // Compensation Off - Used
+        23: { cellWidth: 12 }, // Total Leave Days Used
+        24: { cellWidth: 12 }  // Total Leave Days Remaining
       }
     });
     
@@ -213,26 +300,68 @@ const Reports: React.FC = () => {
   const [leaveBalances, setLeaveBalances] = useState<Record<string, any>>({});
 
   // Function to fetch leave balances for all employees
-  const fetchLeaveBalances = async () => {
+  const fetchLeaveBalances = async (employeesData: Employee[] = employees) => {
     try {
+      console.log('=== FETCHING LEAVE BALANCES FROM DATABASE ===');
+      console.log(`Fetching balances for ${employeesData.length} employees:`, employeesData.map(e => `${e.firstName} ${e.lastName} (${e.id})`));
+
       const balances: Record<string, any> = {};
-      
-      for (const employee of employees) {
+
+      // Use Promise.allSettled to handle failures gracefully without stopping the entire process
+      const balancePromises = employeesData.map(async (employee) => {
         try {
+          console.log(`Fetching balance for employee: ${employee.firstName} ${employee.lastName} (ID: ${employee.id})`);
           const balance = await adminAPI.getEmployeeLeaveBalance(employee.id);
-          balances[employee.id] = balance;
+          console.log(`✓ Balance fetched for ${employee.firstName}:`, balance);
+          return { employeeId: employee.id, balance, success: true };
         } catch (error) {
-          console.warn(`Failed to fetch balance for employee ${employee.id}:`, error);
-          // Fallback to zero balances if API fails
-          balances[employee.id] = {
-            earnedLeave: { total: 0, used: 0, remaining: 0 },
-            sickLeave: { total: 0, used: 0, remaining: 0 },
-            casualLeave: { total: 0, used: 0, remaining: 0 }
+          console.error(`✗ Failed to fetch balance for employee ${employee.firstName} (${employee.id}):`, error);
+          return {
+            employeeId: employee.id,
+            balance: {
+              balances: {
+                earnedLeave: { total: 0, used: 0, remaining: 0 },
+                sickLeave: { total: 0, used: 0, remaining: 0 },
+                casualLeave: { total: 0, used: 0, remaining: 0 }
+              }
+            },
+            success: false
           };
         }
-      }
-      
+      });
+
+      const results = await Promise.allSettled(balancePromises);
+
+      results.forEach((result) => {
+        if (result.status === 'fulfilled') {
+          const { employeeId, balance } = result.value;
+          // Store the balance data correctly - the API returns { year, employeeId, balances: [...] }
+          balances[employeeId] = balance;
+        }
+      });
+
+      console.log('=== LEAVE BALANCE FETCH COMPLETED ===');
+      console.log(`Successfully processed ${results.length} balance requests`);
+      console.log('Final leave balances state:', balances);
+
       setLeaveBalances(balances);
+      setDataReady(true);
+
+      // Log any failed balance fetches
+      const failedCount = results.filter(result =>
+        result.status === 'fulfilled' && !result.value.success
+      ).length;
+      const rejectedCount = results.filter(result => result.status === 'rejected').length;
+
+      console.log(`Balance fetch summary: ${results.length - failedCount - rejectedCount} successful, ${failedCount} failed with fallback, ${rejectedCount} rejected`);
+
+      if (failedCount > 0) {
+        console.warn(`Failed to fetch leave balances for ${failedCount} employees. Using fallback data.`);
+      }
+      if (rejectedCount > 0) {
+        console.error(`Failed to fetch leave balances for ${rejectedCount} employees (rejected promises).`);
+      }
+
     } catch (error) {
       console.error('Failed to fetch leave balances:', error);
       toast({
@@ -240,27 +369,69 @@ const Reports: React.FC = () => {
         description: "Failed to fetch employee leave balances",
         variant: "destructive",
       });
+      setDataReady(true); // Still mark as ready to allow basic functionality
     }
   };
 
   // Helper function to get leave balance for an employee
   const getLeaveBalance = (employeeId: string, leaveType: string) => {
     const balanceData = leaveBalances[employeeId];
-    if (!balanceData || !balanceData.balances) return { total: 0, used: 0, remaining: 0 };
+    console.log(`Getting balance for employee ${employeeId}, leaveType ${leaveType}:`, balanceData);
 
-    const balances = balanceData.balances || [];
-    const balance = balances.find(b => b.leaveType === leaveType);
-    
-    if (!balance) return { total: 0, used: 0, remaining: 0 };
+    if (!balanceData) return { total: 0, used: 0, remaining: 0 };
 
-    return {
-      total: balance.totalDays || 0,
-      used: balance.usedDays || 0,
-      remaining: balance.availableDays || 0
-    };
+    // Handle different data structures - check if it's the nested structure or array structure
+    if (balanceData.balances) {
+      // If balances is an object with nested structure (like the fallback data)
+      if (typeof balanceData.balances === 'object' && !Array.isArray(balanceData.balances)) {
+        const typeMap = {
+          'earned': 'earnedLeave',
+          'sick': 'sickLeave',
+          'casual': 'casualLeave'
+        };
+        const balanceKey = typeMap[leaveType] || leaveType;
+        const balance = balanceData.balances[balanceKey];
+
+        if (balance) {
+          return {
+            total: balance.total || 0,
+            used: balance.used || 0,
+            remaining: balance.remaining || 0
+          };
+        }
+      }
+      // If balances is an array (API structure)
+      else if (Array.isArray(balanceData.balances)) {
+        const balance = balanceData.balances.find(b => b.leaveType === leaveType);
+        if (balance) {
+          return {
+            total: balance.totalAllocated || balance.totalDays || 0,
+            used: balance.usedDays || 0,
+            remaining: balance.availableDays || 0
+          };
+        }
+      }
+    }
+
+    // If balanceData is directly an array (direct API response)
+    if (Array.isArray(balanceData)) {
+      const balance = balanceData.find(b => b.leaveType === leaveType);
+      if (balance) {
+        return {
+          total: balance.totalAllocated || balance.totalDays || 0,
+          used: balance.usedDays || 0,
+          remaining: balance.availableDays || 0
+        };
+      }
+    }
+
+    return { total: 0, used: 0, remaining: 0 };
   };
 
   const generateComprehensiveReport = () => {
+    console.log('Generating comprehensive report. Leave balances state:', leaveBalances);
+    console.log('Employees:', employees);
+
     let filteredEmployees = employees;
     
     // Apply filters
@@ -273,6 +444,9 @@ const Reports: React.FC = () => {
     }
     
     // Apply date range filter to leave requests
+    console.log('All leave requests:', leaveRequests);
+    console.log('Date range filter:', { start: dateRange.startDate, end: dateRange.endDate });
+
     const filteredLeaveRequests = leaveRequests.filter(req => {
       if (!req.startDate) return false;
       const startDate = new Date(req.startDate);
@@ -281,43 +455,64 @@ const Reports: React.FC = () => {
       return startDate >= filterStartDate && startDate <= filterEndDate;
     });
 
+    console.log('Filtered leave requests:', filteredLeaveRequests);
+
     const reportData = filteredEmployees.map(emp => {
+      console.log(`Processing employee: ${emp.firstName} ${emp.lastName} (${emp.id})`);
+
       const earnedBalance = getLeaveBalance(emp.id, 'earned');
       const sickBalance = getLeaveBalance(emp.id, 'sick');
       const casualBalance = getLeaveBalance(emp.id, 'casual');
       const compensationBalance = getLeaveBalance(emp.id, 'casual'); // Use casual as fallback for compensation
-      
+
+      console.log(`Leave balances for ${emp.firstName}:`, { earnedBalance, sickBalance, casualBalance });
+
       // Count pending requests in date range
-      const pendingRequests = filteredLeaveRequests.filter(req => 
-        req.employee?.id === emp.id && req.status === 'pending'
-      ).length;
-      
-      // Count approved requests in date range
-      const approvedRequests = filteredLeaveRequests.filter(req => 
-        req.employee?.id === emp.id && req.status === 'approved'
-      ).length;
-      
-      // Count rejected requests in date range
-      const rejectedRequests = filteredLeaveRequests.filter(req => 
-        req.employee?.id === emp.id && req.status === 'rejected'
-      ).length;
+      const employeeRequests = filteredLeaveRequests.filter(req => {
+        console.log(`Checking request: employeeId=${req.employeeId}, employee?.id=${req.employee?.id}, emp.id=${emp.id}, status=${req.status}`);
+        // Match by employeeId (primary) or employee.id (fallback)
+        return req.employeeId === emp.id || req.employee?.id === emp.id;
+      });
+
+      console.log(`All requests for ${emp.firstName} (${emp.id}):`, employeeRequests);
+
+      const pendingRequests = employeeRequests.filter(req => req.status === 'pending').length;
+      const approvedRequests = employeeRequests.filter(req => req.status === 'approved').length;
+      const rejectedRequests = employeeRequests.filter(req => req.status === 'rejected').length;
+
+      console.log(`Leave request counts for ${emp.firstName}:`, {
+        pendingRequests,
+        approvedRequests,
+        rejectedRequests,
+        total: pendingRequests + approvedRequests + rejectedRequests
+      });
+
+      // Add extra debugging for Nithya
+      if (emp.firstName === 'Nithya') {
+        console.log('=== NITHYA DEBUGGING ===');
+        console.log('Nithya ID:', emp.id);
+        console.log('All filtered leave requests:', filteredLeaveRequests);
+        console.log('Requests matching Nithya:', employeeRequests);
+        console.log('Final counts:', { pendingRequests, approvedRequests, rejectedRequests });
+      }
 
       // Check if currently on leave
       const today = new Date();
       const currentLeave = leaveRequests.find(req => {
-        if (req.employee?.id !== emp.id || req.status !== 'approved') return false;
+        if ((req.employeeId !== emp.id && req.employee?.id !== emp.id) || req.status !== 'approved') return false;
         const startDate = new Date(req.startDate);
         const endDate = new Date(req.endDate);
         return today >= startDate && today <= endDate;
       });
-      
-      // Calculate average days per request
-      const totalRequests = filteredLeaveRequests.filter(req => req.employee?.id === emp.id);
+
+      // Calculate average days per request using same logic as request counting
+      const totalRequests = employeeRequests;
       const avgDaysPerRequest = totalRequests.length > 0 
         ? (earnedBalance.used + sickBalance.used + casualBalance.used) / totalRequests.length
         : 0;
 
-      return {
+
+      const finalRowData = {
         'Employee ID': emp.employeeId || 'N/A',
         'First Name': emp.firstName,
         'Last Name': emp.lastName,
@@ -327,10 +522,10 @@ const Reports: React.FC = () => {
         'Manager': emp.manager ? `${emp.manager.firstName} ${emp.manager.lastName}` : 'N/A',
         'Joining Date': emp.joiningDate ? new Date(emp.joiningDate).toLocaleDateString() : 'N/A',
         'Current Status': currentLeave ? `On Leave (${currentLeave.leaveType})` : 'Active',
-        'Pending Requests': pendingRequests,
-        'Approved Requests': approvedRequests,
-        'Rejected Requests': rejectedRequests,
-        'Total Requests': pendingRequests + approvedRequests + rejectedRequests,
+        'Pending Requests': pendingRequests || 0,
+        'Approved Requests': approvedRequests || 0,
+        'Rejected Requests': rejectedRequests || 0,
+        'Total Requests': (pendingRequests || 0) + (approvedRequests || 0) + (rejectedRequests || 0),
         'Avg Days Per Request': Math.round(avgDaysPerRequest * 10) / 10,
         'Earned Leave - Total': earnedBalance.total,
         'Earned Leave - Used': earnedBalance.used,
@@ -347,11 +542,24 @@ const Reports: React.FC = () => {
         'Compensation Off - Used': compensationBalance.used,
         'Total Leave Days Used': earnedBalance.used + sickBalance.used + casualBalance.used,
         'Total Leave Days Remaining': earnedBalance.remaining + sickBalance.remaining + casualBalance.remaining,
-        'Leave Utilization %': (earnedBalance.total + sickBalance.total + casualBalance.total) > 0 
-          ? Math.round(((earnedBalance.used + sickBalance.used + casualBalance.used) / (earnedBalance.total + sickBalance.total + casualBalance.total)) * 100) 
+        'Leave Utilization %': (earnedBalance.total + sickBalance.total + casualBalance.total) > 0
+          ? Math.round(((earnedBalance.used + sickBalance.used + casualBalance.used) / (earnedBalance.total + sickBalance.total + casualBalance.total)) * 100)
           : 0
       };
+
+      console.log(`Final row data for ${emp.firstName}:`, {
+        'Total Requests': finalRowData['Total Requests'],
+        'Earned Leave - Remaining': finalRowData['Earned Leave - Remaining'],
+        'Sick Leave - Remaining': finalRowData['Sick Leave - Remaining'],
+        'Casual Leave - Remaining': finalRowData['Casual Leave - Remaining'],
+        'Leave Utilization %': finalRowData['Leave Utilization %']
+      });
+
+      return finalRowData;
     });
+
+    console.log('Generated report data:', reportData);
+    console.log('Sample row data:', reportData[0]);
 
     const headers = [
       'Employee ID', 'First Name', 'Last Name', 'Email', 'Department', 'Position', 'Manager', 
@@ -589,44 +797,94 @@ const Reports: React.FC = () => {
             <div className="flex flex-col justify-end">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button className="h-10 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500">
+                  <Button
+                    className="h-10 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={loading || !dataReady}
+                  >
                     <Download className="w-4 h-4 mr-2" />
-                    Export Report
+                    {loading ? 'Loading Data...' : 'Export Report'}
                     <ChevronDown className="w-4 h-4 ml-2" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onClick={() => {
+                      if (!dataReady) {
+                        toast({
+                          title: "Data Loading",
+                          description: "Please wait for all data to load before exporting.",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+
                       let reportData, headers, filename;
                       const startDateStr = dateRange.startDate.toISOString().split('T')[0];
                       const endDateStr = dateRange.endDate.toISOString().split('T')[0];
-                      
-                      if (selectedReportType === 'pending') {
-                        ({ reportData, headers } = generatePendingRequestsReport());
-                        filename = `pending_requests_${startDateStr}_to_${endDateStr}`;
-                      } else if (selectedReportType === 'attendance') {
-                        ({ reportData, headers } = generateAttendanceReport());
-                        filename = `attendance_report_${startDateStr}_to_${endDateStr}`;
-                      } else if (selectedReportType === 'opening') {
-                        ({ reportData, headers } = generateLeaveBalanceReport('opening'));
-                        filename = `opening_balance_${startDateStr}_to_${endDateStr}`;
-                      } else if (selectedReportType === 'closing') {
-                        ({ reportData, headers } = generateLeaveBalanceReport('closing'));
-                        filename = `closing_balance_${startDateStr}_to_${endDateStr}`;
-                      } else {
-                        ({ reportData, headers } = generateComprehensiveReport());
-                        filename = selectedEmployee !== 'all' 
-                          ? `employee_detailed_report_${startDateStr}_to_${endDateStr}`
-                          : `employees_comprehensive_report_${startDateStr}_to_${endDateStr}`;
+
+                      try {
+                        if (selectedReportType === 'pending') {
+                          ({ reportData, headers } = generatePendingRequestsReport());
+                          filename = `pending_requests_${startDateStr}_to_${endDateStr}`;
+                        } else if (selectedReportType === 'attendance') {
+                          ({ reportData, headers } = generateAttendanceReport());
+                          filename = `attendance_report_${startDateStr}_to_${endDateStr}`;
+                        } else if (selectedReportType === 'opening') {
+                          ({ reportData, headers } = generateLeaveBalanceReport('opening'));
+                          filename = `opening_balance_${startDateStr}_to_${endDateStr}`;
+                        } else if (selectedReportType === 'closing') {
+                          ({ reportData, headers } = generateLeaveBalanceReport('closing'));
+                          filename = `closing_balance_${startDateStr}_to_${endDateStr}`;
+                        } else {
+                          ({ reportData, headers } = generateComprehensiveReport());
+                          filename = selectedEmployee !== 'all'
+                            ? `employee_detailed_report_${startDateStr}_to_${endDateStr}`
+                            : `employees_comprehensive_report_${startDateStr}_to_${endDateStr}`;
+
+                          // Filter to remove unwanted columns for CSV
+                          const essentialHeaders = [
+                            'Employee ID', 'First Name', 'Last Name', 'Email', 'Department', 'Position', 'Manager',
+                            'Joining Date', 'Current Status', 'Pending Requests', 'Approved Requests', 'Rejected Requests',
+                            'Total Requests', 'Earned Leave - Total', 'Earned Leave - Used', 'Earned Leave - Remaining',
+                            'Sick Leave - Total', 'Sick Leave - Used', 'Sick Leave - Remaining',
+                            'Casual Leave - Total', 'Casual Leave - Used', 'Casual Leave - Remaining',
+                            'Compensation Off - Used', 'Total Leave Days Used', 'Total Leave Days Remaining'
+                          ];
+
+                          const filteredData = reportData.map(row =>
+                            essentialHeaders.reduce((filteredRow, header) => {
+                              filteredRow[header] = row[header];
+                              return filteredRow;
+                            }, {} as any)
+                          );
+
+                          reportData = filteredData;
+                          headers = essentialHeaders;
+                        }
+
+                        if (!reportData || reportData.length === 0) {
+                          toast({
+                            title: "No Data Available",
+                            description: "No data found for the selected criteria. Please adjust your filters.",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+
+                        exportToCSV(reportData, filename, headers);
+
+                        toast({
+                          title: "CSV Export Complete",
+                          description: `Generated ${selectedReportType === 'all' ? 'comprehensive' : selectedReportType} report with ${reportData.length} record(s)`,
+                        });
+                      } catch (error) {
+                        console.error('CSV Export Error:', error);
+                        toast({
+                          title: "Export Failed",
+                          description: "An error occurred while generating the CSV report. Please try again.",
+                          variant: "destructive",
+                        });
                       }
-                      
-                      exportToCSV(reportData, filename, headers);
-                      
-                      toast({
-                        title: "CSV Export Complete",
-                        description: `Generated ${selectedReportType === 'all' ? 'comprehensive' : selectedReportType} report with ${reportData.length} record(s)`,
-                      });
                     }}
                     className="flex items-center hover:!bg-blue-50 hover:!text-blue-700 dark:hover:bg-blue-950/50 dark:hover:text-blue-300"
                   >
@@ -634,37 +892,84 @@ const Reports: React.FC = () => {
                     Export as CSV
                   </DropdownMenuItem>
                   
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onClick={() => {
+                      if (!dataReady) {
+                        toast({
+                          title: "Data Loading",
+                          description: "Please wait for all data to load before exporting.",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+
                       let reportData, headers, filename;
                       const startDateStr = dateRange.startDate.toISOString().split('T')[0];
                       const endDateStr = dateRange.endDate.toISOString().split('T')[0];
-                      
-                      if (selectedReportType === 'pending') {
-                        ({ reportData, headers } = generatePendingRequestsReport());
-                        filename = `pending_requests_${startDateStr}_to_${endDateStr}`;
-                      } else if (selectedReportType === 'attendance') {
-                        ({ reportData, headers } = generateAttendanceReport());
-                        filename = `attendance_report_${startDateStr}_to_${endDateStr}`;
-                      } else if (selectedReportType === 'opening') {
-                        ({ reportData, headers } = generateLeaveBalanceReport('opening'));
-                        filename = `opening_balance_${startDateStr}_to_${endDateStr}`;
-                      } else if (selectedReportType === 'closing') {
-                        ({ reportData, headers } = generateLeaveBalanceReport('closing'));
-                        filename = `closing_balance_${startDateStr}_to_${endDateStr}`;
-                      } else {
-                        ({ reportData, headers } = generateComprehensiveReport());
-                        filename = selectedEmployee !== 'all' 
-                          ? `employee_detailed_report_${startDateStr}_to_${endDateStr}`
-                          : `employees_comprehensive_report_${startDateStr}_to_${endDateStr}`;
+
+                      try {
+                        if (selectedReportType === 'pending') {
+                          ({ reportData, headers } = generatePendingRequestsReport());
+                          filename = `pending_requests_${startDateStr}_to_${endDateStr}`;
+                        } else if (selectedReportType === 'attendance') {
+                          ({ reportData, headers } = generateAttendanceReport());
+                          filename = `attendance_report_${startDateStr}_to_${endDateStr}`;
+                        } else if (selectedReportType === 'opening') {
+                          ({ reportData, headers } = generateLeaveBalanceReport('opening'));
+                          filename = `opening_balance_${startDateStr}_to_${endDateStr}`;
+                        } else if (selectedReportType === 'closing') {
+                          ({ reportData, headers } = generateLeaveBalanceReport('closing'));
+                          filename = `closing_balance_${startDateStr}_to_${endDateStr}`;
+                        } else {
+                          ({ reportData, headers } = generateComprehensiveReport());
+                          filename = selectedEmployee !== 'all'
+                            ? `employee_detailed_report_${startDateStr}_to_${endDateStr}`
+                            : `employees_comprehensive_report_${startDateStr}_to_${endDateStr}`;
+
+                          // Filter to remove unwanted columns for Excel
+                          const essentialHeaders = [
+                            'Employee ID', 'First Name', 'Last Name', 'Email', 'Department', 'Position', 'Manager',
+                            'Joining Date', 'Current Status', 'Pending Requests', 'Approved Requests', 'Rejected Requests',
+                            'Total Requests', 'Earned Leave - Total', 'Earned Leave - Used', 'Earned Leave - Remaining',
+                            'Sick Leave - Total', 'Sick Leave - Used', 'Sick Leave - Remaining',
+                            'Casual Leave - Total', 'Casual Leave - Used', 'Casual Leave - Remaining',
+                            'Compensation Off - Used', 'Total Leave Days Used', 'Total Leave Days Remaining'
+                          ];
+
+                          const filteredData = reportData.map(row =>
+                            essentialHeaders.reduce((filteredRow, header) => {
+                              filteredRow[header] = row[header];
+                              return filteredRow;
+                            }, {} as any)
+                          );
+
+                          reportData = filteredData;
+                          headers = essentialHeaders;
+                        }
+
+                        if (!reportData || reportData.length === 0) {
+                          toast({
+                            title: "No Data Available",
+                            description: "No data found for the selected criteria. Please adjust your filters.",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+
+                        exportToExcel(reportData, filename, headers);
+
+                        toast({
+                          title: "Excel Export Complete",
+                          description: `Generated ${selectedReportType === 'all' ? 'comprehensive' : selectedReportType} report with ${reportData.length} record(s)`,
+                        });
+                      } catch (error) {
+                        console.error('Excel Export Error:', error);
+                        toast({
+                          title: "Export Failed",
+                          description: "An error occurred while generating the Excel report. Please try again.",
+                          variant: "destructive",
+                        });
                       }
-                      
-                      exportToExcel(reportData, filename, headers);
-                      
-                      toast({
-                        title: "Excel Export Complete",
-                        description: `Generated ${selectedReportType === 'all' ? 'comprehensive' : selectedReportType} report with ${reportData.length} record(s)`,
-                      });
                     }}
                     className="flex items-center hover:!bg-blue-50 hover:!text-blue-700 dark:hover:bg-blue-950/50 dark:hover:text-blue-300"
                   >
@@ -672,37 +977,64 @@ const Reports: React.FC = () => {
                     Export as Excel
                   </DropdownMenuItem>
                   
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onClick={() => {
+                      if (!dataReady) {
+                        toast({
+                          title: "Data Loading",
+                          description: "Please wait for all data to load before exporting.",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+
                       let reportData, headers, filename;
                       const startDateStr = dateRange.startDate.toISOString().split('T')[0];
                       const endDateStr = dateRange.endDate.toISOString().split('T')[0];
-                      
-                      if (selectedReportType === 'pending') {
-                        ({ reportData, headers } = generatePendingRequestsReport());
-                        filename = `pending_requests_${startDateStr}_to_${endDateStr}`;
-                      } else if (selectedReportType === 'attendance') {
-                        ({ reportData, headers } = generateAttendanceReport());
-                        filename = `attendance_report_${startDateStr}_to_${endDateStr}`;
-                      } else if (selectedReportType === 'opening') {
-                        ({ reportData, headers } = generateLeaveBalanceReport('opening'));
-                        filename = `opening_balance_${startDateStr}_to_${endDateStr}`;
-                      } else if (selectedReportType === 'closing') {
-                        ({ reportData, headers } = generateLeaveBalanceReport('closing'));
-                        filename = `closing_balance_${startDateStr}_to_${endDateStr}`;
-                      } else {
-                        ({ reportData, headers } = generateComprehensiveReport());
-                        filename = selectedEmployee !== 'all' 
-                          ? `employee_detailed_report_${startDateStr}_to_${endDateStr}`
-                          : `employees_comprehensive_report_${startDateStr}_to_${endDateStr}`;
+
+                      try {
+                        if (selectedReportType === 'pending') {
+                          ({ reportData, headers } = generatePendingRequestsReport());
+                          filename = `pending_requests_${startDateStr}_to_${endDateStr}`;
+                        } else if (selectedReportType === 'attendance') {
+                          ({ reportData, headers } = generateAttendanceReport());
+                          filename = `attendance_report_${startDateStr}_to_${endDateStr}`;
+                        } else if (selectedReportType === 'opening') {
+                          ({ reportData, headers } = generateLeaveBalanceReport('opening'));
+                          filename = `opening_balance_${startDateStr}_to_${endDateStr}`;
+                        } else if (selectedReportType === 'closing') {
+                          ({ reportData, headers } = generateLeaveBalanceReport('closing'));
+                          filename = `closing_balance_${startDateStr}_to_${endDateStr}`;
+                        } else {
+                          ({ reportData, headers } = generateComprehensiveReport());
+                          filename = selectedEmployee !== 'all'
+                            ? `employee_detailed_report_${startDateStr}_to_${endDateStr}`
+                            : `employees_comprehensive_report_${startDateStr}_to_${endDateStr}`;
+                        }
+
+                        if (!reportData || reportData.length === 0) {
+                          toast({
+                            title: "No Data Available",
+                            description: "No data found for the selected criteria. Please adjust your filters.",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+
+                        exportToPDF(reportData, filename, headers);
+
+                        toast({
+                          title: "PDF Export Complete",
+                          description: `Generated ${selectedReportType === 'all' ? 'comprehensive' : selectedReportType} report with ${reportData.length} record(s)`,
+                        });
+                      } catch (error) {
+                        console.error('PDF Export Error:', error);
+                        toast({
+                          title: "Export Failed",
+                          description: "An error occurred while generating the PDF report. Please try again.",
+                          variant: "destructive",
+                        });
                       }
-                      
-                      exportToPDF(reportData, filename, headers);
-                      
-                      toast({
-                        title: "PDF Export Complete",
-                        description: `Generated ${selectedReportType === 'all' ? 'comprehensive' : selectedReportType} report with ${reportData.length} record(s)`,
-                      });
                     }}
                     className="flex items-center hover:!bg-blue-50 hover:!text-blue-700 dark:hover:bg-blue-950/50 dark:hover:text-blue-300"
                   >
