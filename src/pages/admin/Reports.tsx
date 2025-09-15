@@ -218,108 +218,61 @@ const Reports: React.FC = () => {
     doc.setFontSize(10);
     doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 25);
     
-    // Split into two sections for PDF to prevent horizontal overflow
-    const section1Headers = [
+    // Use more compact essential columns for PDF that fit on one page
+    const essentialHeaders = [
       'Employee ID', 'First Name', 'Last Name', 'Department', 'Position',
-      'Current Status', 'Total Requests', 'Approved Requests', 'Pending Requests', 'Rejected Requests'
+      'Total Requests', 'Earned Remaining', 'Sick Remaining', 'Casual Remaining'
     ];
 
-    const section2Headers = [
-      'Employee ID', 'First Name', 'Last Name', 'Earned Leave - Total', 'Earned Leave - Used', 'Earned Leave - Remaining',
-      'Sick Leave - Total', 'Sick Leave - Used', 'Sick Leave - Remaining',
-      'Casual Leave - Total', 'Casual Leave - Used', 'Casual Leave - Remaining'
-    ];
-    
-    // Create data for both sections
-    const section1Data = data.map(row =>
-      section1Headers.map(header => String(row[header] || ''))
-    );
+    // Map data to compact format
+    const pdfData = data.map(row => [
+      String(row['Employee ID'] || ''),
+      String(row['First Name'] || ''),
+      String(row['Last Name'] || ''),
+      String(row['Department'] || ''),
+      String(row['Position'] || ''),
+      String(row['Total Requests'] || '0'),
+      String(row['Earned Leave - Remaining'] || '0'),
+      String(row['Sick Leave - Remaining'] || '0'),
+      String(row['Casual Leave - Remaining'] || '0')
+    ]);
 
-    const section2Data = data.map(row =>
-      section2Headers.map(header => String(row[header] || ''))
-    );
+    console.log('PDF Export - Compact headers:', essentialHeaders);
+    console.log('PDF Export - Compact data:', pdfData);
 
-    console.log('PDF Export - Section 1 headers:', section1Headers);
-    console.log('PDF Export - Section 2 headers:', section2Headers);
-    console.log('PDF Export - Section 1 data:', section1Data);
-    console.log('PDF Export - Section 2 data:', section2Data);
-
-    // Add first table - Employee Information & Requests
-    doc.setFontSize(12);
-    doc.text('Employee Information & Leave Requests', 14, 35);
-
+    // Add single compact table
     autoTable(doc, {
-      head: [section1Headers],
-      body: section1Data,
-      startY: 45,
+      head: [essentialHeaders],
+      body: pdfData,
+      startY: 35,
       styles: {
-        fontSize: 8,
-        cellPadding: 2,
+        fontSize: 9,
+        cellPadding: 3,
+        valign: 'middle',
+        halign: 'center'
       },
       headStyles: {
         fillColor: [66, 139, 202],
         textColor: [255, 255, 255],
-        fontSize: 9,
-        fontStyle: 'bold'
+        fontSize: 10,
+        fontStyle: 'bold',
+        halign: 'center'
       },
       alternateRowStyles: {
-        fillColor: [245, 245, 245]
+        fillColor: [248, 249, 250]
       },
-      margin: { top: 45, left: 14, right: 14 },
+      margin: { top: 35, left: 10, right: 10 },
       tableWidth: 'auto',
       columnStyles: {
-        0: { cellWidth: 20 }, // Employee ID
-        1: { cellWidth: 25 }, // First Name
-        2: { cellWidth: 25 }, // Last Name
-        3: { cellWidth: 30 }, // Department
-        4: { cellWidth: 35 }, // Position
-        5: { cellWidth: 25 }, // Current Status
-        6: { cellWidth: 20 }, // Total Requests
-        7: { cellWidth: 20 }, // Approved Requests
-        8: { cellWidth: 20 }, // Pending Requests
-        9: { cellWidth: 20 }  // Rejected Requests
-      }
-    });
-
-    // Get the final Y position of the first table
-    const finalY = (doc as any).lastAutoTable.finalY || 100;
-
-    // Add second table - Leave Balances
-    doc.setFontSize(12);
-    doc.text('Leave Balances', 14, finalY + 20);
-
-    autoTable(doc, {
-      head: [section2Headers],
-      body: section2Data,
-      startY: finalY + 30,
-      styles: {
-        fontSize: 8,
-        cellPadding: 2,
-      },
-      headStyles: {
-        fillColor: [66, 139, 202],
-        textColor: [255, 255, 255],
-        fontSize: 9,
-        fontStyle: 'bold'
-      },
-      alternateRowStyles: {
-        fillColor: [245, 245, 245]
-      },
-      margin: { top: finalY + 30, left: 14, right: 14 },
-      tableWidth: 'auto',
-      columnStyles: {
-        0: { cellWidth: 20 }, // Employee ID
-        1: { cellWidth: 25 }, // First Name
-        2: { cellWidth: 25 }, // Last Name
-        3: { cellWidth: 18 }, // Earned Leave - Total
-        4: { cellWidth: 18 }, // Earned Leave - Used
-        5: { cellWidth: 18 }, // Earned Leave - Remaining
-        6: { cellWidth: 18 }, // Sick Leave - Total
-        7: { cellWidth: 18 }, // Sick Leave - Used
-        8: { cellWidth: 18 }, // Sick Leave - Remaining
-        9: { cellWidth: 18 }, // Casual Leave - Total
-        10: { cellWidth: 18 }, // Casual Leave - Used
-        11: { cellWidth: 18 } // Casual Leave - Remaining
+        0: { cellWidth: 25, halign: 'center' }, // Employee ID
+        1: { cellWidth: 30, halign: 'left' },   // First Name
+        2: { cellWidth: 30, halign: 'left' },   // Last Name
+        3: { cellWidth: 35, halign: 'left' },   // Department
+        4: { cellWidth: 40, halign: 'left' },   // Position
+        5: { cellWidth: 25, halign: 'center' }, // Total Requests
+        6: { cellWidth: 25, halign: 'center' }, // Earned Remaining
+        7: { cellWidth: 25, halign: 'center' }, // Sick Remaining
+        8: { cellWidth: 25, halign: 'center' }  // Casual Remaining
       }
     });
     
