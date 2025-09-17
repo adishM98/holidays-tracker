@@ -56,6 +56,7 @@ const Reports: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
+  const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [selectedReportType, setSelectedReportType] = useState<string>('all');
@@ -79,25 +80,29 @@ const Reports: React.FC = () => {
 
       console.log('=== FETCHING DATA FROM DATABASE ===');
 
-      const [employeesResponse, departmentsResponse, leaveRequestsResponse] = await Promise.all([
-        adminAPI.getEmployees(1, 100),
+      const [employeesResponse, departmentsResponse, leaveRequestsResponse, dashboardStatsResponse] = await Promise.all([
+        adminAPI.getEmployees(1, 1000), // Get more employees for reporting (increased from 100)
         adminAPI.getDepartments(),
         adminAPI.getAllLeaveRequests(),
+        adminAPI.getDashboardStats(),
       ]);
 
       console.log('Raw API Responses:');
       console.log('- Employees Response:', employeesResponse);
       console.log('- Departments Response:', departmentsResponse);
       console.log('- Leave Requests Response:', leaveRequestsResponse);
+      console.log('- Dashboard Stats Response:', dashboardStatsResponse);
 
       const employeesData = employeesResponse.employees || employeesResponse.data?.employees || employeesResponse || [];
       const departmentsData = departmentsResponse || [];
       const leaveRequestsData = leaveRequestsResponse?.requests || leaveRequestsResponse || [];
+      const dashboardStatsData = dashboardStatsResponse || {};
 
       console.log('Processed Data:');
       console.log(`- Employees: ${employeesData.length} records`, employeesData);
       console.log(`- Departments: ${departmentsData.length} records`, departmentsData);
       console.log(`- Leave Requests: ${leaveRequestsData.length} records`, leaveRequestsData);
+      console.log('- Dashboard Stats:', dashboardStatsData);
 
       // Check if we have the expected data structure
       if (employeesData.length === 0) {
@@ -110,6 +115,7 @@ const Reports: React.FC = () => {
       setEmployees(employeesData);
       setDepartments(departmentsData);
       setLeaveRequests(leaveRequestsData);
+      setDashboardStats(dashboardStatsData);
 
       // Wait for leave balances to be fetched before marking data as ready
       if (employeesData.length > 0) {
@@ -1259,7 +1265,9 @@ const Reports: React.FC = () => {
                   </div>
                 </div>
                 <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">Total Employees</h3>
-                <p className="text-3xl font-bold text-blue-900 dark:text-blue-100">{employees.length}</p>
+                <p className="text-3xl font-bold text-blue-900 dark:text-blue-100">
+                  {dashboardStats?.employees?.total || employees.length}
+                </p>
               </div>
 
               {/* Departments Card */}
@@ -1270,7 +1278,9 @@ const Reports: React.FC = () => {
                   </div>
                 </div>
                 <h3 className="text-sm font-medium text-green-800 dark:text-green-200 mb-1">Departments</h3>
-                <p className="text-3xl font-bold text-green-900 dark:text-green-100">{departments.length}</p>
+                <p className="text-3xl font-bold text-green-900 dark:text-green-100">
+                  {dashboardStats?.departments?.total || departments.length}
+                </p>
               </div>
 
               {/* Total Leave Requests Card */}
@@ -1281,7 +1291,9 @@ const Reports: React.FC = () => {
                   </div>
                 </div>
                 <h3 className="text-sm font-medium text-purple-800 dark:text-purple-200 mb-1">Total Leave Requests</h3>
-                <p className="text-3xl font-bold text-purple-900 dark:text-purple-100">{leaveRequests.length}</p>
+                <p className="text-3xl font-bold text-purple-900 dark:text-purple-100">
+                  {dashboardStats?.leaves?.totalRequests || leaveRequests.length}
+                </p>
               </div>
 
               {/* Pending Requests Card */}
@@ -1293,7 +1305,7 @@ const Reports: React.FC = () => {
                 </div>
                 <h3 className="text-sm font-medium text-orange-800 dark:text-orange-200 mb-1">Pending Requests</h3>
                 <p className="text-3xl font-bold text-orange-900 dark:text-orange-100">
-                  {leaveRequests.filter(req => req.status === 'pending').length}
+                  {dashboardStats?.leaves?.pendingRequests || leaveRequests.filter(req => req.status === 'pending').length}
                 </p>
               </div>
             </div>
