@@ -946,7 +946,7 @@ const ApplyLeave: React.FC = () => {
                   resetLeaveForm();
                   setIsApplyDialogOpen(false);
                 }}
-                className="flex-1 border-gray-300 text-gray-600 hover:bg-gray-50 rounded-full"
+                className="flex-1 border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white rounded-full"
               >
                 Cancel
               </Button>

@@ -441,16 +441,6 @@ const Profile: React.FC = () => {
                   </div>
                 )}
 
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-muted-foreground">Account Status</Label>
-                  <div className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg">
-                    <StatusIcon className="h-4 w-4 text-muted-foreground" />
-                    <Badge variant={status.variant} className="flex items-center gap-1">
-                      <StatusIcon className="h-3 w-3" />
-                      {status.label}
-                    </Badge>
-                  </div>
-                </div>
               </CardContent>
             </Card>
           </TabsContent>

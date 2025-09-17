@@ -1282,7 +1282,7 @@ const LeaveCalendar: React.FC = () => {
               <Button 
                 onClick={handleCreateLeave}
                 disabled={isSubmitting}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-full"
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-full"
               >
                 {isSubmitting ? (
                   <>
