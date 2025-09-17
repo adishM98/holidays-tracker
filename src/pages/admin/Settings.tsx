@@ -230,9 +230,14 @@ const Settings: React.FC = () => {
       <TimeManagementBackground />
       <div className="relative z-10 space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <SettingsIcon className="h-6 w-6" />
-          <h1 className="text-3xl font-bold">Settings</h1>
+        <div className="flex items-center space-x-3">
+          <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+            <SettingsIcon className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold">Settings</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Manage holidays and system configuration</p>
+          </div>
         </div>
       </div>
 

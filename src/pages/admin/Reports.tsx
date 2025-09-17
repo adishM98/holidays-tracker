@@ -705,9 +705,14 @@ const Reports: React.FC = () => {
       <TimeManagementBackground />
       <div className="relative z-10 space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Reports & Analytics</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Detailed leave analytics and reports</p>
+        <div className="flex items-center space-x-3">
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+            <BarChart3 className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">Reports & Analytics</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Detailed leave analytics and reports</p>
+          </div>
         </div>
       </div>
 
