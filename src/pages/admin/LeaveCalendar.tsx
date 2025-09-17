@@ -76,6 +76,8 @@ const LeaveCalendar: React.FC = () => {
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [hoveredLeave, setHoveredLeave] = useState<LeaveRequest | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [isDayLeavesDialogOpen, setIsDayLeavesDialogOpen] = useState(false);
+  const [selectedDayLeaves, setSelectedDayLeaves] = useState<{date: string, leaves: LeaveRequest[]} | null>(null);
   const { toast } = useToast();
 
   // Helper function to format date for input fields without timezone issues
@@ -170,26 +172,74 @@ const LeaveCalendar: React.FC = () => {
 
   const handleDateClick = (day: number) => {
     const dateString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    
+    const leavesForDay = getLeaveForDate(day);
+
     // Check if there's a holiday on this date first
     const holidayOnDate = holidays.find(holiday => {
       const holidayDate = formatDateForInput(new Date(holiday.date));
       return holidayDate === dateString;
     });
-    
+
     if (holidayOnDate) {
       // Show holiday details popup
       setSelectedHoliday(holidayOnDate);
       setIsHolidayDialogOpen(true);
       return;
     }
-    
-    // Prevent clicking on weekends
+
+    // If there are leaves on this day, show the leaves popup
+    if (leavesForDay.length > 0) {
+      const formattedDate = new Date(currentYear, currentMonth, day).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      setSelectedDayLeaves({
+        date: formattedDate,
+        leaves: leavesForDay
+      });
+      setIsDayLeavesDialogOpen(true);
+      return;
+    }
+
+    // If no leaves and it's a working day, open add leave dialog
+    if (!isDateDisabled(day)) {
+      // Create date object using the local timezone to avoid timezone conversion issues
+      const clickedDateObject = new Date(currentYear, currentMonth, day);
+      setSelectedDate(dateString);
+      setLeaveForm({
+        ...leaveForm,
+        startDate: clickedDateObject,
+        endDate: clickedDateObject,
+      });
+      setIsAddLeaveDialogOpen(true);
+      return;
+    }
+
+    // If it's a disabled date (weekend/holiday), show info
+    const date = new Date(dateString);
+    const dayOfWeek = date.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+    toast({
+      title: "Date Not Available",
+      description: `Cannot create leave on ${isWeekend ? 'weekends' : 'holidays'}. Please select a working day.`,
+      variant: "destructive",
+    });
+  };
+
+  const handleAddLeaveClick = (day: number, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent triggering the date click
+
+    const dateString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+    // Prevent clicking on weekends/holidays
     if (isDateDisabled(day)) {
       const date = new Date(dateString);
       const dayOfWeek = date.getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-      
+
       toast({
         title: "Date Not Available",
         description: `Cannot create leave on ${isWeekend ? 'weekends' : 'holidays'}. Please select a working day.`,
@@ -197,7 +247,7 @@ const LeaveCalendar: React.FC = () => {
       });
       return;
     }
-    
+
     // Create date object using the local timezone to avoid timezone conversion issues
     const clickedDateObject = new Date(currentYear, currentMonth, day);
     setSelectedDate(dateString);
@@ -760,15 +810,15 @@ const LeaveCalendar: React.FC = () => {
                 <div
                   key={`${currentYear}-${currentMonth}-${day}`}
                   className={`p-2 h-24 border rounded-lg overflow-hidden transition-colors ${
-                    isToday 
+                    isToday
                       ? 'bg-primary/5 border-primary/20 ring-1 ring-primary/20'
-                      : isDisabled 
-                        ? hasHoliday 
+                      : isDisabled
+                        ? hasHoliday
                           ? 'cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/20 hover:border-red-300 dark:hover:border-red-600 bg-red-50 border-red-200'
                           : 'cursor-not-allowed bg-gray-100 dark:bg-gray-800 opacity-60 border-border'
                         : 'cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-600 border-border'
                   } ${
-                    !isToday && hasHoliday ? 'bg-red-50 border-red-200' : 
+                    !isToday && hasHoliday ? 'bg-red-50 border-red-200' :
                     !isToday && isWeekend ? 'bg-gray-100/80 dark:bg-gray-800/80 border-gray-300/60' :
                     !isToday ? 'bg-background border-border' : ''
                   }`}
@@ -781,7 +831,11 @@ const LeaveCalendar: React.FC = () => {
                   }`}>
                     <span>{day}</span>
                     {!isDisabled && !hasHoliday && !isWeekend && (
-                      <div className="w-6 h-6 bg-blue-50 dark:bg-blue-900/30 rounded-full flex items-center justify-center hover:bg-blue-100 dark:hover:bg-blue-800/40 transition-colors duration-200 group">
+                      <div
+                        className="w-6 h-6 bg-blue-50 dark:bg-blue-900/30 rounded-full flex items-center justify-center hover:bg-blue-100 dark:hover:bg-blue-800/40 transition-colors duration-200 group cursor-pointer"
+                        onClick={(e) => handleAddLeaveClick(day, e)}
+                        title="Add leave for this date"
+                      >
                         <Plus className="h-3 w-3 text-blue-600 dark:text-blue-400 opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all duration-200" />
                       </div>
                     )}
@@ -809,70 +863,101 @@ const LeaveCalendar: React.FC = () => {
                       </div>
                     )}
                     
-                    {!hasHoliday && !isWeekend && getFilteredLeaves(leavesForDay).slice(0, 2).map((leave, idx) => {
+                    {!hasHoliday && !isWeekend && (() => {
+                      const filteredLeaves = getFilteredLeaves(leavesForDay);
                       const leaveTypeIcons = {
                         'sick': Heart,
-                        'casual': Sun, 
+                        'casual': Sun,
                         'earned': Gift,
                         'compensation': Calendar
                       };
-                      const LeaveIcon = leaveTypeIcons[leave.leaveType] || User;
                       const leaveTypeLabels = {
                         'sick': 'Sick Leave',
                         'casual': 'Casual Leave',
-                        'earned': 'Earned/Privilege Leave', 
+                        'earned': 'Earned/Privilege Leave',
                         'compensation': 'Compensation Off'
                       };
 
-                      return (
-                      <div
-                        key={`${leave.id}-${idx}`}
-                        className={`text-xs px-2 py-1.5 rounded-full border ${getLeaveTypeColor(leave.leaveType, leave.status)} truncate cursor-pointer group hover:shadow-md transition-all duration-200 hover:scale-105`}
-                        onMouseEnter={(e) => handleLeaveHover(e, leave)}
-                        onMouseLeave={handleLeaveLeave}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditLeave(leave);
-                        }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-1 truncate">
-                            <LeaveIcon className="h-3 w-3 flex-shrink-0" />
-                            <span className="truncate font-medium">
-                              {leave.isHalfDay ? `Half ${leaveTypeLabels[leave.leaveType]}` : leaveTypeLabels[leave.leaveType]}
-                            </span>
+                      if (filteredLeaves.length === 0) return null;
+
+                      if (filteredLeaves.length === 1) {
+                        const leave = filteredLeaves[0];
+                        const LeaveIcon = leaveTypeIcons[leave.leaveType] || User;
+
+                        return (
+                          <div
+                            key={leave.id}
+                            className={`text-xs px-2 py-1.5 rounded-full border ${getLeaveTypeColor(leave.leaveType, leave.status)} truncate cursor-pointer group hover:shadow-md transition-all duration-200 hover:scale-105`}
+                            onMouseEnter={(e) => handleLeaveHover(e, leave)}
+                            onMouseLeave={handleLeaveLeave}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditLeave(leave);
+                            }}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-1 truncate">
+                                <LeaveIcon className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate font-medium">
+                                  {leave.isHalfDay ? `Half ${leaveTypeLabels[leave.leaveType]}` : leaveTypeLabels[leave.leaveType]}
+                                </span>
+                              </div>
+                              <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditLeave(leave);
+                                  }}
+                                  className="hover:bg-white/20 p-0.5 rounded"
+                                  title="Edit leave"
+                                >
+                                  <Edit className="h-2 w-2" />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteLeaveClick(leave);
+                                  }}
+                                  className="hover:bg-white/20 p-0.5 rounded"
+                                  title="Delete leave"
+                                >
+                                  <Trash2 className="h-2 w-2" />
+                                </button>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditLeave(leave);
-                              }}
-                              className="hover:bg-white/20 p-0.5 rounded"
-                              title="Edit leave"
-                            >
-                              <Edit className="h-2 w-2" />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteLeaveClick(leave);
-                              }}
-                              className="hover:bg-white/20 p-0.5 rounded"
-                              title="Delete leave"
-                            >
-                              <Trash2 className="h-2 w-2" />
-                            </button>
+                        );
+                      }
+
+                      // Multiple leaves - show first one + count indicator
+                      const firstLeave = filteredLeaves[0];
+                      const LeaveIcon = leaveTypeIcons[firstLeave.leaveType] || User;
+
+                      return (
+                        <div className="space-y-1">
+                          <div
+                            key={firstLeave.id}
+                            className={`text-xs px-2 py-1.5 rounded-full border ${getLeaveTypeColor(firstLeave.leaveType, firstLeave.status)} truncate cursor-pointer group hover:shadow-md transition-all duration-200 hover:scale-105`}
+                            onMouseEnter={(e) => handleLeaveHover(e, firstLeave)}
+                            onMouseLeave={handleLeaveLeave}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditLeave(firstLeave);
+                            }}
+                          >
+                            <div className="flex items-center space-x-1 truncate">
+                              <LeaveIcon className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate font-medium">
+                                {firstLeave.isHalfDay ? `Half ${leaveTypeLabels[firstLeave.leaveType]}` : leaveTypeLabels[firstLeave.leaveType]}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-xs text-center text-blue-600 dark:text-blue-400 font-medium bg-blue-50 dark:bg-blue-900/20 rounded-md py-1 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-800/30 transition-colors">
+                            +{filteredLeaves.length - 1} more
                           </div>
                         </div>
-                      </div>
-                    );
-                    })}
-                    {!hasHoliday && getFilteredLeaves(leavesForDay).length > 2 && (
-                      <div className="text-xs text-muted-foreground text-center">
-                        +{getFilteredLeaves(leavesForDay).length - 2} more
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 </div>
               );
@@ -1335,11 +1420,137 @@ const LeaveCalendar: React.FC = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Day Leaves Dialog */}
+      <Dialog open={isDayLeavesDialogOpen} onOpenChange={setIsDayLeavesDialogOpen}>
+        <DialogContent
+          className="max-w-2xl max-h-[80vh]"
+          style={{
+            borderRadius: '16px',
+            border: 'none',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <CalendarDays className="h-5 w-5 text-blue-600" />
+              <span>Leaves on {selectedDayLeaves?.date}</span>
+            </DialogTitle>
+            <DialogDescription>
+              {selectedDayLeaves?.leaves.length} leave{selectedDayLeaves?.leaves.length !== 1 ? 's' : ''} scheduled for this day
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedDayLeaves && (
+            <div className="py-4">
+              <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                {selectedDayLeaves.leaves.map((leave, index) => {
+                  const leaveTypeIcons = {
+                    'sick': Heart,
+                    'casual': Sun,
+                    'earned': Gift,
+                    'compensation': Calendar
+                  };
+                  const LeaveIcon = leaveTypeIcons[leave.leaveType] || User;
+                  const leaveTypeLabels = {
+                    'sick': 'Sick Leave',
+                    'casual': 'Casual Leave',
+                    'earned': 'Earned/Privilege Leave',
+                    'compensation': 'Compensation Off'
+                  };
+
+                  return (
+                    <div
+                      key={leave.id}
+                      className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-600 rounded-xl bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-700/50 hover:shadow-md transition-all duration-200 cursor-pointer"
+                      onClick={() => {
+                        setIsDayLeavesDialogOpen(false);
+                        handleEditLeave(leave);
+                      }}
+                    >
+                      <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold shadow-md flex-shrink-0">
+                          {leave.employee.firstName[0]}{leave.employee.lastName[0]}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <p className="font-semibold text-gray-900 dark:text-gray-100 text-base">
+                              {leave.employee.firstName} {leave.employee.lastName}
+                            </p>
+                            <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs border font-medium ${getLeaveTypeColor(leave.leaveType, leave.status)}`}>
+                              <LeaveIcon className="h-3 w-3 mr-1" />
+                              {leave.isHalfDay ? `Half ${leaveTypeLabels[leave.leaveType]}` : leaveTypeLabels[leave.leaveType]}
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                            {leave.employee.department?.name}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-500">
+                            Duration: {formatDuration(leave.startDate, leave.endDate)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${
+                          leave.status === 'approved' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
+                          leave.status === 'rejected' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' :
+                          'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
+                        }`}>
+                          {leave.status === 'approved' && '✓'}
+                          {leave.status === 'rejected' && '✗'}
+                          {leave.status === 'pending' && '⏳'}
+                          <span className="ml-1 capitalize">{leave.status}</span>
+                        </div>
+                        <div className="flex items-center space-x-1 opacity-60 hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsDayLeavesDialogOpen(false);
+                              handleEditLeave(leave);
+                            }}
+                            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                            title="Edit leave"
+                          >
+                            <Edit className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsDayLeavesDialogOpen(false);
+                              handleDeleteLeaveClick(leave);
+                            }}
+                            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                            title="Delete leave"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500 dark:text-red-400" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-gray-600 mt-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Click any leave to edit • Use action buttons for quick operations
+                </p>
+                <Button
+                  onClick={() => setIsDayLeavesDialogOpen(false)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Holiday Details Dialog */}
       <Dialog open={isHolidayDialogOpen} onOpenChange={setIsHolidayDialogOpen}>
-        <DialogContent 
+        <DialogContent
           className="max-w-md"
-          style={{ 
+          style={{
             borderRadius: '24px',
             border: 'none',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
@@ -1351,7 +1562,7 @@ const LeaveCalendar: React.FC = () => {
               <span>Holiday Details</span>
             </DialogTitle>
           </DialogHeader>
-          
+
           {selectedHoliday && (
             <div className="space-y-4 py-4">
               <div>
