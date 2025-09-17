@@ -2,12 +2,12 @@ import React from 'react';
 
 export const TimeManagementBackground: React.FC = () => {
   return (
-    <div className="absolute inset-0 z-0 overflow-hidden">
+    <div className="fixed inset-0 z-0 pointer-events-none">
       {/* Background Gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 via-transparent to-indigo-50/30 dark:from-blue-900/10 dark:via-transparent dark:to-indigo-900/10"></div>
 
       {/* Right Side - Time Management Illustration */}
-      <div className="absolute right-8 top-1/2 -translate-y-1/2 opacity-40 dark:opacity-30 hidden lg:block">
+      <div className="absolute right-0 top-1/2 -translate-y-1/2 opacity-40 dark:opacity-30 hidden lg:block pr-4">
         {/* Calendar Grid */}
         <div className="relative w-80 h-64">
           {/* Calendar Background */}
@@ -70,7 +70,7 @@ export const TimeManagementBackground: React.FC = () => {
       </div>
 
       {/* Left Side - Subtle Elements */}
-      <div className="absolute left-8 top-1/4 opacity-25 dark:opacity-20 hidden lg:block">
+      <div className="absolute left-0 top-1/4 opacity-25 dark:opacity-20 hidden lg:block pl-4">
         {/* Progress Bars */}
         <div className="space-y-4">
           <div className="w-32 h-2 bg-gray-200/40 dark:bg-gray-700/40 rounded-full">
@@ -86,7 +86,7 @@ export const TimeManagementBackground: React.FC = () => {
       </div>
 
       {/* Bottom Right - Stats Cards */}
-      <div className="absolute bottom-16 right-16 opacity-30 dark:opacity-25 hidden xl:block">
+      <div className="absolute bottom-16 right-0 opacity-30 dark:opacity-25 hidden xl:block pr-4">
         <div className="flex space-x-3">
           <div className="w-16 h-20 bg-white/80 dark:bg-gray-800/80 rounded-lg border border-gray-200/30 dark:border-gray-700/30 backdrop-blur-sm p-3">
             <div className="w-6 h-6 bg-blue-500/40 rounded mb-2"></div>

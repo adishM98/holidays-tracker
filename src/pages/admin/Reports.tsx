@@ -23,6 +23,7 @@ import { TailwindDatePicker } from '@/components/ui/tailwind-date-picker';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { adminAPI } from '@/services/api';
+import { TimeManagementBackground } from '@/components/ui/time-management-background';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -700,7 +701,9 @@ const Reports: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 min-h-screen bg-white dark:bg-gray-900">
+    <div className="relative min-h-screen">
+      <TimeManagementBackground />
+      <div className="relative z-10 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Reports & Analytics</h1>
@@ -1319,8 +1322,9 @@ const Reports: React.FC = () => {
           </div>
         </CardContent>
       </Card>
-      
 
+
+      </div>
     </div>
   );
 };

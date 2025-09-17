@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { TailwindDatePicker } from '@/components/ui/tailwind-date-picker';
+import { TimeManagementBackground } from '@/components/ui/time-management-background';
 import { Plus, Edit, Trash2, Calendar, Settings as SettingsIcon, PartyPopper } from 'lucide-react';
 import { adminAPI } from '@/services/api';
 import { useToast } from '@/components/ui/use-toast';
@@ -225,7 +226,9 @@ const Settings: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="relative min-h-screen">
+      <TimeManagementBackground />
+      <div className="relative z-10 space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <SettingsIcon className="h-6 w-6" />
@@ -472,6 +475,7 @@ const Settings: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
     </div>
   );
 };
