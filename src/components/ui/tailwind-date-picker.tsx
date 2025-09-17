@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { format } from "date-fns"
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react"
 
@@ -21,6 +22,8 @@ export function TailwindDatePicker({
 }: TailwindDatePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false)
   const [currentMonth, setCurrentMonth] = React.useState(date || new Date())
+  const [buttonPosition, setButtonPosition] = React.useState({ top: 0, left: 0, width: 0 })
+  const buttonRef = React.useRef<HTMLButtonElement>(null)
   
   const months = [
     "January", "February", "March", "April", "May", "June",
@@ -60,6 +63,40 @@ export function TailwindDatePicker({
     onSelect?.(clickedDate)
     setIsOpen(false)
   }
+
+  const updateButtonPosition = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      setButtonPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+        width: rect.width
+      })
+    }
+  }
+
+  const handleToggleOpen = () => {
+    if (!isOpen) {
+      updateButtonPosition()
+    }
+    setIsOpen(!isOpen)
+  }
+
+  // Update position on scroll/resize
+  React.useEffect(() => {
+    if (isOpen) {
+      const handleScroll = () => updateButtonPosition()
+      const handleResize = () => updateButtonPosition()
+
+      window.addEventListener('scroll', handleScroll)
+      window.addEventListener('resize', handleResize)
+
+      return () => {
+        window.removeEventListener('scroll', handleScroll)
+        window.removeEventListener('resize', handleResize)
+      }
+    }
+  }, [isOpen])
   
   const handleMonthChange = (newMonth: number) => {
     const newDate = new Date(currentMonth)
@@ -109,9 +146,10 @@ export function TailwindDatePicker({
     <div key="tailwind-datepicker-v2" className={`relative ${className}`}>
       {/* Input Field */}
       <button
+        ref={buttonRef}
         type="button"
         disabled={disabled}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggleOpen}
         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 justify-between items-center text-left"
       >
         <div className="flex items-center">
@@ -122,110 +160,119 @@ export function TailwindDatePicker({
         </div>
         <ChevronRight className={`h-4 w-4 text-muted-foreground transform transition-transform ${isOpen ? 'rotate-90' : ''}`} />
       </button>
-      
-      {/* Calendar Dropdown */}
-      {isOpen && (
-        <div className="absolute z-50 mt-1 bg-popover border border-border rounded-md shadow-md p-4 min-w-[280px]">
-          {/* Month/Year Selectors */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-2">
-              <select
-                value={currentMonth.getMonth()}
-                onChange={(e) => handleMonthChange(parseInt(e.target.value))}
-                className="px-2 py-1 border border-border rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-500 bg-background text-foreground"
-              >
-                {months.map((month, index) => (
-                  <option key={month} value={index}>
-                    {month}
-                  </option>
-                ))}
-              </select>
-              
-              <select
-                value={currentMonth.getFullYear()}
-                onChange={(e) => handleYearChange(parseInt(e.target.value))}
-                className="px-2 py-1 border border-border rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-500 bg-background text-foreground"
-              >
-                {years.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
+
+      {/* Calendar Dropdown - Rendered via Portal */}
+      {isOpen && typeof window !== 'undefined' && createPortal(
+        <>
+          {/* Overlay to close calendar when clicking outside */}
+          <div
+            className="fixed inset-0 z-[99998]"
+            onClick={() => setIsOpen(false)}
+          />
+
+          {/* Calendar Dropdown */}
+          <div
+            className="fixed z-[99999] bg-popover border border-border rounded-md shadow-lg p-4 min-w-[280px]"
+            style={{
+              top: `${buttonPosition.top}px`,
+              left: `${buttonPosition.left}px`,
+              minWidth: `${Math.max(buttonPosition.width, 280)}px`
+            }}
+          >
+            {/* Month/Year Selectors */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <select
+                  value={currentMonth.getMonth()}
+                  onChange={(e) => handleMonthChange(parseInt(e.target.value))}
+                  className="px-2 py-1 border border-border rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-500 bg-background text-foreground"
+                >
+                  {months.map((month, index) => (
+                    <option key={month} value={index}>
+                      {month}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={currentMonth.getFullYear()}
+                  onChange={(e) => handleYearChange(parseInt(e.target.value))}
+                  className="px-2 py-1 border border-border rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-500 bg-background text-foreground"
+                >
+                  {years.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center space-x-1">
+                <button
+                  type="button"
+                  onClick={goToPreviousMonth}
+                  className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-500 text-muted-foreground"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={goToNextMonth}
+                  className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-500 text-muted-foreground"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
             </div>
-            
-            <div className="flex items-center space-x-1">
+
+            {/* Calendar Grid */}
+            <div className="grid grid-cols-7 gap-1">
+              {/* Day headers */}
+              {daysOfWeek.map((day) => (
+                <div key={day} className="p-2 text-center text-xs font-medium text-muted-foreground">
+                  {day}
+                </div>
+              ))}
+
+              {/* Calendar days */}
+              {days.map((day, index) => (
+                <div key={index} className="p-1">
+                  {day ? (
+                    <button
+                      type="button"
+                      onClick={() => handleDateClick(day)}
+                      className={`
+                        w-8 h-8 rounded text-sm font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-gray-500
+                        ${isSelectedDate(day)
+                          ? 'bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 hover:bg-gray-700 dark:hover:bg-gray-300'
+                          : isToday(day)
+                          ? 'bg-gray-100 dark:bg-gray-800 text-foreground hover:bg-gray-200 dark:hover:bg-gray-700'
+                          : 'text-foreground hover:bg-gray-100 dark:hover:bg-gray-800'
+                        }
+                      `}
+                    >
+                      {day.getDate()}
+                    </button>
+                  ) : (
+                    <div className="w-8 h-8"></div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Close button */}
+            <div className="mt-3 flex justify-end">
               <button
                 type="button"
-                onClick={goToPreviousMonth}
-                className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-500 text-muted-foreground"
+                onClick={() => setIsOpen(false)}
+                className="px-3 py-1 text-sm text-muted-foreground hover:text-gray-800 dark:hover:text-gray-200 focus:outline-none"
               >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={goToNextMonth}
-                className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-500 text-muted-foreground"
-              >
-                <ChevronRight className="h-4 w-4" />
+                Close
               </button>
             </div>
           </div>
-          
-          {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-1">
-            {/* Day headers */}
-            {daysOfWeek.map((day) => (
-              <div key={day} className="p-2 text-center text-xs font-medium text-muted-foreground">
-                {day}
-              </div>
-            ))}
-            
-            {/* Calendar days */}
-            {days.map((day, index) => (
-              <div key={index} className="p-1">
-                {day ? (
-                  <button
-                    type="button"
-                    onClick={() => handleDateClick(day)}
-                    className={`
-                      w-8 h-8 rounded text-sm font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-gray-500
-                      ${isSelectedDate(day)
-                        ? 'bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 hover:bg-gray-700 dark:hover:bg-gray-300'
-                        : isToday(day)
-                        ? 'bg-gray-100 dark:bg-gray-800 text-foreground hover:bg-gray-200 dark:hover:bg-gray-700'
-                        : 'text-foreground hover:bg-gray-100 dark:hover:bg-gray-800'
-                      }
-                    `}
-                  >
-                    {day.getDate()}
-                  </button>
-                ) : (
-                  <div className="w-8 h-8"></div>
-                )}
-              </div>
-            ))}
-          </div>
-          
-          {/* Close button */}
-          <div className="mt-3 flex justify-end">
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              className="px-3 py-1 text-sm text-muted-foreground hover:text-gray-800 dark:hover:text-gray-200 focus:outline-none"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-      
-      {/* Overlay to close calendar when clicking outside */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setIsOpen(false)}
-        />
+        </>,
+        document.body
       )}
     </div>
   )
