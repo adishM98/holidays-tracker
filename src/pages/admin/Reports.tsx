@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   FileText, 
   Calendar, 
@@ -79,43 +79,44 @@ const Reports: React.FC = () => {
       setLoading(true);
       setDataReady(false);
 
-      console.log('=== FETCHING DATA FROM DATABASE ===');
 
       const [employeesResponse, departmentsResponse, leaveRequestsResponse, dashboardStatsResponse] = await Promise.all([
         adminAPI.getEmployees(1, 1000), // Get more employees for reporting (increased from 100)
         adminAPI.getDepartments(),
-        adminAPI.getAllLeaveRequests(),
+        adminAPI.getAllLeaveRequests(undefined, undefined, undefined, true), // Enable reporting mode
         adminAPI.getDashboardStats(),
       ]);
 
-      console.log('Raw API Responses:');
-      console.log('- Employees Response:', employeesResponse);
-      console.log('- Departments Response:', departmentsResponse);
-      console.log('- Leave Requests Response:', leaveRequestsResponse);
-      console.log('- Dashboard Stats Response:', dashboardStatsResponse);
+      // Debug the API responses in production
+      if (process.env.NODE_ENV === 'production') {
+        // Add minimal logging for production debugging
+        const leaveRequestsCount = leaveRequestsResponse?.requests?.length || leaveRequestsResponse?.length || 0;
+        if (leaveRequestsCount === 0) {
+          toast({
+            title: "Data Warning",
+            description: "No leave requests found. Check date range and filters.",
+            variant: "destructive",
+          });
+        }
+      }
+
 
       const employeesData = employeesResponse.employees || employeesResponse.data?.employees || employeesResponse || [];
       const departmentsData = departmentsResponse || [];
+      // Handle the API response structure correctly
       const leaveRequestsData = leaveRequestsResponse?.requests || leaveRequestsResponse || [];
+
+      // Validate the structure
+      if (!Array.isArray(leaveRequestsData)) {
+        setLeaveRequests([]);
+      }
       const dashboardStatsData = dashboardStatsResponse || {};
 
-      console.log('Processed Data:');
-      console.log(`- Employees: ${employeesData.length} records`, employeesData);
-      console.log(`- Departments: ${departmentsData.length} records`, departmentsData);
-      console.log(`- Leave Requests: ${leaveRequestsData.length} records`, leaveRequestsData);
-      console.log('- Dashboard Stats:', dashboardStatsData);
 
-      // Check if we have the expected data structure
-      if (employeesData.length === 0) {
-        console.warn('WARNING: No employees found in database response!');
-      }
-      if (leaveRequestsData.length === 0) {
-        console.warn('WARNING: No leave requests found in database response!');
-      }
 
       setEmployees(employeesData);
       setDepartments(departmentsData);
-      setLeaveRequests(leaveRequestsData);
+      setLeaveRequests(Array.isArray(leaveRequestsData) ? leaveRequestsData : []);
       setDashboardStats(dashboardStatsData);
 
       // Wait for leave balances to be fetched before marking data as ready
@@ -125,32 +126,6 @@ const Reports: React.FC = () => {
         setDataReady(true);
       }
     } catch (error) {
-      console.error('=== ERROR FETCHING DATA FROM DATABASE ===');
-      console.error('Full error details:', error);
-
-      // Try to identify which API call failed
-      try {
-        console.log('Testing individual API calls...');
-
-        const testEmployees = await adminAPI.getEmployees(1, 100);
-        console.log('✓ Employees API working:', testEmployees);
-      } catch (empError) {
-        console.error('✗ Employees API failed:', empError);
-      }
-
-      try {
-        const testDepartments = await adminAPI.getDepartments();
-        console.log('✓ Departments API working:', testDepartments);
-      } catch (deptError) {
-        console.error('✗ Departments API failed:', deptError);
-      }
-
-      try {
-        const testLeaveRequests = await adminAPI.getAllLeaveRequests();
-        console.log('✓ Leave Requests API working:', testLeaveRequests);
-      } catch (reqError) {
-        console.error('✗ Leave Requests API failed:', reqError);
-      }
 
       toast({
         title: "Database Error",
@@ -212,8 +187,6 @@ const Reports: React.FC = () => {
   };
 
   const exportToPDF = (data: any[], filename: string, headers: string[]) => {
-    console.log('PDF Export - Full data received:', data);
-    console.log('PDF Export - Headers received:', headers);
 
     const doc = new jsPDF('l', 'mm', 'a4'); // Landscape orientation
     
@@ -244,8 +217,6 @@ const Reports: React.FC = () => {
       String(row['Casual Leave - Remaining'] || '0')
     ]);
 
-    console.log('PDF Export - Compact headers:', essentialHeaders);
-    console.log('PDF Export - Compact data:', pdfData);
 
     // Add single compact table
     autoTable(doc, {
@@ -297,81 +268,75 @@ const Reports: React.FC = () => {
   // Function to fetch leave balances for all employees
   const fetchLeaveBalances = async (employeesData: Employee[] = employees) => {
     try {
-      console.log('=== FETCHING LEAVE BALANCES FROM DATABASE ===');
-      console.log(`Fetching balances for ${employeesData.length} employees:`, employeesData.map(e => `${e.firstName} ${e.lastName} (${e.id})`));
+      // Try bulk API first (for new deployments)
+      let bulkBalances;
+      try {
+        bulkBalances = await adminAPI.getBulkLeaveBalances();
+        setLeaveBalances(bulkBalances);
+        setDataReady(true);
+        return;
+      } catch (bulkError) {
+        // Bulk API not available, continue to individual calls
+      }
 
+      // Fallback to individual calls (for production compatibility)
       const balances: Record<string, any> = {};
 
-      // Use Promise.allSettled to handle failures gracefully without stopping the entire process
-      const balancePromises = employeesData.map(async (employee) => {
-        try {
-          console.log(`Fetching balance for employee: ${employee.firstName} ${employee.lastName} (ID: ${employee.id})`);
-          const balance = await adminAPI.getEmployeeLeaveBalance(employee.id);
-          console.log(`✓ Balance fetched for ${employee.firstName}:`, balance);
-          return { employeeId: employee.id, balance, success: true };
-        } catch (error) {
-          console.error(`✗ Failed to fetch balance for employee ${employee.firstName} (${employee.id}):`, error);
-          return {
-            employeeId: employee.id,
-            balance: {
-              balances: {
-                earnedLeave: { total: 0, used: 0, remaining: 0 },
-                sickLeave: { total: 0, used: 0, remaining: 0 },
-                casualLeave: { total: 0, used: 0, remaining: 0 }
-              }
-            },
-            success: false
-          };
+      // Process in smaller batches to avoid overwhelming the server
+      const batchSize = 10;
+      for (let i = 0; i < employeesData.length; i += batchSize) {
+        const batch = employeesData.slice(i, i + batchSize);
+
+        const balancePromises = batch.map(async (employee) => {
+          try {
+            const balance = await adminAPI.getEmployeeLeaveBalance(employee.id);
+            return { employeeId: employee.id, balance, success: true };
+          } catch (error) {
+            // Create fallback balance structure if API fails
+            return {
+              employeeId: employee.id,
+              balance: {
+                balances: [
+                  { leaveType: 'earned', totalAllocated: employee.annualLeaveDays || 0, usedDays: 0, availableDays: employee.annualLeaveDays || 0 },
+                  { leaveType: 'sick', totalAllocated: employee.sickLeaveDays || 0, usedDays: 0, availableDays: employee.sickLeaveDays || 0 },
+                  { leaveType: 'casual', totalAllocated: employee.casualLeaveDays || 0, usedDays: 0, availableDays: employee.casualLeaveDays || 0 }
+                ]
+              },
+              success: false
+            };
+          }
+        });
+
+        const results = await Promise.allSettled(balancePromises);
+        results.forEach((result) => {
+          if (result.status === 'fulfilled') {
+            const { employeeId, balance } = result.value;
+            balances[employeeId] = balance;
+          }
+        });
+
+        // Small delay between batches to prevent rate limiting
+        if (i + batchSize < employeesData.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
-      });
-
-      const results = await Promise.allSettled(balancePromises);
-
-      results.forEach((result) => {
-        if (result.status === 'fulfilled') {
-          const { employeeId, balance } = result.value;
-          // Store the balance data correctly - the API returns { year, employeeId, balances: [...] }
-          balances[employeeId] = balance;
-        }
-      });
-
-      console.log('=== LEAVE BALANCE FETCH COMPLETED ===');
-      console.log(`Successfully processed ${results.length} balance requests`);
-      console.log('Final leave balances state:', balances);
+      }
 
       setLeaveBalances(balances);
       setDataReady(true);
 
-      // Log any failed balance fetches
-      const failedCount = results.filter(result =>
-        result.status === 'fulfilled' && !result.value.success
-      ).length;
-      const rejectedCount = results.filter(result => result.status === 'rejected').length;
-
-      console.log(`Balance fetch summary: ${results.length - failedCount - rejectedCount} successful, ${failedCount} failed with fallback, ${rejectedCount} rejected`);
-
-      if (failedCount > 0) {
-        console.warn(`Failed to fetch leave balances for ${failedCount} employees. Using fallback data.`);
-      }
-      if (rejectedCount > 0) {
-        console.error(`Failed to fetch leave balances for ${rejectedCount} employees (rejected promises).`);
-      }
-
     } catch (error) {
-      console.error('Failed to fetch leave balances:', error);
       toast({
         title: "Error",
         description: "Failed to fetch employee leave balances",
         variant: "destructive",
       });
-      setDataReady(true); // Still mark as ready to allow basic functionality
+      setDataReady(true);
     }
   };
 
   // Helper function to get leave balance for an employee
   const getLeaveBalance = (employeeId: string, leaveType: string) => {
     const balanceData = leaveBalances[employeeId];
-    console.log(`Getting balance for employee ${employeeId}, leaveType ${leaveType}:`, balanceData);
 
     if (!balanceData) return { total: 0, used: 0, remaining: 0 };
 
@@ -423,87 +388,92 @@ const Reports: React.FC = () => {
     return { total: 0, used: 0, remaining: 0 };
   };
 
-  const generateComprehensiveReport = () => {
-    console.log('Generating comprehensive report. Leave balances state:', leaveBalances);
-    console.log('Employees:', employees);
-
+  const generateComprehensiveReport = useCallback(() => {
     let filteredEmployees = employees;
-    
+
     // Apply filters
     if (selectedDepartment !== 'all') {
       filteredEmployees = filteredEmployees.filter(emp => emp.department?.id === selectedDepartment);
     }
-    
+
     if (selectedEmployee !== 'all') {
       filteredEmployees = filteredEmployees.filter(emp => emp.id === selectedEmployee);
     }
-    
-    // Apply date range filter to leave requests
-    console.log('All leave requests:', leaveRequests);
-    console.log('Date range filter:', { start: dateRange.startDate, end: dateRange.endDate });
 
-    const filteredLeaveRequests = leaveRequests.filter(req => {
-      if (!req.startDate) return false;
+    // Pre-filter and group leave requests by employee for efficiency
+    const filterStartDate = dateRange.startDate;
+    const filterEndDate = dateRange.endDate;
+
+    const requestsByEmployee = new Map<string, any[]>();
+
+    // Single pass through all leave requests to filter and group
+    leaveRequests.forEach(req => {
+      if (!req.startDate) return;
+
       const startDate = new Date(req.startDate);
-      const filterStartDate = dateRange.startDate;
-      const filterEndDate = dateRange.endDate;
-      return startDate >= filterStartDate && startDate <= filterEndDate;
+      if (startDate < filterStartDate || startDate > filterEndDate) return;
+
+      // Determine employee ID with multiple fallbacks and better debugging
+      let employeeId = null;
+
+      // Try different ways to get the employee ID
+      if (req.employeeId) {
+        employeeId = req.employeeId;
+      } else if (req.employee?.id) {
+        employeeId = req.employee.id;
+      } else if (typeof req.employee === 'string') {
+        employeeId = req.employee;
+      }
+
+      if (!employeeId) {
+        // If we still can't find employee ID, try to match by employee data
+        if (req.employee?.firstName && req.employee?.lastName) {
+          // Find matching employee by name as last resort
+          const matchingEmployee = filteredEmployees.find(emp =>
+            emp.firstName === req.employee.firstName && emp.lastName === req.employee.lastName
+          );
+          if (matchingEmployee) {
+            employeeId = matchingEmployee.id;
+          }
+        }
+      }
+
+      if (!employeeId) return;
+
+      if (!requestsByEmployee.has(employeeId)) {
+        requestsByEmployee.set(employeeId, []);
+      }
+      requestsByEmployee.get(employeeId)!.push(req);
     });
 
-    console.log('Filtered leave requests:', filteredLeaveRequests);
-
     const reportData = filteredEmployees.map(emp => {
-      console.log(`Processing employee: ${emp.firstName} ${emp.lastName} (${emp.id})`);
-
       const earnedBalance = getLeaveBalance(emp.id, 'earned');
       const sickBalance = getLeaveBalance(emp.id, 'sick');
       const casualBalance = getLeaveBalance(emp.id, 'casual');
       const compensationBalance = getLeaveBalance(emp.id, 'casual'); // Use casual as fallback for compensation
 
-      console.log(`Leave balances for ${emp.firstName}:`, { earnedBalance, sickBalance, casualBalance });
-
-      // Count pending requests in date range
-      const employeeRequests = filteredLeaveRequests.filter(req => {
-        console.log(`Checking request: employeeId=${req.employeeId}, employee?.id=${req.employee?.id}, emp.id=${emp.id}, status=${req.status}`);
-        // Match by employeeId (primary) or employee.id (fallback)
-        return req.employeeId === emp.id || req.employee?.id === emp.id;
-      });
-
-      console.log(`All requests for ${emp.firstName} (${emp.id}):`, employeeRequests);
+      // Get pre-filtered requests for this employee
+      const employeeRequests = requestsByEmployee.get(emp.id) || [];
 
       const pendingRequests = employeeRequests.filter(req => req.status === 'pending').length;
       const approvedRequests = employeeRequests.filter(req => req.status === 'approved').length;
       const rejectedRequests = employeeRequests.filter(req => req.status === 'rejected').length;
 
-      console.log(`Leave request counts for ${emp.firstName}:`, {
-        pendingRequests,
-        approvedRequests,
-        rejectedRequests,
-        total: pendingRequests + approvedRequests + rejectedRequests
-      });
 
-      // Add extra debugging for Nithya
-      if (emp.firstName === 'Nithya') {
-        console.log('=== NITHYA DEBUGGING ===');
-        console.log('Nithya ID:', emp.id);
-        console.log('All filtered leave requests:', filteredLeaveRequests);
-        console.log('Requests matching Nithya:', employeeRequests);
-        console.log('Final counts:', { pendingRequests, approvedRequests, rejectedRequests });
-      }
 
-      // Check if currently on leave
+      // Check if currently on leave using employee requests (more efficient)
       const today = new Date();
-      const currentLeave = leaveRequests.find(req => {
-        if ((req.employeeId !== emp.id && req.employee?.id !== emp.id) || req.status !== 'approved') return false;
+      const currentLeave = employeeRequests.find(req => {
+        if (req.status !== 'approved') return false;
         const startDate = new Date(req.startDate);
         const endDate = new Date(req.endDate);
         return today >= startDate && today <= endDate;
       });
 
-      // Calculate average days per request using same logic as request counting
-      const totalRequests = employeeRequests;
-      const avgDaysPerRequest = totalRequests.length > 0 
-        ? (earnedBalance.used + sickBalance.used + casualBalance.used) / totalRequests.length
+      // Calculate average days per request
+      const totalLeaveRequestsCount = employeeRequests.length;
+      const avgDaysPerRequest = totalLeaveRequestsCount > 0
+        ? (earnedBalance.used + sickBalance.used + casualBalance.used) / totalLeaveRequestsCount
         : 0;
 
 
@@ -542,19 +512,10 @@ const Reports: React.FC = () => {
           : 0
       };
 
-      console.log(`Final row data for ${emp.firstName}:`, {
-        'Total Requests': finalRowData['Total Requests'],
-        'Earned Leave - Remaining': finalRowData['Earned Leave - Remaining'],
-        'Sick Leave - Remaining': finalRowData['Sick Leave - Remaining'],
-        'Casual Leave - Remaining': finalRowData['Casual Leave - Remaining'],
-        'Leave Utilization %': finalRowData['Leave Utilization %']
-      });
 
       return finalRowData;
     });
 
-    console.log('Generated report data:', reportData);
-    console.log('Sample row data:', reportData[0]);
 
     const headers = [
       'Employee ID', 'First Name', 'Last Name', 'Email', 'Department', 'Position', 'Manager', 
@@ -567,7 +528,7 @@ const Reports: React.FC = () => {
     ];
 
     return { reportData, headers };
-  };
+  }, [employees, selectedDepartment, selectedEmployee, dateRange, leaveRequests, leaveBalances]);
 
   const generateDepartmentSummary = () => {
     const deptSummary = departments.map(dept => {
@@ -1300,7 +1261,14 @@ const Reports: React.FC = () => {
                 </div>
                 <h3 className="text-sm font-medium text-purple-800 dark:text-purple-200 mb-1">Total Leave Requests</h3>
                 <p className="text-3xl font-bold text-purple-900 dark:text-purple-100">
-                  {dashboardStats?.leaves?.totalRequests || leaveRequests.length}
+                  {useMemo(() => {
+                    // Filter leave requests by the selected date range
+                    return leaveRequests.filter(req => {
+                      if (!req.startDate) return false;
+                      const startDate = new Date(req.startDate);
+                      return startDate >= dateRange.startDate && startDate <= dateRange.endDate;
+                    }).length;
+                  }, [leaveRequests, dateRange])}
                 </p>
               </div>
 
@@ -1313,7 +1281,14 @@ const Reports: React.FC = () => {
                 </div>
                 <h3 className="text-sm font-medium text-orange-800 dark:text-orange-200 mb-1">Pending Requests</h3>
                 <p className="text-3xl font-bold text-orange-900 dark:text-orange-100">
-                  {dashboardStats?.leaves?.pendingRequests || leaveRequests.filter(req => req.status === 'pending').length}
+                  {useMemo(() => {
+                    // Filter pending requests by the selected date range
+                    return leaveRequests.filter(req => {
+                      if (!req.startDate || req.status !== 'pending') return false;
+                      const startDate = new Date(req.startDate);
+                      return startDate >= dateRange.startDate && startDate <= dateRange.endDate;
+                    }).length;
+                  }, [leaveRequests, dateRange])}
                 </p>
               </div>
             </div>

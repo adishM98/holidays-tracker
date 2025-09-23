@@ -409,6 +409,15 @@ export class AdminController {
     };
   }
 
+  @Get("leave-balances/bulk")
+  @ApiOperation({ summary: "Get leave balances for all employees (bulk operation)" })
+  async getBulkLeaveBalances(
+    @Query("year") year?: number,
+    @Query("department") departmentId?: string,
+  ) {
+    return this.leavesService.getBulkLeaveBalances(year, departmentId);
+  }
+
   @Get("reports/employee-leave-balance")
   @ApiOperation({ summary: "Get employee leave balances report" })
   async getEmployeeLeaveBalances(

@@ -381,6 +381,20 @@ export const adminAPI = {
     return apiRequest(`/admin/employees/${employeeId}/leave-balance${queryParam}`);
   },
 
+  getBulkLeaveBalances: async (year?: number, departmentId?: string) => {
+    try {
+      const params = new URLSearchParams();
+      if (year) params.append('year', year.toString());
+      if (departmentId) params.append('department', departmentId);
+
+      const queryString = params.toString() ? `?${params}` : '';
+      return apiRequest(`/admin/leave-balances/bulk${queryString}`);
+    } catch (error) {
+      // If bulk endpoint doesn't exist (like in production), throw error to trigger fallback
+      throw new Error('Bulk endpoint not available');
+    }
+  },
+
   createDepartment: async (data: { name: string; managerId?: string }) => {
     return apiRequest('/admin/departments', {
       method: 'POST',
@@ -397,12 +411,16 @@ export const adminAPI = {
     return apiRequest(`/admin/leave-calendar${queryString}`);
   },
 
-  getAllLeaveRequests: async (status?: string, month?: number, year?: number) => {
+  getAllLeaveRequests: async (status?: string, month?: number, year?: number, forReporting = false) => {
     const params = new URLSearchParams();
     if (status) params.append('status', status);
     if (month) params.append('month', month.toString());
     if (year) params.append('year', year.toString());
-    
+
+    // Always use higher limit for reports to ensure we get all data
+    // This fixes the production issue where only 10 requests were being fetched
+    params.append('limit', '1000');
+
     const queryString = params.toString() ? `?${params}` : '';
     return apiRequest(`/admin/leave-requests${queryString}`);
   },

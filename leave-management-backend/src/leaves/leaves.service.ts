@@ -632,4 +632,68 @@ export class LeavesService {
       })),
     };
   }
+
+  async getBulkLeaveBalances(year?: number, departmentId?: string): Promise<Record<string, any>> {
+    const targetYear = year || new Date().getFullYear();
+
+    // Build employee query with optional department filter
+    const employeeQueryBuilder = this.employeeRepository
+      .createQueryBuilder("employee")
+      .select(["employee.id"]);
+
+    if (departmentId) {
+      employeeQueryBuilder.where("employee.departmentId = :departmentId", { departmentId });
+    }
+
+    const employees = await employeeQueryBuilder.getMany();
+    const employeeIds = employees.map(emp => emp.id);
+
+    if (employeeIds.length === 0) {
+      return {};
+    }
+
+    // Fetch all leave balances in one query
+    const leaveBalances = await this.leaveBalanceRepository
+      .createQueryBuilder("balance")
+      .where("balance.employeeId IN (:...employeeIds)", { employeeIds })
+      .andWhere("balance.year = :year", { year: targetYear })
+      .getMany();
+
+    // Organize balances by employee ID
+    const balancesByEmployee: Record<string, any> = {};
+
+    for (const balance of leaveBalances) {
+      if (!balancesByEmployee[balance.employeeId]) {
+        balancesByEmployee[balance.employeeId] = {
+          year: targetYear,
+          employeeId: balance.employeeId,
+          balances: []
+        };
+      }
+
+      balancesByEmployee[balance.employeeId].balances.push({
+        leaveType: balance.leaveType,
+        totalAllocated: balance.totalAllocated,
+        usedDays: balance.usedDays,
+        availableDays: balance.availableDays,
+      });
+    }
+
+    // Add empty balance objects for employees without balances
+    for (const employeeId of employeeIds) {
+      if (!balancesByEmployee[employeeId]) {
+        balancesByEmployee[employeeId] = {
+          year: targetYear,
+          employeeId,
+          balances: [
+            { leaveType: 'earned', totalAllocated: 0, usedDays: 0, availableDays: 0 },
+            { leaveType: 'sick', totalAllocated: 0, usedDays: 0, availableDays: 0 },
+            { leaveType: 'casual', totalAllocated: 0, usedDays: 0, availableDays: 0 }
+          ]
+        };
+      }
+    }
+
+    return balancesByEmployee;
+  }
 }
