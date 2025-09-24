@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { 
-  FileText, 
-  Calendar, 
-  Users, 
-  AlertTriangle, 
+import {
+  FileText,
+  Calendar,
+  Users,
+  AlertTriangle,
   Download,
   Clock,
   BarChart3,
@@ -12,7 +12,9 @@ import {
   TrendingUp,
   Target,
   FileDown,
-  FileSpreadsheet
+  FileSpreadsheet,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -67,11 +69,18 @@ const Reports: React.FC = () => {
   });
   const [loading, setLoading] = useState(false);
   const [dataReady, setDataReady] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchInitialData();
   }, []);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedDepartment, selectedEmployee]);
 
 
   const fetchInitialData = async () => {
@@ -1265,7 +1274,12 @@ const Reports: React.FC = () => {
                 );
               }
 
-              return filteredEmployees.map((employee) => {
+              // Apply pagination
+              const startIndex = (currentPage - 1) * itemsPerPage;
+              const endIndex = startIndex + itemsPerPage;
+              const paginatedEmployees = filteredEmployees.slice(startIndex, endIndex);
+
+              return paginatedEmployees.map((employee, index) => {
                 const earnedBalance = getLeaveBalance(employee.id, 'earned');
                 const sickBalance = getLeaveBalance(employee.id, 'sick');
                 const casualBalance = getLeaveBalance(employee.id, 'casual');
@@ -1350,6 +1364,101 @@ const Reports: React.FC = () => {
                 </table>
               </div>
             );
+          })()}
+
+          {/* Pagination Controls */}
+          {(() => {
+            // Filter employees for pagination calculation
+            let filteredEmployees = employees;
+
+            if (selectedDepartment !== 'all') {
+              filteredEmployees = filteredEmployees.filter(emp => emp.department?.id === selectedDepartment);
+            }
+
+            if (selectedEmployee !== 'all') {
+              filteredEmployees = filteredEmployees.filter(emp => emp.id === selectedEmployee);
+            }
+
+            const totalEmployees = filteredEmployees.length;
+            const totalPages = Math.ceil(totalEmployees / itemsPerPage);
+
+            const handleItemsPerPageChange = (newItemsPerPage: string) => {
+              setItemsPerPage(parseInt(newItemsPerPage));
+              setCurrentPage(1); // Reset to first page when changing items per page
+            };
+
+            if (totalEmployees > 0) {
+              return (
+                <div className="flex items-center justify-between px-2 py-4 border-t">
+                  <div className="flex items-center space-x-4">
+                    <div className="text-sm text-muted-foreground">
+                      Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalEmployees)} of {totalEmployees} employees
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-muted-foreground">Show</span>
+                      <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
+                        <SelectTrigger className="w-[70px] h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="10">10</SelectItem>
+                          <SelectItem value="20">20</SelectItem>
+                          <SelectItem value="50">50</SelectItem>
+                          <SelectItem value="100">100</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <span className="text-sm text-muted-foreground">per page</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                      disabled={currentPage <= 1 || totalPages <= 1}
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      Previous
+                    </Button>
+
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter(page =>
+                          page === 1 ||
+                          page === totalPages ||
+                          Math.abs(page - currentPage) <= 2
+                        )
+                        .map((page, index, array) => (
+                          <React.Fragment key={page}>
+                            {index > 0 && array[index - 1] !== page - 1 && (
+                              <span className="px-2 text-muted-foreground">...</span>
+                            )}
+                            <Button
+                              variant={page === currentPage ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setCurrentPage(page)}
+                              className="w-8 h-8 p-0"
+                            >
+                              {page}
+                            </Button>
+                          </React.Fragment>
+                        ))}
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                      disabled={currentPage >= totalPages || totalPages <= 1}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            }
+            return null;
           })()}
         </CardContent>
       </Card>
