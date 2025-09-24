@@ -1267,7 +1267,7 @@ const Reports: React.FC = () => {
               if (filteredEmployees.length === 0) {
                 return (
                   <tr>
-                    <td colSpan={9} className="border border-border p-8 text-center text-muted-foreground">
+                    <td colSpan={10} className="border border-border p-8 text-center text-muted-foreground">
                       No employee data available
                     </td>
                   </tr>
@@ -1291,6 +1291,25 @@ const Reports: React.FC = () => {
                          (typeof req.employee === 'string' && req.employee === employee.id) ||
                          (req.employee?.firstName === employee.firstName && req.employee?.lastName === employee.lastName);
                 });
+
+                // Check if this employee is a manager (has direct reports)
+                const isManager = employees.some(emp => emp.manager?.id === employee.id);
+
+                // Count pending approvals for this manager (if they are a manager)
+                const pendingApprovals = isManager ? leaveRequests.filter(req => {
+                  // Check if the request is pending
+                  if (req.status !== 'pending') return false;
+
+                  // Check if this employee is the manager of the requester
+                  const requester = employees.find(emp =>
+                    emp.id === req.employeeId ||
+                    emp.id === req.employee?.id ||
+                    (typeof req.employee === 'string' && emp.id === req.employee) ||
+                    (req.employee?.firstName === emp.firstName && req.employee?.lastName === emp.lastName)
+                  );
+
+                  return requester && requester.manager?.id === employee.id;
+                }).length : 0;
 
                 return (
                   <tr key={employee.id} className="hover:bg-muted/50">
@@ -1329,6 +1348,22 @@ const Reports: React.FC = () => {
                         {casualBalance.remaining}
                       </Badge>
                     </td>
+                    <td className="border border-border p-3 text-center">
+                      {isManager ? (
+                        <Badge
+                          variant={pendingApprovals > 0 ? "destructive" : "secondary"}
+                          className={
+                            pendingApprovals > 0
+                              ? "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-300 dark:border-red-800"
+                              : "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-950/20 dark:text-gray-300 dark:border-gray-800"
+                          }
+                        >
+                          {pendingApprovals}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">N/A</span>
+                      )}
+                    </td>
                   </tr>
                 );
               });
@@ -1356,6 +1391,7 @@ const Reports: React.FC = () => {
                       <th className="border border-border p-3 text-center text-sm font-semibold">Earned Remaining</th>
                       <th className="border border-border p-3 text-center text-sm font-semibold">Sick Remaining</th>
                       <th className="border border-border p-3 text-center text-sm font-semibold">Casual Remaining</th>
+                      <th className="border border-border p-3 text-center text-sm font-semibold">Pending Approval</th>
                     </tr>
                   </thead>
                   <tbody>
