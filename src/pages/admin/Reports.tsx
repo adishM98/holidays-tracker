@@ -1367,7 +1367,7 @@ const Reports: React.FC = () => {
                   </tr>
                 );
               });
-            }, [employees, selectedDepartment, selectedEmployee, leaveRequests, leaveBalances]);
+            }, [employees, selectedDepartment, selectedEmployee, leaveRequests, leaveBalances, currentPage, itemsPerPage]);
 
             if (loading) {
               return (
