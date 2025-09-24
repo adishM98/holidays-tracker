@@ -1215,91 +1215,142 @@ const Reports: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Summary Statistics */}
+      {/* Employee Details Table (Current Month) */}
       <Card className="border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center text-base font-medium">
             <BarChart3 className="w-5 h-5 mr-2" />
             Summary Statistics
+            <span className="ml-2 text-sm font-normal text-muted-foreground">
+              (Current Month: {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })})
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* Total Employees Card */}
-              <div className="group bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/40 dark:to-blue-900/40 p-6 rounded-xl border border-blue-200/50 dark:border-blue-800/50 hover:shadow-lg hover:scale-105 transition-all duration-200 cursor-pointer hover:shadow-blue-500/10">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-2 bg-blue-500/10 dark:bg-blue-400/20 rounded-lg">
-                    <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                  </div>
-                </div>
-                <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">Total Employees</h3>
-                <p className="text-3xl font-bold text-blue-900 dark:text-blue-100">
-                  {dashboardStats?.employees?.total || employees.length}
-                </p>
-              </div>
+          {/* Always call useMemo to avoid hook order issues */}
+          {(() => {
+            const tableRows = useMemo(() => {
+              // Filter employees based on selected filters
+              let filteredEmployees = employees;
 
-              {/* Departments Card */}
-              <div className="group bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/40 dark:to-green-900/40 p-6 rounded-xl border border-green-200/50 dark:border-green-800/50 hover:shadow-lg hover:scale-105 transition-all duration-200 cursor-pointer hover:shadow-green-500/10">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-2 bg-green-500/10 dark:bg-green-400/20 rounded-lg">
-                    <Target className="w-6 h-6 text-green-600 dark:text-green-400" />
-                  </div>
-                </div>
-                <h3 className="text-sm font-medium text-green-800 dark:text-green-200 mb-1">Departments</h3>
-                <p className="text-3xl font-bold text-green-900 dark:text-green-100">
-                  {dashboardStats?.departments?.total || departments.length}
-                </p>
-              </div>
+              if (selectedDepartment !== 'all') {
+                filteredEmployees = filteredEmployees.filter(emp => emp.department?.id === selectedDepartment);
+              }
 
-              {/* Total Leave Requests Card */}
-              <div className="group bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/40 dark:to-purple-900/40 p-6 rounded-xl border border-purple-200/50 dark:border-purple-800/50 hover:shadow-lg hover:scale-105 transition-all duration-200 cursor-pointer hover:shadow-purple-500/10">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-2 bg-purple-500/10 dark:bg-purple-400/20 rounded-lg">
-                    <Calendar className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                  </div>
-                </div>
-                <h3 className="text-sm font-medium text-purple-800 dark:text-purple-200 mb-1">Total Leave Requests</h3>
-                <p className="text-3xl font-bold text-purple-900 dark:text-purple-100">
-                  {useMemo(() => {
-                    // Filter leave requests by the selected date range
-                    return leaveRequests.filter(req => {
-                      if (!req.startDate) return false;
-                      const startDate = new Date(req.startDate);
-                      return startDate >= dateRange.startDate && startDate <= dateRange.endDate;
-                    }).length;
-                  }, [leaveRequests, dateRange])}
-                </p>
-              </div>
+              if (selectedEmployee !== 'all') {
+                filteredEmployees = filteredEmployees.filter(emp => emp.id === selectedEmployee);
+              }
 
-              {/* Pending Requests Card */}
-              <div className="group bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/40 dark:to-orange-900/40 p-6 rounded-xl border border-orange-200/50 dark:border-orange-800/50 hover:shadow-lg hover:scale-105 transition-all duration-200 cursor-pointer hover:shadow-orange-500/10">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-2 bg-orange-500/10 dark:bg-orange-400/20 rounded-lg">
-                    <Clock className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-                  </div>
+              // Get current month date range
+              const currentDate = new Date();
+              const currentMonth = currentDate.getMonth();
+              const currentYear = currentDate.getFullYear();
+              const currentMonthStart = new Date(currentYear, currentMonth, 1);
+              const currentMonthEnd = new Date(currentYear, currentMonth + 1, 0);
+
+              // Filter leave requests for current month only
+              const currentMonthRequests = leaveRequests.filter(req => {
+                if (!req.startDate) return false;
+                const startDate = new Date(req.startDate);
+                return startDate >= currentMonthStart && startDate <= currentMonthEnd;
+              });
+
+              if (filteredEmployees.length === 0) {
+                return (
+                  <tr>
+                    <td colSpan={9} className="border border-border p-8 text-center text-muted-foreground">
+                      No employee data available
+                    </td>
+                  </tr>
+                );
+              }
+
+              return filteredEmployees.map((employee) => {
+                const earnedBalance = getLeaveBalance(employee.id, 'earned');
+                const sickBalance = getLeaveBalance(employee.id, 'sick');
+                const casualBalance = getLeaveBalance(employee.id, 'casual');
+
+                // Count total requests for this employee in current month
+                const employeeCurrentMonthRequests = currentMonthRequests.filter(req => {
+                  return req.employeeId === employee.id ||
+                         req.employee?.id === employee.id ||
+                         (typeof req.employee === 'string' && req.employee === employee.id) ||
+                         (req.employee?.firstName === employee.firstName && req.employee?.lastName === employee.lastName);
+                });
+
+                return (
+                  <tr key={employee.id} className="hover:bg-muted/50">
+                    <td className="border border-border p-3 text-sm font-medium">
+                      {employee.employeeId || 'N/A'}
+                    </td>
+                    <td className="border border-border p-3 text-sm">
+                      {employee.firstName}
+                    </td>
+                    <td className="border border-border p-3 text-sm">
+                      {employee.lastName}
+                    </td>
+                    <td className="border border-border p-3 text-sm">
+                      {employee.department?.name || 'N/A'}
+                    </td>
+                    <td className="border border-border p-3 text-sm">
+                      {employee.position || 'N/A'}
+                    </td>
+                    <td className="border border-border p-3 text-center">
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-300 dark:border-blue-800">
+                        {employeeCurrentMonthRequests.length}
+                      </Badge>
+                    </td>
+                    <td className="border border-border p-3 text-center">
+                      <Badge variant="default" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-300 dark:border-green-800">
+                        {earnedBalance.remaining}
+                      </Badge>
+                    </td>
+                    <td className="border border-border p-3 text-center">
+                      <Badge variant="secondary" className="bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/20 dark:text-orange-300 dark:border-orange-800">
+                        {sickBalance.remaining}
+                      </Badge>
+                    </td>
+                    <td className="border border-border p-3 text-center">
+                      <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/20 dark:text-purple-300 dark:border-purple-800">
+                        {casualBalance.remaining}
+                      </Badge>
+                    </td>
+                  </tr>
+                );
+              });
+            }, [employees, selectedDepartment, selectedEmployee, leaveRequests, leaveBalances]);
+
+            if (loading) {
+              return (
+                <div className="flex justify-center items-center py-8">
+                  <div className="text-muted-foreground">Loading employee data...</div>
                 </div>
-                <h3 className="text-sm font-medium text-orange-800 dark:text-orange-200 mb-1">Pending Requests</h3>
-                <p className="text-3xl font-bold text-orange-900 dark:text-orange-100">
-                  {useMemo(() => {
-                    // Filter pending requests by the selected date range
-                    return leaveRequests.filter(req => {
-                      if (!req.startDate || req.status !== 'pending') return false;
-                      const startDate = new Date(req.startDate);
-                      return startDate >= dateRange.startDate && startDate <= dateRange.endDate;
-                    }).length;
-                  }, [leaveRequests, dateRange])}
-                </p>
+              );
+            }
+
+            return (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-border rounded-lg">
+                  <thead>
+                    <tr className="bg-muted">
+                      <th className="border border-border p-3 text-left text-sm font-semibold">Employee ID</th>
+                      <th className="border border-border p-3 text-left text-sm font-semibold">First Name</th>
+                      <th className="border border-border p-3 text-left text-sm font-semibold">Last Name</th>
+                      <th className="border border-border p-3 text-left text-sm font-semibold">Department</th>
+                      <th className="border border-border p-3 text-left text-sm font-semibold">Position</th>
+                      <th className="border border-border p-3 text-center text-sm font-semibold">Total Requests</th>
+                      <th className="border border-border p-3 text-center text-sm font-semibold">Earned Remaining</th>
+                      <th className="border border-border p-3 text-center text-sm font-semibold">Sick Remaining</th>
+                      <th className="border border-border p-3 text-center text-sm font-semibold">Casual Remaining</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tableRows}
+                  </tbody>
+                </table>
               </div>
-            </div>
-            
-            {selectedEmployee && selectedEmployee !== 'all' && (
-              <div className="mt-6 p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600/50">
-                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Selected Employee</h4>
-                <p className="text-base font-semibold text-gray-700 dark:text-gray-300">{employees.find(emp => emp.id === selectedEmployee)?.firstName} {employees.find(emp => emp.id === selectedEmployee)?.lastName}</p>
-              </div>
-            )}
-          </div>
+            );
+          })()}
         </CardContent>
       </Card>
 
