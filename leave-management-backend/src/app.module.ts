@@ -15,6 +15,7 @@ import { AdminModule } from "./admin/admin.module";
 import { ManagerModule } from "./manager/manager.module";
 import { EmployeeModule } from "./employee/employee.module";
 import { StaticModule } from "./static/static.module";
+import { SettingsModule } from "./settings/settings.module";
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { StaticModule } from "./static/static.module";
     ManagerModule,
     EmployeeModule,
     StaticModule,
+    SettingsModule,
   ],
 })
 export class AppModule {}

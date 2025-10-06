@@ -37,6 +37,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { TailwindDatePicker } from '@/components/ui/tailwind-date-picker';
 import { TimeManagementBackground } from '@/components/ui/time-management-background';
 import { Plus, Edit, Trash2, Calendar, Settings as SettingsIcon, PartyPopper } from 'lucide-react';
@@ -77,6 +78,8 @@ const Settings: React.FC = () => {
     isActive: true,
   });
   const [formErrors, setFormErrors] = useState<Partial<HolidayFormData>>({});
+  const [autoApproveEnabled, setAutoApproveEnabled] = useState(false);
+  const [autoApproveLoading, setAutoApproveLoading] = useState(false);
 
   const { toast } = useToast();
 
@@ -97,8 +100,39 @@ const Settings: React.FC = () => {
     }
   };
 
+  const fetchAutoApproveStatus = async () => {
+    try {
+      const response = await adminAPI.getAutoApproveStatus();
+      setAutoApproveEnabled(response.enabled);
+    } catch (error) {
+      console.error('Error fetching auto-approve status:', error);
+    }
+  };
+
+  const handleAutoApproveToggle = async (enabled: boolean) => {
+    try {
+      setAutoApproveLoading(true);
+      await adminAPI.toggleAutoApprove(enabled);
+      setAutoApproveEnabled(enabled);
+      toast({
+        title: 'Success',
+        description: `Auto-approve has been ${enabled ? 'enabled' : 'disabled'}`,
+      });
+    } catch (error) {
+      console.error('Error toggling auto-approve:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update auto-approve setting',
+        variant: 'destructive',
+      });
+    } finally {
+      setAutoApproveLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchHolidays();
+    fetchAutoApproveStatus();
   }, []);
 
   const validateForm = (): boolean => {
@@ -240,6 +274,34 @@ const Settings: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Auto-Approve Settings Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Leave Auto-Approval</CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            Configure automatic approval of pending leave requests
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="space-y-0.5">
+              <Label htmlFor="auto-approve" className="text-base font-medium">
+                Auto-Approve Pending Leaves After Requested Day
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Automatically approve leave requests that have passed their requested date if not approved by the manager
+              </p>
+            </div>
+            <Switch
+              id="auto-approve"
+              checked={autoApproveEnabled}
+              onCheckedChange={handleAutoApproveToggle}
+              disabled={autoApproveLoading}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Holiday Management Section */}
       <Card>

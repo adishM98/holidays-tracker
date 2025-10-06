@@ -11,9 +11,11 @@ import { LeaveCalculationService } from "./services/leave-calculation.service";
 import { LeaveCleanupService } from "./services/leave-cleanup.service";
 import { YearEndBalanceService } from "./services/year-end-balance.service";
 import { LeaveBalanceSchedulerService } from "./services/leave-balance-scheduler.service";
+import { LeaveAutoApproveService } from "./services/leave-auto-approve.service";
 import { AdminLeaveBalanceController } from "./admin-leave-balance.controller";
 import { MailModule } from "../mail/mail.module";
 import { ScheduleModule } from "@nestjs/schedule";
+import { SettingsModule } from "../settings/settings.module";
 
 @Module({
   imports: [
@@ -27,14 +29,16 @@ import { ScheduleModule } from "@nestjs/schedule";
     ]),
     MailModule,
     ScheduleModule.forRoot(),
+    SettingsModule,
   ],
   controllers: [AdminLeaveBalanceController],
   providers: [
-    LeavesService, 
-    LeaveCalculationService, 
+    LeavesService,
+    LeaveCalculationService,
     LeaveCleanupService,
     YearEndBalanceService,
-    LeaveBalanceSchedulerService
+    LeaveBalanceSchedulerService,
+    LeaveAutoApproveService,
   ],
   exports: [
     LeavesService, 

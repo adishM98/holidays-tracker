@@ -580,6 +580,18 @@ export const adminAPI = {
       method: 'POST',
     });
   },
+
+  // Settings API
+  getAutoApproveStatus: async (): Promise<{ enabled: boolean }> => {
+    return apiRequest('/settings/auto-approve/status');
+  },
+
+  toggleAutoApprove: async (enabled: boolean): Promise<{ enabled: boolean; setting: any }> => {
+    return apiRequest('/settings/auto-approve/toggle', {
+      method: 'PUT',
+      body: JSON.stringify({ enabled }),
+    });
+  },
 };
 
 export { getAuthToken, setAuthToken, removeAuthToken };
