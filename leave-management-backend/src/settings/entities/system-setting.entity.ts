@@ -11,14 +11,11 @@ export class SystemSetting {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true, length: 255 })
+  @Column({ unique: true })
   key: string;
 
-  @Column({ type: 'text' })
-  value: string;
-
   @Column({ type: 'text', nullable: true })
-  description: string;
+  value: string;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

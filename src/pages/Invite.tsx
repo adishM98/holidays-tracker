@@ -11,6 +11,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || `${window.location.origin}/api`;
+const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || window.location.origin;
 
 const Invite: React.FC = () => {
   const { actualTheme } = useTheme();
@@ -346,9 +347,9 @@ const Invite: React.FC = () => {
           {logoUrl && (
             <div className="flex items-center justify-center mb-4">
               <img
-                src={`${API_BASE_URL}${logoUrl.split('?')[0]}`}
+                src={`${BACKEND_URL}${logoUrl.split('?')[0]}`}
                 alt="Company Logo"
-                className="h-8 w-auto object-contain"
+                className="h-6 w-auto object-contain max-w-[150px]"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                 }}
@@ -356,7 +357,6 @@ const Invite: React.FC = () => {
             </div>
           )}
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-foreground mb-2">Complete Setup</h2>
             <p className="text-muted-foreground">Set up your account to start managing leave requests</p>
           </div>
         </CardHeader>

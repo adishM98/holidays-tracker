@@ -63,6 +63,10 @@ export class SettingsService {
     return this.systemSettingRepository.save(setting);
   }
 
+  async deleteSetting(key: string): Promise<void> {
+    await this.systemSettingRepository.delete({ key });
+  }
+
   async getAutoApproveEnabled(): Promise<boolean> {
     try {
       const setting = await this.getSetting('auto_approve_pending_leaves');
@@ -132,8 +136,8 @@ export class SettingsService {
       }
     }
 
-    await this.updateSetting('company_logo_path', '');
-    await this.updateSetting('company_logo_metadata', '');
+    await this.deleteSetting('company_logo_path');
+    await this.deleteSetting('company_logo_metadata');
   }
 
   // Favicon Management
@@ -192,7 +196,7 @@ export class SettingsService {
       }
     }
 
-    await this.updateSetting('company_favicon_path', '');
-    await this.updateSetting('company_favicon_metadata', '');
+    await this.deleteSetting('company_favicon_path');
+    await this.deleteSetting('company_favicon_metadata');
   }
 }

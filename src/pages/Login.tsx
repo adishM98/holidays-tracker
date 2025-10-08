@@ -12,6 +12,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { adminAPI } from '@/services/api';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || `${window.location.origin}/api`;
+const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || window.location.origin;
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -186,9 +187,9 @@ const Login: React.FC = () => {
           {logoUrl && (
             <div className="mb-12">
               <img
-                src={`${API_BASE_URL}${logoUrl.split('?')[0]}`}
+                src={`${BACKEND_URL}${logoUrl.split('?')[0]}`}
                 alt="Company Logo"
-                className="h-6 w-auto object-contain"
+                className="h-8 w-auto object-contain max-w-[200px]"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                 }}

@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/sidebar';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || `${window.location.origin}/api`;
+const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || window.location.origin;
 
 export function AppSidebar() {
   const location = useLocation();
@@ -102,9 +103,9 @@ export function AppSidebar() {
         <div className="flex items-center justify-between p-4">
           {logoUrl ? (
             <img
-              src={`${API_BASE_URL}${logoUrl.split('?')[0]}`}
+              src={`${BACKEND_URL}${logoUrl.split('?')[0]}`}
               alt="Company Logo"
-              className="h-6 w-auto"
+              className="h-6 w-auto object-contain max-w-[120px]"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
               }}

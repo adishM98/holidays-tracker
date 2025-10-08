@@ -16,6 +16,7 @@ import { SettingsService } from './settings.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 import { UserRole } from '../common/enums/user-role.enum';
 import { SystemSetting } from './entities/system-setting.entity';
 
@@ -92,6 +93,7 @@ export class SettingsController {
     return this.settingsService.uploadLogo(file);
   }
 
+  @Public()
   @Get('logo/url')
   async getLogoUrl(): Promise<{ url: string | null }> {
     const url = await this.settingsService.getLogoUrl();
@@ -133,6 +135,7 @@ export class SettingsController {
     return this.settingsService.uploadFavicon(file);
   }
 
+  @Public()
   @Get('favicon/url')
   async getFaviconUrl(): Promise<{ url: string | null }> {
     const url = await this.settingsService.getFaviconUrl();

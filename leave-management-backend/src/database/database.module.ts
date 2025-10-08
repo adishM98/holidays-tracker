@@ -8,6 +8,8 @@ import { LeaveRequest } from "../leaves/entities/leave-request.entity";
 import { LeaveBalance } from "../leaves/entities/leave-balance.entity";
 import { PasswordResetToken } from "../auth/entities/password-reset-token.entity";
 import { Holiday } from "../holidays/entities/holiday.entity";
+import { SystemSetting } from "../settings/entities/system-setting.entity";
+import { GoogleCalendarToken } from "../google-calendar/entities/google-calendar-token.entity";
 import { DatabaseCreationService } from "./database-creation.service";
 
 @Module({
@@ -29,6 +31,8 @@ import { DatabaseCreationService } from "./database-creation.service";
           LeaveBalance,
           PasswordResetToken,
           Holiday,
+          SystemSetting,
+          GoogleCalendarToken,
         ],
         synchronize: true, // Enable sync but we'll recreate admin user properly
         dropSchema: false,

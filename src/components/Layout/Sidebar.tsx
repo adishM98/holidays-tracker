@@ -9,6 +9,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { adminAPI } from '@/services/api';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || `${window.location.origin}/api`;
+const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || window.location.origin;
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
@@ -114,9 +115,9 @@ const Sidebar: React.FC = () => {
             {logoUrl && (
               <div className="flex items-center justify-center mb-2">
                 <img
-                  src={`${API_BASE_URL}${logoUrl.split('?')[0]}`}
+                  src={`${BACKEND_URL}${logoUrl.split('?')[0]}`}
                   alt="Company Logo"
-                  className="h-8 w-auto"
+                  className="h-8 w-auto object-contain"
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
                   }}
@@ -193,9 +194,9 @@ const Sidebar: React.FC = () => {
         {logoUrl && (
           <div className="flex items-center justify-center mb-2">
             <img
-              src={`${API_BASE_URL}${logoUrl.split('?')[0]}`}
+              src={`${BACKEND_URL}${logoUrl.split('?')[0]}`}
               alt="Company Logo"
-              className="h-8 w-auto"
+              className="h-8 w-auto object-contain"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
               }}

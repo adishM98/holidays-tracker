@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || `${window.location.origin}/api`;
+const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || window.location.origin;
 
 export const WhiteLabeling: React.FC = () => {
   const { toast } = useToast();
@@ -303,7 +304,7 @@ export const WhiteLabeling: React.FC = () => {
               </div>
               <div className="flex items-center justify-center p-6 bg-muted/30 rounded-lg border border-border min-h-[120px]">
                 <img
-                  src={`${API_BASE_URL}${logoUrl.split('?')[0]}`}
+                  src={`${BACKEND_URL}${logoUrl.split('?')[0]}`}
                   alt="Company Logo"
                   className="max-h-16 max-w-full object-contain"
                   onError={(e) => {
@@ -441,7 +442,7 @@ export const WhiteLabeling: React.FC = () => {
               </div>
               <div className="flex items-center justify-center p-6 bg-muted/30 rounded-lg border border-border min-h-[80px]">
                 <img
-                  src={`${API_BASE_URL}${faviconUrl.split('?')[0]}`}
+                  src={`${BACKEND_URL}${faviconUrl.split('?')[0]}`}
                   alt="Favicon"
                   className="max-h-8 max-w-full object-contain"
                   onError={(e) => {

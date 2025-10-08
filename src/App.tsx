@@ -19,14 +19,21 @@ import LeaveCalendar from "@/pages/admin/LeaveCalendar";
 import Reports from "@/pages/admin/Reports";
 import Settings from "@/pages/admin/Settings";
 import NotFound from "./pages/NotFound";
+import { useFavicon } from "@/hooks/use-favicon";
 
 const queryClient = new QueryClient();
+
+const AppContent = () => {
+  useFavicon();
+  return null;
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <TooltipProvider>
         <AuthProvider>
+        <AppContent />
         <Toaster />
         <Sonner />
         <BrowserRouter>
