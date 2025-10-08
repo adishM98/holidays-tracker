@@ -592,6 +592,70 @@ export const adminAPI = {
       body: JSON.stringify({ enabled }),
     });
   },
+
+  // Logo Management
+  uploadLogo: async (file: File): Promise<{ url: string; metadata: any }> => {
+    const token = getAuthToken();
+    const formData = new FormData();
+    formData.append('logo', file);
+
+    const response = await fetch(`${API_BASE_URL}/settings/logo/upload`, {
+      method: 'POST',
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+  },
+
+  getLogoUrl: async (): Promise<{ url: string | null }> => {
+    return apiRequest('/settings/logo/url');
+  },
+
+  deleteLogo: async (): Promise<{ message: string }> => {
+    return apiRequest('/settings/logo', {
+      method: 'DELETE',
+    });
+  },
+
+  // Favicon Management
+  uploadFavicon: async (file: File): Promise<{ url: string; metadata: any }> => {
+    const token = getAuthToken();
+    const formData = new FormData();
+    formData.append('favicon', file);
+
+    const response = await fetch(`${API_BASE_URL}/settings/favicon/upload`, {
+      method: 'POST',
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+  },
+
+  getFaviconUrl: async (): Promise<{ url: string | null }> => {
+    return apiRequest('/settings/favicon/url');
+  },
+
+  deleteFavicon: async (): Promise<{ message: string }> => {
+    return apiRequest('/settings/favicon', {
+      method: 'DELETE',
+    });
+  },
 };
 
 export { getAuthToken, setAuthToken, removeAuthToken };

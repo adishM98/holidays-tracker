@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Lock, Phone, Mail, Calendar, MapPin, Briefcase, Shield, Eye, EyeOff, CheckCircle, Clock, UserCheck } from 'lucide-react';
+import { User, Lock, Phone, Mail, Calendar, MapPin, Briefcase, Shield, Eye, EyeOff, CheckCircle, Clock, UserCheck, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { employeeAPI, authAPI } from '@/services/api';
+import { WhiteLabeling } from '@/components/WhiteLabeling';
 
 interface EmployeeProfile {
   id: string;
@@ -328,7 +329,7 @@ const Profile: React.FC = () => {
 
         {/* Tabbed Layout */}
         <Tabs defaultValue="personal" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className={`grid w-full ${user?.role === 'admin' ? 'grid-cols-3' : 'grid-cols-2'}`}>
             <TabsTrigger value="personal" className="flex items-center space-x-2">
               <User className="h-4 w-4" />
               <span>Personal Information</span>
@@ -337,6 +338,12 @@ const Profile: React.FC = () => {
               <Briefcase className="h-4 w-4" />
               <span>Employment Details</span>
             </TabsTrigger>
+            {user?.role === 'admin' && (
+              <TabsTrigger value="white-labeling" className="flex items-center space-x-2">
+                <ImageIcon className="h-4 w-4" />
+                <span>White-Labeling</span>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="personal" className="space-y-6">
@@ -444,6 +451,12 @@ const Profile: React.FC = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {user?.role === 'admin' && (
+            <TabsContent value="white-labeling" className="space-y-6">
+              <WhiteLabeling />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>

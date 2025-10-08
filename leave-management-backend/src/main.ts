@@ -148,6 +148,13 @@ async function bootstrap() {
     console.log(`📁 Serving static files from: ${publicPath}`);
   }
 
+  // Serve uploaded files (e.g., company logos)
+  const uploadsPath = join(process.cwd(), "uploads");
+  app.useStaticAssets(uploadsPath, {
+    prefix: '/uploads/',
+  });
+  console.log(`📁 Serving uploaded files from: ${uploadsPath}`);
+
   // CORS - Allow frontend origin or all origins in production
   const isProduction = configService.get("NODE_ENV") === "production";
   app.enableCors({

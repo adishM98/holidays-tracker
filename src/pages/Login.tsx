@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useTheme } from '@/contexts/ThemeContext';
+import { adminAPI } from '@/services/api';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || `${window.location.origin}/api`;
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -16,10 +19,26 @@ const Login: React.FC = () => {
   const { actualTheme } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   
   const { login } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Fetch custom logo
+    const fetchLogo = async () => {
+      try {
+        const response = await adminAPI.getLogoUrl();
+        if (response.url) {
+          setLogoUrl(response.url);
+        }
+      } catch (error) {
+        console.error('Error fetching logo:', error);
+      }
+    };
+    fetchLogo();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,17 +183,18 @@ const Login: React.FC = () => {
       <div className="relative z-10 min-h-screen flex items-center justify-center px-8">
         <div className="w-full max-w-md">
           {/* Logo */}
-          <div className="mb-12">
-            <img 
-              src={actualTheme === 'dark' ? "/tooljet-dark.svg" : "/tooljet-light.svg"}
-              alt="ToolJet Logo" 
-              className="h-6 w-auto object-contain"
-              onError={(e) => {
-                // Fallback to light logo if dark logo fails
-                e.currentTarget.src = "/tooljet-light.svg";
-              }}
-            />
-          </div>
+          {logoUrl && (
+            <div className="mb-12">
+              <img
+                src={`${API_BASE_URL}${logoUrl.split('?')[0]}`}
+                alt="Company Logo"
+                className="h-6 w-auto object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            </div>
+          )}
 
           {/* Sign in Title */}
           <div className="mb-6">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Calendar, FileText, Home, Users, LogOut, Clock, Menu, X, Settings, Upload, UserCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useTheme } from '@/contexts/ThemeContext';
+import { adminAPI } from '@/services/api';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || `${window.location.origin}/api`;
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
@@ -13,6 +16,7 @@ const Sidebar: React.FC = () => {
   const { actualTheme } = useTheme();
   const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   const employeeNavItems = [
     { path: '/dashboard', icon: Home, label: 'Dashboard' },
@@ -47,7 +51,22 @@ const Sidebar: React.FC = () => {
   };
 
   const navItems = getNavItems();
-  
+
+  useEffect(() => {
+    // Fetch custom logo
+    const fetchLogo = async () => {
+      try {
+        const response = await adminAPI.getLogoUrl();
+        if (response.url) {
+          setLogoUrl(response.url);
+        }
+      } catch (error) {
+        console.error('Error fetching logo:', error);
+      }
+    };
+    fetchLogo();
+  }, []);
+
   const getUserDisplayName = () => {
     if (user?.employee?.fullName) {
       return user.employee.fullName;
@@ -92,17 +111,18 @@ const Sidebar: React.FC = () => {
           isOpen ? 'translate-x-0' : '-translate-x-full'
         } shadow-professional-lg flex flex-col`}>
           <div className="p-6 border-b border-border mt-16">
-            <div className="flex items-center justify-center">
-              <img 
-                src={actualTheme === 'dark' ? "/tooljet-dark.svg" : "/tooljet-light.svg"}
-                alt="ToolJet Logo" 
-                className="h-8 w-auto"
-                onError={(e) => {
-                  // Fallback to light SVG if dark SVG fails to load
-                  e.currentTarget.src = "/tooljet-light.svg";
-                }}
-              />
-            </div>
+            {logoUrl && (
+              <div className="flex items-center justify-center mb-2">
+                <img
+                  src={`${API_BASE_URL}${logoUrl.split('?')[0]}`}
+                  alt="Company Logo"
+                  className="h-8 w-auto"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              </div>
+            )}
             <p className="text-sm font-bold text-muted-foreground text-center mt-2">Leave & Attendance Tracker</p>
           </div>
 
@@ -170,17 +190,18 @@ const Sidebar: React.FC = () => {
   return (
     <div className="h-screen w-64 bg-card border-r border-border flex flex-col shadow-professional-sm">
       <div className="p-6 border-b border-border">
-        <div className="flex items-center justify-center">
-          <img 
-            src={actualTheme === 'dark' ? "/tooljet-dark.svg" : "/tooljet-light.svg"}
-            alt="ToolJet Logo" 
-            className="h-8 w-auto"
-            onError={(e) => {
-              // Fallback to light SVG if dark SVG fails to load
-              e.currentTarget.src = "/tooljet-light.svg";
-            }}
-          />
-        </div>
+        {logoUrl && (
+          <div className="flex items-center justify-center mb-2">
+            <img
+              src={`${API_BASE_URL}${logoUrl.split('?')[0]}`}
+              alt="Company Logo"
+              className="h-8 w-auto"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          </div>
+        )}
         <p className="text-sm font-bold text-muted-foreground text-center mt-2">Leave & Attendance Tracker</p>
       </div>
 

@@ -10,6 +10,8 @@ import { adminAPI } from '@/services/api';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || `${window.location.origin}/api`;
+
 const Invite: React.FC = () => {
   const { actualTheme } = useTheme();
   const [formData, setFormData] = useState({
@@ -22,10 +24,26 @@ const Invite: React.FC = () => {
   const [employeeInfo, setEmployeeInfo] = useState<any>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Fetch custom logo
+    const fetchLogo = async () => {
+      try {
+        const response = await adminAPI.getLogoUrl();
+        if (response.url) {
+          setLogoUrl(response.url);
+        }
+      } catch (error) {
+        console.error('Error fetching logo:', error);
+      }
+    };
+    fetchLogo();
+  }, []);
 
   useEffect(() => {
     // Parse URL parameters
@@ -325,17 +343,18 @@ const Invite: React.FC = () => {
       <div className="relative z-10 min-h-screen flex items-center justify-center px-8">
         <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="flex items-center justify-center mb-4">
-            <img 
-              src={actualTheme === 'dark' ? "/tooljet-dark.svg" : "/tooljet-light.svg"}
-              alt="ToolJet Logo" 
-              className="h-8 w-auto object-contain"
-              onError={(e) => {
-                // Fallback to light logo if dark logo fails
-                e.currentTarget.src = "/tooljet-light.svg";
-              }}
-            />
-          </div>
+          {logoUrl && (
+            <div className="flex items-center justify-center mb-4">
+              <img
+                src={`${API_BASE_URL}${logoUrl.split('?')[0]}`}
+                alt="Company Logo"
+                className="h-8 w-auto object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            </div>
+          )}
           <div className="text-center">
             <h2 className="text-2xl font-bold text-foreground mb-2">Complete Setup</h2>
             <p className="text-muted-foreground">Set up your account to start managing leave requests</p>

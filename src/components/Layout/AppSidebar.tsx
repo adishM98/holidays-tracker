@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Calendar, FileText, Home, Users, LogOut, Clock, Settings, UserCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useTheme } from '@/contexts/ThemeContext';
+import { adminAPI } from '@/services/api';
 import {
   Sidebar,
   SidebarContent,
@@ -19,10 +20,28 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || `${window.location.origin}/api`;
+
 export function AppSidebar() {
   const location = useLocation();
   const { user, logout } = useAuth();
   const { actualTheme } = useTheme();
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Fetch custom logo
+    const fetchLogo = async () => {
+      try {
+        const response = await adminAPI.getLogoUrl();
+        if (response.url) {
+          setLogoUrl(response.url);
+        }
+      } catch (error) {
+        console.error('Error fetching logo:', error);
+      }
+    };
+    fetchLogo();
+  }, []);
 
   const employeeNavItems = [
     { path: '/dashboard', icon: Home, label: 'Dashboard' },
@@ -81,18 +100,20 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center justify-between p-4">
-          <img 
-            src={actualTheme === 'dark' ? "/tooljet-dark.svg" : "/tooljet-light.svg"}
-            alt="ToolJet Logo" 
-            className="h-6 w-auto"
-            onError={(e) => {
-              e.currentTarget.src = "/tooljet-light.svg";
-            }}
-          />
-          {/* <div className="flex flex-col">
-            <span className="font-semibold text-sidebar-foreground">ToolJet</span>
-            <span className="text-xs text-sidebar-foreground/60">Leave & Attendance Tracker</span>
-          </div> */}
+          {logoUrl ? (
+            <img
+              src={`${API_BASE_URL}${logoUrl.split('?')[0]}`}
+              alt="Company Logo"
+              className="h-6 w-auto"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          ) : (
+            <div className="flex flex-col">
+              <span className="text-xs text-sidebar-foreground/60">Leave & Attendance Tracker</span>
+            </div>
+          )}
           <ThemeToggle />
         </div>
       </SidebarHeader>
