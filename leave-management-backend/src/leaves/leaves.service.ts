@@ -3,6 +3,8 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Inject,
+  forwardRef,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, Between } from "typeorm";
@@ -19,6 +21,7 @@ import { MailService } from "../mail/mail.service";
 import { Holiday } from "../holidays/entities/holiday.entity";
 import { LeaveStatus } from "../common/enums/leave-status.enum";
 import { LeaveType } from "../common/enums/leave-type.enum";
+import { CalendarSyncService } from "../google-calendar/services/calendar-sync.service";
 
 @Injectable()
 export class LeavesService {
@@ -35,6 +38,8 @@ export class LeavesService {
     private holidayRepository: Repository<Holiday>,
     private leaveCalculationService: LeaveCalculationService,
     private mailService: MailService,
+    @Inject(forwardRef(() => CalendarSyncService))
+    private calendarSyncService: CalendarSyncService,
   ) {}
 
   async createLeaveRequest(
@@ -250,6 +255,11 @@ export class LeavesService {
 
     const updatedRequest = await this.leaveRequestRepository.save(leaveRequest);
 
+    // Sync to calendar (async - don't wait)
+    this.calendarSyncService.syncLeaveToCalendar(updatedRequest).catch(err => {
+      console.error('Calendar sync failed:', err);
+    });
+
     // Send notification to employee
     // Use the employeeApprover we already found, but with relations if it exists
     let approver = null;
@@ -339,7 +349,16 @@ export class LeavesService {
       }
     }
 
-    return this.leaveRequestRepository.save(leaveRequest);
+    const updatedRequest = await this.leaveRequestRepository.save(leaveRequest);
+
+    // Update calendar if leave is approved
+    if (updatedRequest.status === LeaveStatus.APPROVED) {
+      this.calendarSyncService.updateLeaveInCalendar(updatedRequest).catch(err => {
+        console.error('Calendar update failed:', err);
+      });
+    }
+
+    return updatedRequest;
   }
 
   async deleteLeaveRequest(requestId: string): Promise<void> {
@@ -391,6 +410,10 @@ export class LeavesService {
     }
 
     console.log("LeavesService: Removing leave request from database");
+
+    // Remove from calendar before deleting from database
+    await this.calendarSyncService.removeLeaveFromCalendar(requestId);
+
     await this.leaveRequestRepository.remove(leaveRequest);
     console.log("LeavesService: Delete operation completed successfully");
   }
@@ -458,6 +481,11 @@ export class LeavesService {
       );
     }
 
+    // Remove from calendar when rejected
+    this.calendarSyncService.removeLeaveFromCalendar(requestId).catch(err => {
+      console.error('Calendar removal failed:', err);
+    });
+
     return this.findOne(updatedRequest.id);
   }
 
@@ -494,7 +522,14 @@ export class LeavesService {
     }
 
     leaveRequest.status = LeaveStatus.CANCELLED;
-    return this.leaveRequestRepository.save(leaveRequest);
+    const cancelledRequest = await this.leaveRequestRepository.save(leaveRequest);
+
+    // Remove from calendar when cancelled
+    this.calendarSyncService.removeLeaveFromCalendar(requestId).catch(err => {
+      console.error('Calendar removal failed:', err);
+    });
+
+    return cancelledRequest;
   }
 
   async getLeaveBalance(

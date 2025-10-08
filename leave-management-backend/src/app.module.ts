@@ -16,6 +16,7 @@ import { ManagerModule } from "./manager/manager.module";
 import { EmployeeModule } from "./employee/employee.module";
 import { StaticModule } from "./static/static.module";
 import { SettingsModule } from "./settings/settings.module";
+import { GoogleCalendarModule } from "./google-calendar/google-calendar.module";
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { SettingsModule } from "./settings/settings.module";
     EmployeeModule,
     StaticModule,
     SettingsModule,
+    GoogleCalendarModule,
   ],
 })
 export class AppModule {}
