@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { LeaveRequest } from '../../leaves/entities/leave-request.entity';
 import { LeaveStatus } from '../../common/enums/leave-status.enum';
 import { GoogleCalendarService } from './google-calendar.service';
@@ -12,6 +13,7 @@ import { SyncMode } from '../dto/calendar-settings.dto';
 @Injectable()
 export class CalendarSyncService {
   private readonly logger = new Logger(CalendarSyncService.name);
+  private readonly isEnabled: boolean;
 
   constructor(
     @InjectRepository(LeaveRequest)
@@ -20,12 +22,36 @@ export class CalendarSyncService {
     private tokenRepository: Repository<GoogleCalendarToken>,
     private googleCalendarService: GoogleCalendarService,
     private settingsService: SettingsService,
-  ) {}
+    private configService: ConfigService,
+  ) {
+    // Check if Google Calendar feature is enabled
+    this.isEnabled = this.configService.get<string>('GOOGLE_CALENDAR_ENABLED') === 'true';
+
+    if (!this.isEnabled) {
+      this.logger.log('Google Calendar integration is disabled');
+    }
+  }
+
+  /**
+   * Check if Google Calendar integration is enabled
+   */
+  private checkEnabled(): boolean {
+    if (!this.isEnabled) {
+      this.logger.debug('Skipping calendar operation - Google Calendar integration is disabled');
+      return false;
+    }
+    return true;
+  }
 
   /**
    * Sync leave request to calendar (called after leave creation/approval)
    */
   async syncLeaveToCalendar(leaveRequest: LeaveRequest): Promise<void> {
+    // Check if Google Calendar is enabled
+    if (!this.checkEnabled()) {
+      return;
+    }
+
     try {
       // Only sync approved leaves
       if (leaveRequest.status !== LeaveStatus.APPROVED) {
@@ -92,6 +118,11 @@ export class CalendarSyncService {
    * Update calendar event when leave is modified
    */
   async updateLeaveInCalendar(leaveRequest: LeaveRequest): Promise<void> {
+    // Check if Google Calendar is enabled
+    if (!this.checkEnabled()) {
+      return;
+    }
+
     try {
       // Only update approved leaves that have calendar events
       if (leaveRequest.status !== LeaveStatus.APPROVED) {
@@ -129,6 +160,11 @@ export class CalendarSyncService {
    * Remove calendar event when leave is cancelled/rejected/deleted
    */
   async removeLeaveFromCalendar(leaveRequestId: string): Promise<void> {
+    // Check if Google Calendar is enabled
+    if (!this.checkEnabled()) {
+      return;
+    }
+
     try {
       await this.googleCalendarService.deleteLeaveEvent(leaveRequestId);
 
@@ -147,6 +183,11 @@ export class CalendarSyncService {
    * Batch sync leaves for an employee (useful for initial setup)
    */
   async batchSyncEmployeeLeaves(employeeId: string): Promise<void> {
+    // Check if Google Calendar is enabled
+    if (!this.checkEnabled()) {
+      return;
+    }
+
     try {
       // Get all approved leaves for the employee
       const approvedLeaves = await this.leaveRequestRepository.find({

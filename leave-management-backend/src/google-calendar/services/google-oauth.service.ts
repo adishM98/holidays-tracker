@@ -10,6 +10,7 @@ import { Employee } from '../../employees/entities/employee.entity';
 export class GoogleOAuthService {
   private oauth2Client: Auth.OAuth2Client;
   private readonly redirectUri: string;
+  private readonly isEnabled: boolean;
 
   constructor(
     @InjectRepository(GoogleCalendarToken)
@@ -18,12 +19,21 @@ export class GoogleOAuthService {
     private employeeRepository: Repository<Employee>,
     private configService: ConfigService,
   ) {
+    // Check if Google Calendar feature is enabled
+    this.isEnabled = this.configService.get<string>('GOOGLE_CALENDAR_ENABLED') === 'true';
+
     const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
     const clientSecret = this.configService.get<string>('GOOGLE_CLIENT_SECRET');
     this.redirectUri = this.configService.get<string>('GOOGLE_REDIRECT_URI');
 
+    if (!this.isEnabled) {
+      console.log('Google Calendar integration is disabled');
+      return;
+    }
+
     if (!clientId || !clientSecret || !this.redirectUri) {
-      console.warn('Google OAuth credentials not configured');
+      console.warn('Google Calendar is enabled but credentials are not configured');
+      return;
     }
 
     this.oauth2Client = new google.auth.OAuth2(
@@ -34,9 +44,23 @@ export class GoogleOAuthService {
   }
 
   /**
+   * Check if Google Calendar integration is enabled and properly configured
+   */
+  private checkEnabled(): void {
+    if (!this.isEnabled) {
+      throw new BadRequestException('Google Calendar integration is disabled');
+    }
+    if (!this.oauth2Client) {
+      throw new BadRequestException('Google Calendar is not properly configured');
+    }
+  }
+
+  /**
    * Generate authorization URL for OAuth flow
    */
   getAuthorizationUrl(employeeId: string): string {
+    this.checkEnabled();
+
     const scopes = [
       'https://www.googleapis.com/auth/calendar.events',
       'https://www.googleapis.com/auth/calendar',
@@ -59,6 +83,8 @@ export class GoogleOAuthService {
     code: string,
     employeeId: string,
   ): Promise<GoogleCalendarToken> {
+    this.checkEnabled();
+
     // Verify employee exists
     const employee = await this.employeeRepository.findOne({
       where: { id: employeeId },
@@ -121,6 +147,8 @@ export class GoogleOAuthService {
    * Refresh access token using refresh token
    */
   async refreshAccessToken(employeeId: string): Promise<GoogleCalendarToken> {
+    this.checkEnabled();
+
     const token = await this.tokenRepository.findOne({
       where: { employeeId, isActive: true },
     });
@@ -161,6 +189,8 @@ export class GoogleOAuthService {
    * Get valid OAuth2 client for an employee
    */
   async getOAuth2Client(employeeId: string): Promise<Auth.OAuth2Client> {
+    this.checkEnabled();
+
     let token = await this.tokenRepository.findOne({
       where: { employeeId, isActive: true },
     });

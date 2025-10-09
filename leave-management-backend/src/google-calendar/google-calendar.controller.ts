@@ -10,6 +10,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { Response } from 'express';
+import { ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GoogleOAuthService } from './services/google-oauth.service';
 import { GoogleCalendarService } from './services/google-calendar.service';
@@ -17,16 +18,37 @@ import { GoogleCalendarService } from './services/google-calendar.service';
 @Controller('google-calendar')
 @UseGuards(JwtAuthGuard)
 export class GoogleCalendarController {
+  private readonly isEnabled: boolean;
+
   constructor(
     private readonly googleOAuthService: GoogleOAuthService,
     private readonly googleCalendarService: GoogleCalendarService,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.isEnabled = this.configService.get<string>('GOOGLE_CALENDAR_ENABLED') === 'true';
+  }
+
+  /**
+   * Check if Google Calendar integration is enabled
+   */
+  private checkEnabled() {
+    if (!this.isEnabled) {
+      return {
+        statusCode: HttpStatus.SERVICE_UNAVAILABLE,
+        message: 'Google Calendar integration is disabled',
+      };
+    }
+    return null;
+  }
 
   /**
    * Get authorization URL to initiate OAuth flow
    */
   @Get('auth/url')
   getAuthUrl(@Req() req: any) {
+    const disabledCheck = this.checkEnabled();
+    if (disabledCheck) return disabledCheck;
+
     const employeeId = req.user.employee?.id;
 
     if (!employeeId) {
@@ -53,6 +75,12 @@ export class GoogleCalendarController {
     @Query('state') state: string,
     @Res() res: Response,
   ) {
+    if (!this.isEnabled) {
+      return res.redirect(
+        `${process.env.FRONTEND_URL}/settings?calendar_error=disabled`,
+      );
+    }
+
     try {
       if (!code || !state) {
         return res.redirect(
@@ -81,6 +109,9 @@ export class GoogleCalendarController {
    */
   @Get('status')
   async getStatus(@Req() req: any) {
+    const disabledCheck = this.checkEnabled();
+    if (disabledCheck) return disabledCheck;
+
     const employeeId = req.user.employee?.id;
 
     if (!employeeId) {
@@ -103,6 +134,9 @@ export class GoogleCalendarController {
    */
   @Delete('disconnect')
   async disconnect(@Req() req: any) {
+    const disabledCheck = this.checkEnabled();
+    if (disabledCheck) return disabledCheck;
+
     const employeeId = req.user.employee?.id;
 
     if (!employeeId) {
@@ -125,6 +159,9 @@ export class GoogleCalendarController {
    */
   @Get('events')
   async getEvents(@Req() req: any) {
+    const disabledCheck = this.checkEnabled();
+    if (disabledCheck) return disabledCheck;
+
     const employeeId = req.user.employee?.id;
 
     if (!employeeId) {
