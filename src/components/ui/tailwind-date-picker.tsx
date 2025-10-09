@@ -163,21 +163,24 @@ export function TailwindDatePicker({
 
       {/* Calendar Dropdown - Rendered via Portal */}
       {isOpen && typeof window !== 'undefined' && createPortal(
-        <>
+        <div className="fixed inset-0 z-[9999]" style={{ pointerEvents: 'none' }}>
           {/* Overlay to close calendar when clicking outside */}
           <div
-            className="fixed inset-0 z-[99998]"
+            className="fixed inset-0"
+            style={{ pointerEvents: 'auto' }}
             onClick={() => setIsOpen(false)}
           />
 
           {/* Calendar Dropdown */}
           <div
-            className="fixed z-[99999] bg-popover border border-border rounded-md shadow-lg p-4 min-w-[280px]"
+            className="fixed bg-popover border border-border rounded-md shadow-lg p-4 min-w-[280px]"
             style={{
               top: `${buttonPosition.top}px`,
               left: `${buttonPosition.left}px`,
-              minWidth: `${Math.max(buttonPosition.width, 280)}px`
+              minWidth: `${Math.max(buttonPosition.width, 280)}px`,
+              pointerEvents: 'auto'
             }}
+            onClick={(e) => e.stopPropagation()}
           >
             {/* Month/Year Selectors */}
             <div className="flex items-center justify-between mb-4">
@@ -271,7 +274,7 @@ export function TailwindDatePicker({
               </button>
             </div>
           </div>
-        </>,
+        </div>,
         document.body
       )}
     </div>
