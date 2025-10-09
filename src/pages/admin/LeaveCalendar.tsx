@@ -902,26 +902,26 @@ const LeaveCalendar: React.FC = () => {
                                   {leave.isHalfDay ? `Half ${leaveTypeLabels[leave.leaveType]}` : leaveTypeLabels[leave.leaveType]}
                                 </span>
                               </div>
-                              <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleEditLeave(leave);
                                   }}
-                                  className="hover:bg-white/20 p-0.5 rounded"
+                                  className="hover:bg-blue-500/20 hover:scale-125 p-0.5 rounded transition-all duration-200 hover:shadow-md"
                                   title="Edit leave"
                                 >
-                                  <Edit className="h-2 w-2" />
+                                  <Edit className="h-2 w-2 text-blue-600 dark:text-blue-400" />
                                 </button>
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleDeleteLeaveClick(leave);
                                   }}
-                                  className="hover:bg-white/20 p-0.5 rounded"
+                                  className="hover:bg-red-500/20 hover:scale-125 p-0.5 rounded transition-all duration-200 hover:shadow-md"
                                   title="Delete leave"
                                 >
-                                  <Trash2 className="h-2 w-2" />
+                                  <Trash2 className="h-2 w-2 text-red-600 dark:text-red-400" />
                                 </button>
                               </div>
                             </div>
