@@ -6,19 +6,28 @@ A comprehensive leave management application with role-based access control, fea
 
 ### For Employees
 - **Self-Service Portal**: Apply for leaves, view balance, and track request status
-- **Leave Calendar**: Visual representation of approved leaves
+- **Leave Calendar**: Visual representation of approved leaves and holidays
 - **Dashboard**: Overview of leave balances and recent activities
+- **Profile Management**: Update personal information and view employment details
+- **Google Calendar Integration**: Sync approved leaves to personal Google Calendar (optional)
 
 ### For Managers
 - **Team Management**: Approve/reject team member leave requests
 - **Team Calendar**: View team's leave schedule
 - **Reporting**: Access to team leave statistics
+- **Pending Approvals**: Quick view of requests awaiting approval
 
 ### For Administrators
-- **Employee Management**: Full CRUD operations for employees
-- **Bulk Import**: CSV-based employee data import
+- **Employee Management**: Full CRUD operations for employees with invite system
+- **Bulk Import**: CSV-based employee data import with validation
 - **System Analytics**: Comprehensive dashboard with system statistics
-- **Department Management**: Organize employees by departments
+- **Department Management**: Organize employees by departments with manager assignments
+- **Holiday Management**: Create, update, and manage company-wide holidays
+- **Settings & Customization**:
+  - Auto-approve leave requests toggle
+  - White-labeling (custom logo and favicon)
+  - Google Calendar integration configuration
+- **Advanced Reporting**: Employee leave reports, department comparisons, approval bottlenecks
 
 ## 🛠️ Technology Stack
 
@@ -97,18 +106,32 @@ holidays-tracker/
 ├── src/                          # React frontend application
 │   ├── components/              # Reusable UI components
 │   ├── pages/                   # Application pages/routes
-│   ├── contexts/                # React contexts (Auth, etc.)
+│   ├── contexts/                # React contexts (Auth, Theme, etc.)
 │   ├── services/                # API service layer
+│   ├── hooks/                   # Custom React hooks
 │   └── types/                   # TypeScript type definitions
 ├── leave-management-backend/     # NestJS backend API
 │   ├── src/                     # Backend source code
-│   │   ├── auth/               # Authentication module
+│   │   ├── auth/               # Authentication & JWT
+│   │   ├── admin/              # Admin management module
+│   │   ├── employee/           # Employee self-service module
 │   │   ├── employees/          # Employee management
+│   │   ├── manager/            # Manager operations module
 │   │   ├── leaves/             # Leave management
 │   │   ├── departments/        # Department management
+│   │   ├── holidays/           # Holiday management
+│   │   ├── google-calendar/    # Google Calendar integration
+│   │   ├── settings/           # System settings (white-labeling, etc.)
+│   │   ├── mail/               # Email service
 │   │   └── users/              # User management
 │   ├── docker-compose.yml      # Database setup
+│   ├── docs/                   # Backend documentation
 │   └── README.md               # Backend-specific documentation
+├── docs/                        # Project documentation
+│   ├── DEPLOYMENT.md           # Deployment guide
+│   ├── GOOGLE_CALENDAR_INTEGRATION.md  # Google Calendar setup
+│   ├── IMPLEMENTATION_STATUS.md        # Feature status
+│   └── CODEBASE-DOCUMENTATION.md       # Technical documentation
 └── start-all.sh                # Startup script
 ```
 
@@ -179,10 +202,91 @@ When the backend is running, visit:
 ## 📧 Email Notifications
 
 The system sends automated emails for:
+- Employee invite links with secure tokens
 - Welcome messages for new employees
 - Leave request notifications to managers
 - Status updates when requests are approved/rejected
 - Password reset tokens
+
+## 🎨 Customization Features
+
+### White-Labeling
+- **Custom Logo**: Upload your company logo (visible on login and invite pages)
+- **Custom Favicon**: Set a custom favicon for browser tabs
+- Both are stored in the system settings and served dynamically
+
+### Theme Support
+- **Light/Dark Mode**: Full theme support with user preference persistence
+- Seamless theme switching across all pages
+
+## 🔗 Integrations
+
+### Google Calendar (Backend Complete, Frontend Pending)
+- **Personal Calendar Sync**: Employees can connect their Google Calendar
+- **Automatic Sync**: Approved leaves automatically create calendar events
+- **OAuth2 Integration**: Secure authentication with token refresh
+- **Event Management**: Updates and deletions sync automatically
+
+See [`docs/GOOGLE_CALENDAR_INTEGRATION.md`](docs/GOOGLE_CALENDAR_INTEGRATION.md) for setup instructions.
+
+## 📋 Additional Features
+
+### Holiday Management
+- Create company-wide holidays
+- Set recurring holidays (annual events)
+- Mark holidays as active/inactive
+- Holidays visible on all calendars
+
+### Employee Invite System
+- Generate secure invite links for new employees
+- Time-limited tokens (24-hour expiration)
+- Direct dashboard access after account setup
+- No manual password sharing required
+
+### Auto-Approve Settings
+- Optional automatic approval for leave requests
+- Admin toggle in Settings page
+- Useful for small teams or specific leave types
+
+### Advanced Leave Management
+- **Half-day leaves**: Support for half-day requests
+- **Leave types**: Earned, Sick, Casual, Compensation
+- **Pro-rata calculations**: Automatic calculations for mid-year joiners
+- **Year-end processing**: Automatic balance reset and archiving
+- **Carry forward**: Configurable leave carry-forward rules
+
+## 📚 Documentation
+
+Additional documentation is available in the `/docs` folder:
+
+- **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Deployment guide and production setup
+- **[GOOGLE_CALENDAR_INTEGRATION.md](docs/GOOGLE_CALENDAR_INTEGRATION.md)** - Google Calendar integration setup
+- **[IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md)** - Current feature implementation status
+- **[CODEBASE-DOCUMENTATION.md](docs/CODEBASE-DOCUMENTATION.md)** - Technical architecture and code documentation
+
+Backend-specific documentation:
+- **[leave-management-backend/docs/DATABASE.md](leave-management-backend/docs/DATABASE.md)** - Database schema and relationships
+- **[leave-management-backend/docs/MIGRATION_SETUP.md](leave-management-backend/docs/MIGRATION_SETUP.md)** - Database migration guide
+- **[leave-management-backend/docs/ADMIN_PASSWORD_RESET.md](leave-management-backend/docs/ADMIN_PASSWORD_RESET.md)** - Admin password reset procedures
+- **[leave-management-backend/docs/YEAR_END_RESET.md](leave-management-backend/docs/YEAR_END_RESET.md)** - Year-end leave balance processing
+
+## 🆕 Recent Improvements
+
+### Direct Dashboard Access After Invite (Latest)
+- New employees are now automatically logged in after completing their invite
+- Eliminates redundant login step after password setup
+- Improved onboarding UX with seamless authentication flow
+
+### Enhanced Authentication
+- JWT-based authentication with automatic token refresh
+- Secure invite system with time-limited tokens
+- Role-based access control throughout the application
+
+### UI/UX Enhancements
+- Modern, responsive design with shadcn/ui components
+- Intuitive navigation with role-specific menus
+- Real-time validation and error handling
+- Loading states and optimistic UI updates
 
 ## 🤝 Contributing
 
@@ -191,4 +295,8 @@ The system sends automated emails for:
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
