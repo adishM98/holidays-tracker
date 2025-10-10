@@ -199,7 +199,7 @@ export class AuthService {
 
   async completeInvite(
     completeInviteDto: CompleteInviteDto,
-  ): Promise<{ message: string }> {
+  ): Promise<{ message: string; access_token: string; refresh_token: string; user: any }> {
     const { email, token, password } = completeInviteDto;
 
     try {
@@ -251,7 +251,27 @@ export class AuthService {
         inviteStatus: "active",
       });
 
-      return { message: "Account activated successfully" };
+      // Generate authentication tokens for the user
+      const payload = {
+        sub: user.id,
+        email: user.email,
+        role: user.role,
+      };
+
+      const accessToken = this.jwtService.sign(payload);
+      const refreshToken = this.jwtService.sign(payload, { expiresIn: "30d" });
+
+      return {
+        message: "Account activated successfully",
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          mustChangePassword: false,
+        },
+      };
     } catch (error) {
       if (error instanceof BadRequestException) {
         throw error;

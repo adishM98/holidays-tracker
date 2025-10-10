@@ -180,10 +180,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateUser = (userData: Partial<User>) => {
     if (!user) return;
-    
+
     const updatedUser = { ...user, ...userData };
     setUser(updatedUser);
     localStorage.setItem('user_data', JSON.stringify(updatedUser));
+  };
+
+  const setUserData = (userData: User) => {
+    setUser(userData);
+    localStorage.setItem('user_data', JSON.stringify(userData));
   };
 
   const checkRoleChange = useCallback(async () => {
@@ -235,7 +240,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user?.id, refreshUser]); // Include refreshUser but it's stable
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, refreshUser, updateUser, checkRoleChange }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, refreshUser, updateUser, setUser: setUserData, checkRoleChange }}>
       {children}
     </AuthContext.Provider>
   );

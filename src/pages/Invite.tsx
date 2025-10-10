@@ -6,15 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { adminAPI } from '@/services/api';
+import { adminAPI, setAuthToken, employeeAPI } from '@/services/api';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { useAuth } from '@/contexts/AuthContext';
+import { User } from '@/types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || `${window.location.origin}/api`;
 const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || window.location.origin;
 
 const Invite: React.FC = () => {
   const { actualTheme } = useTheme();
+  const { setUser } = useAuth();
   const [formData, setFormData] = useState({ email: '', password: '', confirmPassword: '' });
   const [loading, setLoading] = useState(false);
   const [validToken, setValidToken] = useState(false);
@@ -112,9 +115,42 @@ const Invite: React.FC = () => {
 
       if (!response.ok) throw new Error(result.message || 'Failed to create account');
 
-      toast({ title: 'Account Created Successfully!', description: 'Your password has been set. Redirecting to login page...' });
+      // Store authentication tokens
+      if (result.access_token) {
+        setAuthToken(result.access_token);
+      }
+      if (result.refresh_token) {
+        localStorage.setItem('refresh_token', result.refresh_token);
+      }
 
-      setTimeout(() => navigate('/login'), 1600);
+      // Create user object from response
+      const userData: User = {
+        id: result.user.id,
+        email: result.user.email,
+        role: result.user.role as any,
+        mustChangePassword: result.user.mustChangePassword,
+      };
+
+      // Get employee profile data if user is not admin
+      if (result.user.role !== 'admin') {
+        try {
+          const profileData = await employeeAPI.getProfile();
+          userData.employee = profileData.employee;
+        } catch (error) {
+          console.warn('Failed to load employee profile:', error);
+        }
+      }
+
+      // Store user data in localStorage
+      localStorage.setItem('user_data', JSON.stringify(userData));
+
+      // Update AuthContext with the new user data
+      setUser(userData);
+
+      toast({ title: '🎉 Account Created Successfully!', description: 'Redirecting to your dashboard...' });
+
+      // Navigate to dashboard using React Router
+      setTimeout(() => navigate('/dashboard'), 1000);
     } catch (error) {
       console.error('Error creating account:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to create account';
