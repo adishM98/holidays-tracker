@@ -112,7 +112,7 @@ export function AppSidebar() {
             />
           ) : (
             <div className="flex flex-col">
-              <span className="text-xs text-sidebar-foreground/60">Leave & Attendance Tracker</span>
+              <span className="text-xs text-sidebar-foreground/60"></span>
             </div>
           )}
           <ThemeToggle />
