@@ -7,19 +7,22 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Layout from "@/components/Layout/Layout";
-import Login from "@/pages/Login";
-import Invite from "@/pages/Invite";
-import Dashboard from "@/pages/Dashboard";
-import ApplyLeave from "@/pages/ApplyLeave";
-import LeaveHistory from "@/pages/LeaveHistory";
-import PendingApprovals from "@/pages/PendingApprovals";
-import Profile from "@/pages/Profile";
-import EmployeesDebug from "@/pages/admin/EmployeesDebug";
-import LeaveCalendar from "@/pages/admin/LeaveCalendar";
-import Reports from "@/pages/admin/Reports";
-import Settings from "@/pages/admin/Settings";
-import NotFound from "./pages/NotFound";
 import { useFavicon } from "@/hooks/use-favicon";
+import { lazy, Suspense } from "react";
+
+// Lazy load route components for better code splitting
+const Login = lazy(() => import("@/pages/Login"));
+const Invite = lazy(() => import("@/pages/Invite"));
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const ApplyLeave = lazy(() => import("@/pages/ApplyLeave"));
+const LeaveHistory = lazy(() => import("@/pages/LeaveHistory"));
+const PendingApprovals = lazy(() => import("@/pages/PendingApprovals"));
+const Profile = lazy(() => import("@/pages/Profile"));
+const EmployeesDebug = lazy(() => import("@/pages/admin/EmployeesDebug"));
+const LeaveCalendar = lazy(() => import("@/pages/admin/LeaveCalendar"));
+const Reports = lazy(() => import("@/pages/admin/Reports"));
+const Settings = lazy(() => import("@/pages/admin/Settings"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
 
@@ -27,6 +30,16 @@ const AppContent = () => {
   useFavicon();
   return null;
 };
+
+// Loading fallback component for Suspense
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="flex flex-col items-center space-y-4">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <p className="text-sm text-muted-foreground">Loading...</p>
+    </div>
+  </div>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -37,6 +50,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/invite" element={<Invite />} />
@@ -120,6 +134,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
         </BrowserRouter>
         </AuthProvider>
       </TooltipProvider>
