@@ -30,22 +30,25 @@ The Leave Management System is a comprehensive full-stack application built for 
 
 ```
 holidays-tracker/
-├── src/                          # React frontend
-│   ├── components/              # Reusable UI components
-│   │   ├── ui/                 # shadcn/ui base components
-│   │   ├── Layout/             # Layout components
-│   │   └── admin/              # Admin-specific components
-│   ├── pages/                  # Route pages
-│   │   ├── admin/              # Admin pages
-│   │   └── *.tsx               # Main application pages
-│   ├── contexts/               # React contexts
-│   │   ├── AuthContext.tsx     # Authentication context
-│   │   └── ThemeContext.tsx    # Theme management
-│   ├── services/               # API service layer
-│   │   └── api.ts              # API client and methods
-│   └── types/                  # TypeScript definitions
-│       └── index.ts            # Main type definitions
-├── leave-management-backend/    # NestJS backend
+├── frontend/                    # React frontend
+│   ├── src/                    # Frontend source code
+│   │   ├── components/         # Reusable UI components
+│   │   │   ├── ui/            # shadcn/ui base components
+│   │   │   ├── Layout/        # Layout components
+│   │   │   └── admin/         # Admin-specific components
+│   │   ├── pages/             # Route pages
+│   │   │   ├── admin/         # Admin pages
+│   │   │   └── *.tsx          # Main application pages
+│   │   ├── contexts/          # React contexts
+│   │   │   ├── AuthContext.tsx # Authentication context
+│   │   │   └── ThemeContext.tsx # Theme management
+│   │   ├── services/          # API service layer
+│   │   │   └── api.ts         # API client and methods
+│   │   └── types/             # TypeScript definitions
+│   │       └── index.ts       # Main type definitions
+│   ├── public/                # Static assets
+│   └── package.json           # Frontend dependencies
+├── server/                     # NestJS backend
 │   ├── src/
 │   │   ├── auth/              # Authentication module
 │   │   ├── users/             # User management
@@ -59,10 +62,10 @@ holidays-tracker/
 │   │   ├── mail/              # Email service
 │   │   ├── database/          # Database configuration
 │   │   └── common/            # Shared utilities and enums
+│   ├── docs/                  # Backend documentation
 │   └── docker-compose.yml     # Database setup
 └── Configuration files
-    ├── package.json           # Frontend dependencies
-    ├── docker-compose.yml     # Full stack deployment
+    ├── deploy/                # Production deployment
     └── various config files
 ```
 
@@ -361,10 +364,12 @@ Automated year-end processing:
 
 ### Frontend Development
 ```bash
+cd frontend
+
 # Install dependencies
 npm install
 
-# Start development server (http://localhost:5173)
+# Start development server (http://localhost:8081)
 npm run dev
 
 # Build for production
@@ -376,9 +381,9 @@ npm run lint
 
 ### Backend Development
 ```bash
-cd leave-management-backend
+cd server
 
-# Install dependencies  
+# Install dependencies
 npm install
 
 # Start development server (http://localhost:3000)
@@ -394,7 +399,7 @@ npm run test
 ### Database Management
 ```bash
 # Start PostgreSQL with Docker
-cd leave-management-backend
+cd server
 docker-compose up -d
 
 # Access API documentation
@@ -411,7 +416,7 @@ The project includes comprehensive Docker support:
 ./start-all.sh
 
 # Or manually:
-cd leave-management-backend
+cd server
 docker-compose up -d
 ```
 
@@ -467,22 +472,22 @@ The codebase supports comprehensive testing:
 ## 📚 Key Files Reference
 
 ### Backend Core Files
-- `/leave-management-backend/src/app.module.ts:1` - Main application module
-- `/leave-management-backend/src/users/entities/user.entity.ts:1` - User entity
-- `/leave-management-backend/src/employees/entities/employee.entity.ts:1` - Employee entity  
-- `/leave-management-backend/src/leaves/entities/leave-request.entity.ts:1` - Leave request entity
-- `/leave-management-backend/src/leaves/entities/leave-balance.entity.ts:1` - Leave balance entity
+- `/server/src/app.module.ts:1` - Main application module
+- `/server/src/users/entities/user.entity.ts:1` - User entity
+- `/server/src/employees/entities/employee.entity.ts:1` - Employee entity
+- `/server/src/leaves/entities/leave-request.entity.ts:1` - Leave request entity
+- `/server/src/leaves/entities/leave-balance.entity.ts:1` - Leave balance entity
 
 ### Frontend Core Files
-- `/src/App.tsx:1` - Main application component and routing
-- `/src/contexts/AuthContext.tsx:1` - Authentication management
-- `/src/services/api.ts:1` - API client and methods
-- `/src/types/index.ts:1` - TypeScript type definitions
+- `/frontend/src/App.tsx:1` - Main application component and routing
+- `/frontend/src/contexts/AuthContext.tsx:1` - Authentication management
+- `/frontend/src/services/api.ts:1` - API client and methods
+- `/frontend/src/types/index.ts:1` - TypeScript type definitions
 
 ### Configuration Files
-- `/package.json:1` - Frontend dependencies and scripts
-- `/leave-management-backend/package.json` - Backend dependencies
-- `/docker-compose.yml` - Container orchestration
+- `/frontend/package.json:1` - Frontend dependencies and scripts
+- `/server/package.json` - Backend dependencies
+- `/deploy/docker-compose.yml` - Production container orchestration
 - `/README.md:1` - Project setup and usage instructions
 
 This documentation provides a comprehensive overview of the Leave Management System codebase, covering architecture, functionality, and development workflows. It serves as a reference for future development, maintenance, and onboarding of new team members.

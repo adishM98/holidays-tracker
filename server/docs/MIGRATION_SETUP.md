@@ -64,7 +64,7 @@ npm run migration:generate:prod -- MigrationName
 
 ## Files Modified
 - ✅ `package.json` - Added production migration scripts
-- ✅ `leave-management-backend/Dockerfile` - Updated to include dev dependencies  
+- ✅ `server/Dockerfile` - Updated to include dev dependencies
 - ✅ `Dockerfile` (root) - Updated production multi-stage build for migrations
 - ✅ `src/database/data-source.prod.ts` - New production data source
 - ✅ `migrate.sh` - New helper script

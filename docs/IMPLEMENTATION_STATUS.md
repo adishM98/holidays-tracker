@@ -143,7 +143,7 @@
 
 3. **Run Database Migration**
    ```bash
-   cd leave-management-backend
+   cd server
    npm run migration:run
    ```
 
@@ -187,7 +187,7 @@
 ## 📁 File Structure
 
 ```
-leave-management-backend/
+server/
 ├── src/
 │   ├── google-calendar/
 │   │   ├── entities/
@@ -209,9 +209,9 @@ leave-management-backend/
 │   └── database/
 │       └── migrations/
 │           └── 1757299200000-AddGoogleCalendarIntegration.ts
-├── .env.example (MODIFIED - added Google config)
-├── GOOGLE_CALENDAR_INTEGRATION.md (NEW)
-└── IMPLEMENTATION_STATUS.md (NEW)
+└── docs/
+    ├── GOOGLE_CALENDAR_INTEGRATION.md
+    └── MIGRATION_SETUP.md
 ```
 
 ## 🐛 Known Issues / Limitations
