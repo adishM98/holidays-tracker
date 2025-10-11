@@ -91,7 +91,7 @@ The application will be available at:
 
 Default admin credentials (set during migration):
 - Email: `admin@company.com`
-- Password: `Admin@123`
+- Password: `admin123`
 
 **⚠️ Important:** Change the admin password immediately after first login!
 

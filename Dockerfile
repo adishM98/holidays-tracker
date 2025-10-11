@@ -100,3 +100,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 
 # Use the entrypoint script
 ENTRYPOINT ["./entrypoint.sh"]
+
+
+# Build command: docker buildx build --platform=linux/amd64 -f Dockerfile  . -t <tag_name> --no-cache

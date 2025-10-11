@@ -47,7 +47,9 @@ services:
 
   # Main Application (Frontend + Backend)
   app:
-    image: tooljet/tj-osv:leave-61
+    build:
+      context: ..
+      dockerfile: Dockerfile
     container_name: leave_app
     restart: unless-stopped
     platform: linux/amd64
