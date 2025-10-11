@@ -20,7 +20,7 @@ import {
   BulkImportResultDto,
   BulkImportReportDto,
 } from "./dto/bulk-import-employee.dto";
-import * as bcrypt from "bcrypt";
+import * as bcrypt from "bcryptjs";
 import * as crypto from "crypto";
 import * as csv from "csv-parser";
 import { Readable } from "stream";

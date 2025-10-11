@@ -22,7 +22,7 @@ import { GoogleCalendarModule } from "./google-calendar/google-calendar.module";
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ".env",
+      envFilePath: "../.env", // Load .env from project root
     }),
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([

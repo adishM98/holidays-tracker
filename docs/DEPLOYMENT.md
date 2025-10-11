@@ -93,6 +93,41 @@ curl http://localhost:3000/api/health
 docker-compose exec postgres pg_isready -U postgres
 ```
 
+### Understanding the Startup Sequence
+
+The application uses a three-step sequential startup process to ensure database integrity:
+
+```
+🚀 Leave Management System - Starting...
+⏳ Waiting for database...
+✅ Database ready!
+📋 Step 1: Initializing database schema...
+📊 Step 2: Running database migrations...
+✅ Migrations completed successfully!
+🎯 Step 3: Starting application...
+🚀 Application is running on: http://localhost:80
+```
+
+**What happens in each step:**
+
+1. **Step 1: Schema Initialization**
+   - TypeORM creates base tables (users, employees, departments, etc.)
+   - Runs briefly (10 seconds) then automatically stops
+   - Application is NOT accessible during this phase
+
+2. **Step 2: Database Migrations**
+   - Executes all pending migrations
+   - Adds additional tables (leave_balances_history, system_settings, google_calendar_tokens, etc.)
+   - Creates indexes and constraints
+   - Application is NOT accessible during this phase
+
+3. **Step 3: Application Startup**
+   - Starts the full application
+   - Creates initial data (admin user, departments)
+   - Application becomes accessible on port 80
+
+This sequential approach ensures users never access an incomplete database during deployment.
+
 ## 🌐 Production Configuration
 
 ### Environment Variables

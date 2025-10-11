@@ -13,8 +13,8 @@ npm run db:create
 
 **What it does:**
 1. ✅ Creates the PostgreSQL database if it doesn't exist
-2. 📋 Creates all database tables using TypeORM synchronization
-3. 🔧 Runs the `init-db.sql` script to insert initial data (admin user, departments)
+2. 📋 Creates all base database tables using TypeORM synchronization
+3. ✅ Database is ready for use (initial data will be created when the app starts)
 
 ### `npm run db:status`
 Checks the current database status and lists all tables.
@@ -26,13 +26,18 @@ npm run db:status
 **Output example:**
 ```
 📊 Database 'leave_management': ✅ EXISTS
-📋 Tables (7):
+📋 Tables (12):
+   - calendar_events
    - departments
    - employees
+   - google_calendar_tokens
    - holidays
    - leave_balances
+   - leave_balances_history
    - leave_requests
+   - migrations
    - password_reset_tokens
+   - system_settings
    - users
 ```
 
@@ -54,9 +59,10 @@ npm run db:reset
 
 **What it does:**
 1. 🗑️ Drops the existing database
-2. 📊 Creates a fresh database
-3. 📋 Creates all tables
-4. 🔧 Inserts initial data
+2. 📊 Creates a fresh database (empty)
+3. 📋 Creates all base tables using TypeORM synchronization
+4. 📊 Runs all database migrations to add additional tables and schema changes
+5. ✅ Database is ready for use (initial data will be created when the app starts)
 
 ## Manual Database Setup
 

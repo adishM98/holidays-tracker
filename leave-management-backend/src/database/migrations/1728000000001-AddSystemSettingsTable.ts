@@ -45,8 +45,8 @@ export class AddSystemSettingsTable1728000000001 implements MigrationInterface {
 
     // Insert the default auto-approve setting (OFF by default)
     await queryRunner.query(`
-      INSERT INTO system_settings (key, value, description)
-      VALUES ('auto_approve_pending_leaves', 'false', 'Automatically approve pending leave requests after the requested day has passed')
+      INSERT INTO system_settings (key, value)
+      VALUES ('auto_approve_pending_leaves', 'false')
     `);
   }
 

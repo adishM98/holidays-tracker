@@ -96,17 +96,17 @@ const Reports: React.FC = () => {
         adminAPI.getDashboardStats(),
       ]);
 
-      // Debug the API responses in production
-      if (process.env.NODE_ENV === 'production') {
-        // Add minimal logging for production debugging
-        const leaveRequestsCount = leaveRequestsResponse?.requests?.length || leaveRequestsResponse?.length || 0;
-        if (leaveRequestsCount === 0) {
-          toast({
-            title: "Data Warning",
-            description: "No leave requests found. Check date range and filters.",
-            variant: "destructive",
-          });
-        }
+      // Only show warning if there are employees but no leave requests
+      // Don't show warning for completely empty database (better UX for new installations)
+      const employeesCount = employeesResponse?.employees?.length || employeesResponse?.data?.employees?.length || employeesResponse?.length || 0;
+      const leaveRequestsCount = leaveRequestsResponse?.requests?.length || leaveRequestsResponse?.length || 0;
+
+      if (employeesCount > 0 && leaveRequestsCount === 0) {
+        toast({
+          title: "No Leave Requests",
+          description: "No leave requests found for the selected date range. Try adjusting your filters.",
+          variant: "default",
+        });
       }
 
 
