@@ -351,7 +351,6 @@ See [`docs/GOOGLE_CALENDAR_INTEGRATION.md`](docs/GOOGLE_CALENDAR_INTEGRATION.md)
 
 Additional documentation is available in the `/docs` folder:
 
-- **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Deployment guide and production setup
 - **[GOOGLE_CALENDAR_INTEGRATION.md](docs/GOOGLE_CALENDAR_INTEGRATION.md)** - Google Calendar integration setup
 - **[IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md)** - Current feature implementation status
 - **[CODEBASE-DOCUMENTATION.md](docs/CODEBASE-DOCUMENTATION.md)** - Technical architecture and code documentation
