@@ -6,10 +6,12 @@ import { Employee } from "../employees/entities/employee.entity";
 import { Department } from "../departments/entities/department.entity";
 import { LeaveRequest } from "../leaves/entities/leave-request.entity";
 import { LeaveBalance } from "../leaves/entities/leave-balance.entity";
+import { LeaveBalanceHistory } from "../leaves/entities/leave-balance-history.entity";
 import { PasswordResetToken } from "../auth/entities/password-reset-token.entity";
 import { Holiday } from "../holidays/entities/holiday.entity";
 import { SystemSetting } from "../settings/entities/system-setting.entity";
 import { GoogleCalendarToken } from "../google-calendar/entities/google-calendar-token.entity";
+import { CalendarEvent } from "../google-calendar/entities/calendar-event.entity";
 import { DatabaseCreationService } from "./database-creation.service";
 
 @Module({
@@ -29,12 +31,14 @@ import { DatabaseCreationService } from "./database-creation.service";
           Department,
           LeaveRequest,
           LeaveBalance,
+          LeaveBalanceHistory,
           PasswordResetToken,
           Holiday,
           SystemSetting,
           GoogleCalendarToken,
+          CalendarEvent,
         ],
-        synchronize: true, // Enable sync but we'll recreate admin user properly
+        synchronize: true, // Auto-create base schema, migrations handle additions
         dropSchema: false,
         createDatabase: false,
         logging: false, // Disable excessive logging

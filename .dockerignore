@@ -40,7 +40,8 @@ Thumbs.db
 **/*.log
 
 # Runtime and build artifacts
-**/dist
+# Note: We need to include frontend dist for Docker image
+leave-management-backend/dist
 **/build
 **/.cache
 **/tmp

@@ -9,7 +9,7 @@ import { join } from "path";
 import { existsSync } from "fs";
 import { UserRole } from "./common/enums/user-role.enum";
 import { DataSource } from "typeorm";
-import * as bcrypt from "bcrypt";
+import * as bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 
 // Polyfill for crypto.randomUUID in case it's not available globally

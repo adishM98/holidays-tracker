@@ -63,21 +63,36 @@ A comprehensive leave management application with role-based access control, fea
    cd holidays-tracker
    ```
 
-2. **Start the backend services**
+2. **Configure environment variables**
+   ```bash
+   # Copy the example environment file
+   cp .env.example .env
+
+   # Edit .env with your settings (database, email, etc.)
+   # The single .env file in the root configures both frontend and backend
+   nano .env  # or use your preferred editor
+   ```
+
+   **Important**: Update at minimum:
+   - Database credentials (if not using defaults)
+   - SMTP settings for email notifications
+   - JWT secrets (change from defaults for security)
+
+3. **Start the backend services**
    ```bash
    # Start all services (backend + database)
    ./start-all.sh
    ```
 
-3. **Install frontend dependencies and start development server**
+4. **Install frontend dependencies and start development server**
    ```bash
    npm install
    npm run dev
    ```
 
-4. **Access the applications**
-   - Frontend: http://localhost:5173
-   - Backend API: http://localhost:3000/api
+5. **Access the applications**
+   - Frontend: http://localhost:5173 (or port specified in `VITE_PORT`)
+   - Backend API: http://localhost:3000/api (or port specified in `PORT`)
    - API Documentation: http://localhost:3000/api/docs
 
 ### 🔑 Default Login Credentials
@@ -171,25 +186,64 @@ npm run test
 
 ## 🐳 Docker Deployment
 
-The project includes Docker support for easy deployment:
-
+### Development (Local)
 ```bash
-# Start all services with Docker
+# Start development services (database only)
 cd leave-management-backend
 docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
 ```
+
+### Production Deployment
+For production deployment with Docker, see the comprehensive guide:
+**[deploy/README.md](deploy/README.md)**
+
+Quick start for production:
+```bash
+cd deploy
+cp .env.example .env
+# Edit .env with production values
+docker-compose up -d
+```
+
+The `deploy/` folder contains:
+- Production-ready `docker-compose.yml`
+- Environment configuration template
+- Comprehensive deployment guide
+
+**Note:** SSL/reverse proxy setup is left to users to configure based on their infrastructure (Nginx, Caddy, Traefik, Cloudflare, etc.)
 
 ## 📖 API Documentation
 
 When the backend is running, visit:
 - **Swagger UI**: http://localhost:3000/api/docs
 - **API Base URL**: http://localhost:3000/api
+
+## ⚙️ Configuration
+
+The project uses a **single `.env` file** in the root directory to configure both frontend and backend. This simplifies configuration management and makes it easier for developers.
+
+### Environment Variables Structure
+
+```bash
+# Root directory
+.env                    # Single configuration file for both frontend and backend
+.env.example           # Template with all available options
+```
+
+The `.env` file includes:
+- Application settings (ports, environment)
+- Database configuration
+- JWT authentication secrets
+- Email/SMTP settings
+- File upload configuration
+- CORS and API settings
+- Frontend configuration (Vite)
+- Google Calendar integration (optional)
+
+**Backend**: Loads `../.env` from the parent directory
+**Frontend**: Vite automatically loads `.env` from the project root
+
+See `.env.example` for all available configuration options with detailed comments.
 
 ## 🔐 Authentication & Security
 

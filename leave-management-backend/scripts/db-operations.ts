@@ -25,14 +25,44 @@ class DatabaseOperations {
 
   async createDatabase() {
     console.log('📊 Creating database if it doesn\'t exist...');
-    const databaseCreationService = this.app.get(DatabaseCreationService);
-    await databaseCreationService.ensureDatabaseExists();
-    console.log('✅ Database creation completed');
+
+    const dbName = this.configService.get('DATABASE_NAME');
+    const client = new Client({
+      host: this.configService.get('DATABASE_HOST'),
+      port: this.configService.get('DATABASE_PORT'),
+      user: this.configService.get('DATABASE_USERNAME'),
+      password: this.configService.get('DATABASE_PASSWORD'),
+      database: 'postgres', // Connect to default postgres database
+    });
+
+    try {
+      await client.connect();
+
+      // Check if database exists
+      const dbExists = await client.query(
+        'SELECT 1 FROM pg_database WHERE datname = $1',
+        [dbName]
+      );
+
+      if (dbExists.rows.length === 0) {
+        // Create the database
+        await client.query(`CREATE DATABASE "${dbName}"`);
+        console.log(`✅ Database '${dbName}' created successfully`);
+      } else {
+        console.log(`✅ Database '${dbName}' already exists`);
+      }
+
+    } catch (error) {
+      console.error('❌ Error creating database:', error);
+      throw error;
+    } finally {
+      await client.end();
+    }
   }
 
   async createTables() {
     console.log('📋 Creating database tables...');
-    
+
     // Create DataSource for table creation
     this.dataSource = new DataSource({
       type: 'postgres',
@@ -49,6 +79,34 @@ class DatabaseOperations {
 
     await this.dataSource.initialize();
     console.log('✅ Database tables created successfully');
+  }
+
+  async runMigrations() {
+    console.log('📊 Running database migrations...');
+
+    // Import and run migrations using the development data source
+    const { spawn } = require('child_process');
+
+    return new Promise<void>((resolve, reject) => {
+      const migrationProcess = spawn('npm', ['run', 'migration:run'], {
+        cwd: __dirname + '/..',
+        stdio: 'inherit',
+        shell: true
+      });
+
+      migrationProcess.on('close', (code: number) => {
+        if (code === 0) {
+          console.log('✅ Migrations completed successfully');
+          resolve();
+        } else {
+          reject(new Error(`Migration process exited with code ${code}`));
+        }
+      });
+
+      migrationProcess.on('error', (error: Error) => {
+        reject(error);
+      });
+    });
   }
 
   async dropDatabase() {
@@ -190,6 +248,7 @@ async function main() {
         await dbOps.dropDatabase();
         await dbOps.createDatabase();
         await dbOps.createTables();
+        await dbOps.runMigrations();
         console.log('\n🎉 Database reset completed successfully!');
         break;
 
