@@ -360,7 +360,6 @@ Backend-specific documentation:
 - **[server/docs/DATABASE.md](server/docs/DATABASE.md)** - Database schema and relationships
 - **[server/docs/MIGRATION_SETUP.md](server/docs/MIGRATION_SETUP.md)** - Database migration guide
 - **[server/docs/ADMIN_PASSWORD_RESET.md](server/docs/ADMIN_PASSWORD_RESET.md)** - Admin password reset procedures
-- **[server/docs/YEAR_END_RESET.md](server/docs/YEAR_END_RESET.md)** - Year-end leave balance processing
 
 ## 🆕 Recent Improvements
 
