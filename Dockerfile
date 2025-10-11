@@ -6,17 +6,17 @@ FROM node:18-alpine AS frontend-builder
 WORKDIR /app/frontend
 
 # Copy frontend package files
-COPY package.json package-lock.json* ./
-COPY vite.config.ts tsconfig.json tsconfig.app.json tsconfig.node.json ./
-COPY tailwind.config.ts postcss.config.js ./
-COPY index.html ./
+COPY frontend/package.json frontend/package-lock.json* ./
+COPY frontend/vite.config.ts frontend/tsconfig.json frontend/tsconfig.app.json frontend/tsconfig.node.json ./
+COPY frontend/tailwind.config.ts frontend/postcss.config.js ./
+COPY frontend/index.html ./
 
 # Install frontend dependencies (including dev dependencies for build)
 RUN npm ci --silent
 
 # Copy frontend source code
-COPY src ./src
-COPY public ./public
+COPY frontend/src ./src
+COPY frontend/public ./public
 
 # Build frontend for production
 RUN npm run build
@@ -31,15 +31,15 @@ FROM node:18-alpine AS backend-builder
 WORKDIR /app/backend
 
 # Copy backend package files
-COPY leave-management-backend/package.json leave-management-backend/package-lock.json* ./
-COPY leave-management-backend/tsconfig.json leave-management-backend/nest-cli.json ./
+COPY server/package.json server/package-lock.json* ./
+COPY server/tsconfig.json server/nest-cli.json ./
 
 # Install backend dependencies (including dev dependencies for build)
 RUN npm ci --silent
 
 # Copy backend source code
-COPY leave-management-backend/src ./src
-COPY leave-management-backend/scripts ./scripts
+COPY server/src ./src
+COPY server/scripts ./scripts
 
 # Build backend for production
 RUN npm run build
@@ -73,13 +73,13 @@ COPY --from=backend-builder /app/backend/tsconfig.json ./
 COPY --from=backend-builder /app/backend/nest-cli.json ./
 
 # Copy database initialization script
-COPY leave-management-backend/init-db.sql ./
+COPY server/init-db.sql ./
 
 # Copy entrypoint script
-COPY leave-management-backend/entrypoint.sh ./entrypoint.sh
+COPY server/entrypoint.sh ./entrypoint.sh
 
 # Copy migration helper script
-COPY leave-management-backend/migrate.sh ./migrate.sh
+COPY server/migrate.sh ./migrate.sh
 
 # Copy frontend build to be served by backend
 COPY --from=frontend-builder /app/frontend/dist ./public

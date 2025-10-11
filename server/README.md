@@ -60,7 +60,7 @@ A comprehensive leave management system backend built with NestJS, TypeScript, a
 
 1. **Clone and setup**
    ```bash
-   cd leave-management-backend
+   cd server
    npm install
    cp .env.example .env
    ```

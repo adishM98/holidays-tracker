@@ -83,7 +83,7 @@ Add the following to your `.env` file:
 GOOGLE_CLIENT_ID=your-client-id-here
 GOOGLE_CLIENT_SECRET=your-client-secret-here
 GOOGLE_REDIRECT_URI=http://localhost:3000/api/google-calendar/auth/callback
-FRONTEND_URL=http://localhost:5173
+FRONTEND_URL=http://localhost:8081
 ```
 
 ### 3. Database Migration
@@ -91,7 +91,7 @@ FRONTEND_URL=http://localhost:5173
 Run the migration to create the required tables:
 
 ```bash
-cd leave-management-backend
+cd server
 npm run migration:run
 ```
 

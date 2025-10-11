@@ -11,7 +11,7 @@ async function testConnection() {
     
     if (!healthResponse) {
       console.log('   ❌ Backend is not running');
-      console.log('   💡 Run: cd leave-management-backend && npm run start:dev');
+      console.log('   💡 Run: cd server && npm run start:dev');
       return;
     }
     console.log('   ✅ Backend is running');
@@ -57,8 +57,8 @@ async function testConnection() {
   } catch (error) {
     console.log(`❌ Connection test failed: ${error.message}`);
     console.log('\n💡 Make sure both frontend and backend are running:');
-    console.log('   Backend: cd leave-management-backend && npm run start:dev');
-    console.log('   Frontend: npm run dev');
+    console.log('   Backend: cd server && npm run start:dev');
+    console.log('   Frontend: cd frontend && npm run dev');
   }
 }
 

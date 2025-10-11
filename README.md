@@ -91,7 +91,7 @@ A comprehensive leave management application with role-based access control, fea
    ```
 
 5. **Access the applications**
-   - Frontend: http://localhost:5173 (or port specified in `VITE_PORT`)
+   - Frontend: http://localhost:8081 (or port specified in `VITE_PORT`)
    - Backend API: http://localhost:3000/api (or port specified in `PORT`)
    - API Documentation: http://localhost:3000/api/docs
 
@@ -118,14 +118,17 @@ Use these credentials to log into the system for the first time:
 
 ```
 holidays-tracker/
-├── src/                          # React frontend application
-│   ├── components/              # Reusable UI components
-│   ├── pages/                   # Application pages/routes
-│   ├── contexts/                # React contexts (Auth, Theme, etc.)
-│   ├── services/                # API service layer
-│   ├── hooks/                   # Custom React hooks
-│   └── types/                   # TypeScript type definitions
-├── leave-management-backend/     # NestJS backend API
+├── frontend/                     # React frontend application
+│   ├── src/                     # Frontend source code
+│   │   ├── components/          # Reusable UI components
+│   │   ├── pages/               # Application pages/routes
+│   │   ├── contexts/            # React contexts (Auth, Theme, etc.)
+│   │   ├── services/            # API service layer
+│   │   ├── hooks/               # Custom React hooks
+│   │   └── types/               # TypeScript type definitions
+│   ├── public/                  # Static assets
+│   └── package.json             # Frontend dependencies
+├── server/                       # NestJS backend API
 │   ├── src/                     # Backend source code
 │   │   ├── auth/               # Authentication & JWT
 │   │   ├── admin/              # Admin management module
@@ -139,7 +142,6 @@ holidays-tracker/
 │   │   ├── settings/           # System settings (white-labeling, etc.)
 │   │   ├── mail/               # Email service
 │   │   └── users/              # User management
-│   ├── docker-compose.yml      # Database setup
 │   ├── docs/                   # Backend documentation
 │   └── README.md               # Backend-specific documentation
 ├── docs/                        # Project documentation
@@ -147,13 +149,19 @@ holidays-tracker/
 │   ├── GOOGLE_CALENDAR_INTEGRATION.md  # Google Calendar setup
 │   ├── IMPLEMENTATION_STATUS.md        # Feature status
 │   └── CODEBASE-DOCUMENTATION.md       # Technical documentation
-└── start-all.sh                # Startup script
+├── deploy/                      # Production deployment files
+│   ├── docker-compose.yml      # Production Docker Compose
+│   ├── .env.example            # Environment template
+│   └── README.md               # Deployment guide
+└── start-all.sh                # Development startup script
 ```
 
 ## 🔧 Development
 
 ### Frontend Development
 ```bash
+cd frontend
+
 # Install dependencies
 npm install
 
@@ -169,7 +177,7 @@ npm run lint
 
 ### Backend Development
 ```bash
-cd leave-management-backend
+cd server
 
 # Install dependencies
 npm install
@@ -189,7 +197,7 @@ npm run test
 ### Development (Local)
 ```bash
 # Start development services (database only)
-cd leave-management-backend
+cd server
 docker-compose up -d
 ```
 
@@ -319,10 +327,10 @@ Additional documentation is available in the `/docs` folder:
 - **[CODEBASE-DOCUMENTATION.md](docs/CODEBASE-DOCUMENTATION.md)** - Technical architecture and code documentation
 
 Backend-specific documentation:
-- **[leave-management-backend/docs/DATABASE.md](leave-management-backend/docs/DATABASE.md)** - Database schema and relationships
-- **[leave-management-backend/docs/MIGRATION_SETUP.md](leave-management-backend/docs/MIGRATION_SETUP.md)** - Database migration guide
-- **[leave-management-backend/docs/ADMIN_PASSWORD_RESET.md](leave-management-backend/docs/ADMIN_PASSWORD_RESET.md)** - Admin password reset procedures
-- **[leave-management-backend/docs/YEAR_END_RESET.md](leave-management-backend/docs/YEAR_END_RESET.md)** - Year-end leave balance processing
+- **[server/docs/DATABASE.md](server/docs/DATABASE.md)** - Database schema and relationships
+- **[server/docs/MIGRATION_SETUP.md](server/docs/MIGRATION_SETUP.md)** - Database migration guide
+- **[server/docs/ADMIN_PASSWORD_RESET.md](server/docs/ADMIN_PASSWORD_RESET.md)** - Admin password reset procedures
+- **[server/docs/YEAR_END_RESET.md](server/docs/YEAR_END_RESET.md)** - Year-end leave balance processing
 
 ## 🆕 Recent Improvements
 

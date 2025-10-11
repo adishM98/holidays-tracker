@@ -41,7 +41,7 @@ Thumbs.db
 
 # Runtime and build artifacts
 # Note: We need to include frontend dist for Docker image
-leave-management-backend/dist
+server/dist
 **/build
 **/.cache
 **/tmp
@@ -88,6 +88,6 @@ bun.lockb
 **/.storybook
 
 # Backend specific ignores
-leave-management-backend/uploads/
-leave-management-backend/.env*
-leave-management-backend/dist
+server/uploads/
+server/.env*
+server/dist

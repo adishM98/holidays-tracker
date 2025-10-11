@@ -16,7 +16,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./leave-management-backend/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+      - ../server/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     networks:
       - app-network
     healthcheck:
