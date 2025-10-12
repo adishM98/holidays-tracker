@@ -10,9 +10,15 @@ import { employeeAPI, managerAPI, adminAPI } from '@/services/api';
 import { DashboardData, LeaveRequest, LeaveBalance } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { TimeManagementBackground } from '@/components/ui/time-management-background';
+import AdminDashboard from '@/pages/admin/AdminDashboard';
 
 const Dashboard: React.FC = () => {
   const { user, isLoading: authLoading, checkRoleChange } = useAuth();
+
+  // If user is admin, render the new AdminDashboard component
+  if (user?.role === 'admin' && !authLoading) {
+    return <AdminDashboard />;
+  }
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [managerData, setManagerData] = useState<any>(null);
   const [upcomingHolidays, setUpcomingHolidays] = useState<any[]>([]);
@@ -639,13 +645,18 @@ const Dashboard: React.FC = () => {
 
         {/* Manager Dashboard - Pending Approvals */}
         {user?.role === 'manager' && managerData && (
-          <Card className="shadow-professional-md border border-border/50 bg-gradient-card dark:border-0">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Users className="h-5 w-5 mr-2 text-warning" />
+          <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-900 dark:to-blue-950/20 backdrop-blur-sm min-h-[500px]">
+            <CardHeader className="relative">
+              <div className="absolute top-4 right-4 w-8 h-8 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-lg flex items-center justify-center">
+                <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <CardTitle className="flex items-center text-xl">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mr-3 shadow-md">
+                  <Users className="h-5 w-5 text-white" />
+                </div>
                 Pending Approvals
                 {managerData.stats?.pendingRequests > 0 && (
-                  <Badge className="ml-2 bg-warning text-warning-foreground">
+                  <Badge className="ml-2 bg-blue-500 text-white">
                     {managerData.stats.pendingRequests}
                   </Badge>
                 )}
