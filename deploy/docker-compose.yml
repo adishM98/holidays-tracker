@@ -6,7 +6,7 @@ services:
     image: postgres:16
     container_name: postgres_db
     restart: unless-stopped
-    platform: linux/arm64
+    platform: linux/amd64
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -31,7 +31,7 @@ services:
     image: redis:7-alpine
     container_name: redis
     restart: unless-stopped
-    platform: linux/arm64
+    platform: linux/amd64
     ports:
       - "6379:6379"
     volumes:
