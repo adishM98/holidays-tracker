@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, lazy, Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,9 @@ import { employeeAPI, managerAPI, adminAPI } from '@/services/api';
 import { DashboardData, LeaveRequest, LeaveBalance } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { TimeManagementBackground } from '@/components/ui/time-management-background';
+
+// Lazy load AdminDashboard for code splitting
+const AdminDashboard = lazy(() => import('@/components/admin/AdminDashboard'));
 
 const Dashboard: React.FC = () => {
   const { user, isLoading: authLoading, checkRoleChange } = useAuth();
@@ -367,6 +370,15 @@ const Dashboard: React.FC = () => {
       <div className="text-center py-12">
         <p className="text-muted-foreground">Please log in to view your dashboard.</p>
       </div>
+    );
+  }
+
+  // Use dedicated Admin Dashboard for admin users
+  if (user.role === 'admin') {
+    return (
+      <Suspense fallback={<DashboardSkeleton />}>
+        <AdminDashboard />
+      </Suspense>
     );
   }
 
